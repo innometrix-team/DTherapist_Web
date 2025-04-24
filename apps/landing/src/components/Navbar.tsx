@@ -1,0 +1,61 @@
+import React, { useState } from 'react';
+import { FiMenu, FiX } from 'react-icons/fi';
+
+const Navbar: React.FC = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
+
+  return (
+    <>
+      <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
+        <div className="text-xl font-bold text-Dblue">DTherapist</div>
+
+        {/* Desktop Links */}
+        <ul className="hidden md:flex gap-6 text-sm font-medium">
+          <li><a href="#home" className="hover:text-Dblue">Home</a></li>
+          <li><a href="#therapists" className="hover:text-Dblue">Therapists</a></li>
+          <li><a href="#reviews" className="hover:text-Dblue">Reviews</a></li>
+          <li><a href="#faq" className="hover:text-Dblue">FAQs</a></li>
+        </ul>
+
+        {/* Buttons (Always Visible) */}
+        <div className="hidden md:flex gap-4">
+          <button className="text-sm border border-Dblue text-Dblue px-4 py-1 rounded hover:bg-Dblue hover:text-white transition-all">Login</button>
+          <button className="text-sm bg-Dblue text-white px-4 py-1 rounded hover:bg-Dblue transition-all">Register</button>
+        </div>
+
+        {/* Hamburger Icon */}
+        <div className="md:hidden">
+          <button onClick={toggleMenu}>
+            {menuOpen ? <FiX className="text-2xl text-Dblue" /> : <FiMenu className="text-2xl text-Dblue" />}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-40 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex flex-col p-6 gap-6 text-sm font-medium">
+          <a href="#home" className="hover:text-Dblue" onClick={toggleMenu}>Home</a>
+          <a href="#therapists" className="hover:text-Dblue" onClick={toggleMenu}>Therapists</a>
+          <a href="#reviews" className="hover:text-Dblue" onClick={toggleMenu}>Reviews</a>
+          <a href="#faq" className="hover:text-Dblue" onClick={toggleMenu}>FAQs</a>
+
+            <hr />
+
+            <button className="border border-Dblue text-Dblue px-4 py-2 rounded hover:bg-Dblue hover:text-white transition-all">Login</button>
+            <button className="bg-Dblue text-white px-4 py-2 rounded hover:bg-Dblue transition-all">Register</button>
+          </div>
+        </div>
+
+        {/* Overlay */}
+        {menuOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-30" onClick={toggleMenu}></div>
+        )}
+      </nav>
+    </>
+  );
+};
+
+export default Navbar;
