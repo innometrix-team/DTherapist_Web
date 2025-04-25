@@ -6,13 +6,16 @@ import LoginForm from "./components/auth/LoginForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import EmailVerification from "./components/auth/EmailVerification";
 import ChangePasswordForm from './components/auth/ChangePasswordForm';
+import Settings from './pages/Settings';
 
 function App() {
   
 
   return (
    
-    <Routes>
+    <Routes> 
+      <Route path="/settings" element={<Settings />} />
+      {/* Add other routes here */}
     <Route path="/auth" element={<Auth />}>
     <Route index element={<Navigate to="login" />} />
         <Route path="signup" element={<SignupForm />} />
