@@ -22,11 +22,11 @@ const BankDetailsForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 space-y-6 w-full">
       <h2 className="text-xl font-semibold text-gray-800">Bank Details</h2>
 
-      <div className="flex items-center  gap-4">
-        <label htmlFor="bankName" className="text-sm font-medium text-gray-700 w-40 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <label htmlFor="bankName" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0">
           Bank Name
         </label>
         <select
@@ -34,7 +34,7 @@ const BankDetailsForm: React.FC = () => {
           id="bankName"
           value={form.bankName}
           onChange={handleChange}
-          className="max-w-md w-full border border-gray-300 rounded px-4 py-2 bg-gray-100"
+          className="w-full max-w-full md:max-w-md border border-gray-300 rounded px-4 py-2 bg-gray-100 focus:outline-none"
         >
           <option value="">Select Bank</option>
           {bankOptions.map((bank) => (
@@ -45,8 +45,8 @@ const BankDetailsForm: React.FC = () => {
         </select>
       </div>
 
-      <div className="flex items-center  gap-4">
-        <label htmlFor="accountNumber" className="text-sm font-medium text-gray-700 w-40 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <label htmlFor="accountNumber" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0">
           Account Number
         </label>
         <input
@@ -55,12 +55,12 @@ const BankDetailsForm: React.FC = () => {
           placeholder="Enter account number"
           value={form.accountNumber}
           onChange={handleChange}
-          className="max-w-md w-full border border-gray-300 rounded px-4 py-2 bg-gray-100"
+          className="w-full max-w-full md:max-w-md border border-gray-300 rounded px-4 py-2 bg-gray-100 focus:outline-none"
         />
       </div>
 
-      <div className="flex items-center  gap-4">
-        <label htmlFor="accountName" className="text-sm font-medium text-gray-700 w-40 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <label htmlFor="accountName" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0">
           Account Name
         </label>
         <input
@@ -69,14 +69,14 @@ const BankDetailsForm: React.FC = () => {
           placeholder="Enter account name"
           value={form.accountName}
           onChange={handleChange}
-          className="max-w-md w-full border border-gray-300 rounded px-4 py-2 bg-gray-100"
+          className="w-full max-w-full md:max-w-md border border-gray-300 rounded px-4 py-2 bg-gray-100 focus:outline-none"
         />
       </div>
 
-      <div>
+      <div className="pt-4">
         <button
           type="submit"
-          className="bg-Dblue hover:bg-blue-700 text-white font-medium px-6 py-2 rounded"
+          className="bg-Dblue hover:bg-blue-700 text-white font-medium px-6 py-2 rounded w-full md:w-auto"
         >
           Update
         </button>

@@ -39,22 +39,21 @@ const ProfileForm: React.FC = () => {
     console.log("Submitting Profile Details:", form);
     console.log("Profile Image:", profileImage);
   };
-  
 
-  const inputStyle = "max-w-md w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none";
-  const formGroupStyle = "flex items-center gap-4";
-  const labelStyle = "w-48 font-medium ";
+  const inputStyle = "w-full max-w-full md:max-w-md px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-Dblue";
+  const formGroupStyle = "flex flex-col md:flex-row md:items-center gap-2 md:gap-4";
+  const labelStyle = "w-full md:w-48 font-medium";
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-2 space-y-6"
+      className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
-      <h2 className="text-xl font-semibold">Profile Details</h2>
+      <h2 className="text-xl font-semibold text-gray-800">Profile Details</h2>
 
       <div className="space-y-2">
-        <label className="block font-medium">Profile Image</label>
-        <div className="flex items-center gap-4">
+        <label className="block font-medium text-gray-700">Profile Image</label>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="w-24 h-24 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
             {profileImage ? (
               <img
@@ -66,7 +65,7 @@ const ProfileForm: React.FC = () => {
               <FaCloudUploadAlt className="text-gray-400 w-8 h-8" />
             )}
           </div>
-          <div className="space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label className="cursor-pointer text-blue-600 font-medium">
               Update Image
               <input
@@ -89,6 +88,7 @@ const ProfileForm: React.FC = () => {
         </div>
       </div>
 
+      {/* Form fields */}
       {[
         { label: "Full Name", name: "fullName", type: "text" },
         { label: "Email", name: "email", type: "text" },
@@ -134,7 +134,9 @@ const ProfileForm: React.FC = () => {
           className={inputStyle}
         >
           {genderOptions.map((g) => (
-            <option key={g}>{g}</option>
+            <option key={g} value={g}>
+              {g}
+            </option>
           ))}
         </select>
       </div>
@@ -142,7 +144,7 @@ const ProfileForm: React.FC = () => {
       <div className="pt-4">
         <button
           type="submit"
-          className="bg-Dblue hover:bg-blue-700 text-white font-medium px-6 py-2 rounded"
+          className="bg-Dblue hover:bg-blue-700 text-white font-medium px-6 py-2 rounded w-full md:w-auto"
         >
           Update
         </button>
@@ -150,4 +152,5 @@ const ProfileForm: React.FC = () => {
     </form>
   );
 };
+
 export default ProfileForm;

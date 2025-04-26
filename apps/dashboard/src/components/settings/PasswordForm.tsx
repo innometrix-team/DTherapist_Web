@@ -26,14 +26,14 @@ const PasswordForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-white p-4 md:p-6 space-y-6 w-full">
       <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
 
-      <div className="flex items-center  gap-4">
-        <label htmlFor="newPassword" className="text-sm font-medium text-gray-700 w-40 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <label htmlFor="newPassword" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0">
           New Password
         </label>
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-full md:max-w-md">
           <input
             id="newPassword"
             name="newPassword"
@@ -52,11 +52,11 @@ const PasswordForm: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center  gap-4">
-        <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 w-40 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0">
           Confirm Password
         </label>
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-full md:max-w-md">
           <input
             id="confirmPassword"
             name="confirmPassword"
@@ -75,10 +75,10 @@ const PasswordForm: React.FC = () => {
         </div>
       </div>
 
-      <div>
+      <div className="pt-4">
         <button
           type="submit"
-          className="bg-Dblue hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded"
+          className="bg-Dblue hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded w-full md:w-auto"
         >
           Update
         </button>
