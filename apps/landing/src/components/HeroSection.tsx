@@ -2,7 +2,7 @@ const HeroSection = () => {
   return (
     <section
       className="relative h-[85vh] flex items-center justify-center bg-cover bg-center text-white m-4 rounded-2xl"
-      style={{ backgroundImage: "url('https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744094284/img1_pxdd9l.jpg')" }}
+      style={{ backgroundImage: "url('https://ik.imagekit.io/rqi1dzw2h/homepage/home1.png?updatedAt=1746018233090')" }}
 
     >
       <div className="absolute inset-0 bg-black/70  rounded-2xl "></div>

@@ -8,7 +8,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
   subtitle,
   title,
   description,
-  buttonText,
+  buttonText = true,
   showDownloadButtons = false,
   iosUrl,
   androidUrl,
@@ -20,7 +20,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
         <img
           src={imageUrl}
           alt={title}
-          className="w-full h-auto rounded-2xl shadow-lg object-cover"
+          className="w-full h-[300px] md:h-[500px] rounded-2xl  object-contain"
         />
       </div>
       <div>
@@ -31,9 +31,11 @@ const AboutSection: React.FC<AboutSectionProps> = ({
         <p className="text-gray-600 mb-6 leading-relaxed text-sm md:text-base">
           {description}
         </p>
-        <button className="bg-Dblue text-white px-6 py-2 rounded hover:bg-blue-700 transition-all">
-          {buttonText}
-        </button>
+        {buttonText && (
+          <button className="bg-Dblue text-white px-6 py-2 rounded hover:bg-blue-700 transition-all">
+            Learn More
+          </button>
+        )}
 
         {/* Optional Download Buttons */}
         {showDownloadButtons && (
@@ -41,7 +43,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
             {iosUrl && (
               <a href={iosUrl} target="_blank" rel="noopener noreferrer">
                 <img
-                  src="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_2_uhjpxu.png"
+                  src="https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053"
                   alt="Download on the App Store"
                   className="h-12"
                 />
@@ -50,7 +52,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
             {androidUrl && (
               <a href={androidUrl} target="_blank" rel="noopener noreferrer">
                 <img
-                  src="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_1_lxj2uo.png"
+                  src="https://ik.imagekit.io/rqi1dzw2h/homepage/playstore.png?updatedAt=1746020196102"
                   alt="Get it on Google Play"
                   className="h-12"
                 />

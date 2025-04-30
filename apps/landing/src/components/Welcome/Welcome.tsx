@@ -21,7 +21,11 @@ const Welcome = () => {
           {welcomeFeatures.map((feature: WelcomeFeature, idx: number) => (
             <ServiceFeature
               key={idx}
-              icon={feature.icon}
+              icon={(
+                <div className="bg-gray-200 rounded-full p-2">
+                  {feature.icon}
+                </div>
+              )}
               title={feature.title}
               description={feature.description}
             />
@@ -31,7 +35,7 @@ const Welcome = () => {
         {/* Right - Image */}
         <div>
           <img
-            src="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744094284/img1_pxdd9l.jpg"
+            src="https://ik.imagekit.io/rqi1dzw2h/homepage/home5.jpg?updatedAt=1746018015880"
             alt="Therapist welcome"
             className="w-full h-full object-cover rounded-2xl shadow-md max-h-[500px]"
           />
@@ -42,3 +46,4 @@ const Welcome = () => {
 };
 
 export default Welcome;
+

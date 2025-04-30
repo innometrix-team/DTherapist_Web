@@ -27,7 +27,9 @@ const Steps = () => {
               key={idx}
               className="bg-darkerb text-white rounded-xl p-3 shadow hover:shadow-lg transition-all relative"
             >
-              <div className="text-white text-3xl mb-4">{step.icon}</div>
+              <div className="text-white text-3xl mb-4 flex items-center justify-center bg-gray-300 rounded-full w-12 h-12">
+                {step.icon}
+              </div>
               <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
               <p className="text-sm text-white">{step.desc}</p>
             </div>
@@ -39,3 +41,4 @@ const Steps = () => {
 };
 
 export default Steps;
+
