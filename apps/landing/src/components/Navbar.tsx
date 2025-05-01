@@ -11,7 +11,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
-        <div className="text-xl font-bold text-Dblue">DTherapist</div>
+        <img src="https://ik.imagekit.io/rqi1dzw2h/DT_Logo.png?updatedAt=1746132133582" alt="DTherapist Logo" className="h-10 md:h-12 w-auto object-contain" />
 
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
@@ -59,3 +59,4 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
+
