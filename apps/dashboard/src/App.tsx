@@ -6,6 +6,7 @@ import LoginForm from "./components/auth/LoginForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import EmailVerification from "./components/auth/EmailVerification";
 import ChangePasswordForm from './components/auth/ChangePasswordForm';
+import ScheduleSetupPage from './pages/schedule-setup';
 
 function App() {
   
@@ -21,8 +22,9 @@ function App() {
         <Route path="verify-email" element={<EmailVerification />} />
         <Route path="change-password" element={<ChangePasswordForm />} />
       </Route>
+      <Route path="/" element={<ScheduleSetupPage />}/>
   </Routes>
- 
+  
   )
 }
 
