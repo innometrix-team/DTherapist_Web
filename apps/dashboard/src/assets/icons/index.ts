@@ -1,0 +1,9 @@
+export { default as DashboardIcon }    from "./dashboard.svg?react";
+export { default as CounselorIcon }   from "./counselor.svg?react";
+export { default as AppointmentsIcon } from "./appointments.svg?react";
+export { default as PeopleIcon }       from "./people.svg?react";
+export { default as BooksIcon }        from "./books.svg?react";
+export { default as ScheduleIcon }     from "./Schedule.svg?react";
+export { default as SettingsIcon }     from "./Settings.svg?react";
+export { default as LogoutIcon }       from "./Logout.svg?react";
+export { default as MenuIcon }         from "./MenuIcon.svg?react";

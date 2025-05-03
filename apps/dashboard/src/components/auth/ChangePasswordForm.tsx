@@ -23,7 +23,7 @@ const ChangePasswordForm = () => {
           placeholder="Confirm New Password"
           className="w-full border border-gray-300 rounded px-4 py-2"
         />
-        <button className="w-fit bg-Dblue text-white py-2 px-4 rounded font-medium">
+        <button className="w-fit bg-primary text-white py-2 px-4 rounded font-medium">
           Change Password
         </button>
       </form>
