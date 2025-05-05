@@ -22,7 +22,7 @@ export interface Service {
   subtitle: string;
   title: string;
   description: string;
-  buttonText: string;
+  buttonText?: boolean;
   showDownloadButtons?: boolean;
   iosUrl?: string;
   androidUrl?: string;

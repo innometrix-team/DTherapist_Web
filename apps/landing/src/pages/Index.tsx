@@ -17,6 +17,27 @@ const Index: React.FC = () => {
       <div id="home">
         <HeroSection />
       </div>
+      <ServiceList />
+      <AboutSection
+        imageUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/home6.jpg?updatedAt=1746018048918"
+        subtitle="About Us"
+        title="Committed to Health, Committed to You."
+        description="At DTherapist, we believe mental health is just as important as physical health..."
+        buttonText={true}
+      />
+      <Welcome />
+      <Steps />
+      <AboutSection
+        imageUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/phone.png?updatedAt=1746018021136"
+        subtitle="DTherapist App"
+        title="Get Help Anytime, Anywhere"
+        description="Download our app and connect with a therapist 24/7, from anywhere in the world."
+        buttonText={false}
+        showDownloadButtons={true}
+        iosUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_2_uhjpxu.png"
+        androidUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_1_lxj2uo.png"
+      />
+
       <div id="therapists">
         <RecommendedTherapists />
       </div>
@@ -26,27 +47,6 @@ const Index: React.FC = () => {
       <div id="faq">
         <FAQ />
       </div>
-
-      <ServiceList />
-      <AboutSection
-        imageUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744094284/img1_pxdd9l.jpg"
-        subtitle="About Us"
-        title="Committed to Health, Committed to You."
-        description="At DTherapist, we believe mental health is just as important as physical health..."
-        buttonText="Learn More"
-      />
-      <Welcome />
-      <Steps />
-      <AboutSection
-        imageUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744094284/img1_pxdd9l.jpg"
-        subtitle="DTherapist App"
-        title="Get Help Anytime, Anywhere"
-        description="Download our app and connect with a therapist 24/7, from anywhere in the world."
-        buttonText="Explore App"
-        showDownloadButtons={true}
-        iosUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_2_uhjpxu.png"
-        androidUrl="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_1_lxj2uo.png"
-      />
       <Footer />
     </>
   );

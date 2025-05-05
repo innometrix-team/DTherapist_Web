@@ -12,17 +12,17 @@ import {
 export const services: Service[] = [
   {
     title: 'Online Therapy',
-    imageUrl: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744097881/online_therapy_wjehqq.jpg',
+    imageUrl: 'https://ik.imagekit.io/rqi1dzw2h/homepage/home4.jpg?updatedAt=1746018017700',
     description: 'Access professional therapists from the comfort of your home.'
   },
   {
     title: 'Home Visits',
-    imageUrl: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744097881/home_visit_q2l1qg.jpg',
+    imageUrl: 'https://ik.imagekit.io/rqi1dzw2h/homepage/home3.png?updatedAt=1746018247563',
     description: 'Request personalized therapy sessions at your location.'
   },
   {
     title: 'Group Therapy',
-    imageUrl: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744097881/group_therapy_xilqfx.jpg',
+    imageUrl: 'https://ik.imagekit.io/rqi1dzw2h/homepage/home2.png?updatedAt=1746018227014',
     description: 'Join community sessions for shared healing and growth.'
   }
 ];
@@ -88,7 +88,7 @@ export const therapists: Therapist[] = [
     stars: 4.8,
     experience: 10,
     rate: '$80/hr',
-    image: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744220357/b2717030010ac858c1e70d6e72f91d7d_cvhjod.jpg',
+    image: 'https://randomuser.me/api/portraits/women/1.jpg',
   },
   {
     id: '2',
@@ -98,7 +98,7 @@ export const therapists: Therapist[] = [
     stars: 4.5,
     experience: 8,
     rate: '$70/hr',
-    image: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744220357/b2717030010ac858c1e70d6e72f91d7d_cvhjod.jpg',
+    image: 'https://randomuser.me/api/portraits/women/2.jpg',
   },
   {
     id: '3',
@@ -108,7 +108,7 @@ export const therapists: Therapist[] = [
     stars: 4.7,
     experience: 9,
     rate: '$75/hr',
-    image: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744220357/b2717030010ac858c1e70d6e72f91d7d_cvhjod.jpg',
+    image: 'https://randomuser.me/api/portraits/women/3.jpg',
   },
   {
     id: '4',
@@ -118,7 +118,7 @@ export const therapists: Therapist[] = [
     stars: 4.9,
     experience: 11,
     rate: '$85/hr',
-    image: 'https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744220357/b2717030010ac858c1e70d6e72f91d7d_cvhjod.jpg',
+    image: 'https://randomuser.me/api/portraits/women/4.jpg',
   },
 ];
 
