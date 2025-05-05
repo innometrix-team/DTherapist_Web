@@ -6,6 +6,16 @@ import LoginForm from "./components/auth/LoginForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import EmailVerification from "./components/auth/EmailVerification";
 import ChangePasswordForm from './components/auth/ChangePasswordForm';
+import Layout from "./components/layout/Layout";
+import Dashboard from "./pages/dashboard/Dashboard";
+import Counselor from "./pages/counselor/Counselor";
+import Appointments from "./pages/appointments/Appointments";
+import Library from "./pages/library/Library";
+
+import Settings from "./pages/settings/Settings";
+import MySchedule from "./pages/my-schedule/MySchedule";
+import DAnonymous from "./pages/danonymous/DAnonymous";
+import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
 
 function App() {
   return (

@@ -3,7 +3,7 @@ import MeetingPreferenceStep from '../components/ScheduleSetup/MeetingPreference
 import AvailabilityStep from '../components/ScheduleSetup/AvailabilityStep';
 import DateTimeStep from '../components/ScheduleSetup/DateTimeStep';
 import PricingStep from '../components/ScheduleSetup/PricingStep';
-import { MeetingPreference } from '../types/schedule.types';
+import { MeetingPreference } from '../components/ScheduleSetup/schedule.types';
 
 const ScheduleSetupPage: React.FC = () => {
   const [step, setStep] = useState(1);

@@ -7,3 +7,11 @@ export { default as ScheduleIcon }     from "./Schedule.svg?react";
 export { default as SettingsIcon }     from "./Settings.svg?react";
 export { default as LogoutIcon }       from "./Logout.svg?react";
 export { default as MenuIcon }         from "./MenuIcon.svg?react";
+
+export { default as ScheduleIcon1 } from "./schedule1.svg?react";
+export { default as ScheduleIcon2 } from "./schedule2.svg?react";
+export { default as ScheduleIcon3 } from "./schedule3.svg?react";
+export { default as CancelIcon }     from "./Cancel.svg?react";
+export { default as CopyIcon }     from "./Copy.svg?react";
+export { default as AddIcon }     from "./Add.svg?react";
+export { default as TimeIcon }     from "./timer.svg?react";
