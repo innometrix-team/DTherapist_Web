@@ -1,6 +1,3 @@
-import React from 'react';
-import { FaInstagram, FaFacebook, FaTwitter } from 'react-icons/fa';
-
 
 const Footer = () => {
   return (
@@ -41,10 +38,10 @@ const Footer = () => {
 
           <div className="flex gap-3">
             <a href="#">
-              <img src='https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_2_uhjpxu.png' alt="Download on iOS" className="w-28" />
+              <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053' alt="Download on iOS" className="w-28" />
             </a>
             <a href="#">
-              <img src='https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744198275/Frame_1_lxj2uo.png' alt="Download on Android" className="w-28" />
+              <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/playstore.png?updatedAt=1746020196102' alt="Download on Android" className="w-28" />
             </a>
           </div>
         </div>
