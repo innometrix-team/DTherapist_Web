@@ -1,6 +1,6 @@
 // src/components/HowItWorks/Steps.tsx
-import React from 'react';
-import { steps } from '../utils/constants';
+import React from "react";
+import { steps } from "../utils/constants";
 
 const Steps = () => {
   return (
@@ -8,13 +8,16 @@ const Steps = () => {
       <div className="max-w-7xl mx-auto flex flex-col md:grid md:grid-cols-2 gap-10 items-center">
         {/* Left Side - Text Content */}
         <div className="text-center md:text-left">
-          <p className="uppercase text-sm text-blue-200 font-semibold mb-2">Process</p>
+          <p className="uppercase text-sm text-blue-200 font-semibold mb-2">
+            Process
+          </p>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
           <p className="text-white text-sm md:text-base mb-6 max-w-md mx-auto md:mx-0">
-            Our approach is simple and effective. Just follow the steps and get matched with the right mental health professional.
+            Our approach is simple and effective. Just follow the steps and get
+            matched with the right mental health professional.
           </p>
           <div className="flex justify-center md:justify-start">
-            <button className="bg-Dblue text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black transition">
+            <button className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black transition">
               Get Started
             </button>
           </div>
@@ -41,4 +44,3 @@ const Steps = () => {
 };
 
 export default Steps;
-
