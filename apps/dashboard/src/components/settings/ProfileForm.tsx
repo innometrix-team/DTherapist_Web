@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { ProfileDetails } from "../../types/settings.types";
 import { genderOptions } from "../../constant/settings.constants";
-import { FaCloudUploadAlt, FaTrash } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
+import { CameraIcon } from "../../assets/icons"
 
 const ProfileForm: React.FC = () => {
   const [form, setForm] = useState<ProfileDetails>({
@@ -40,7 +41,7 @@ const ProfileForm: React.FC = () => {
     console.log("Profile Image:", profileImage);
   };
 
-  const inputStyle = "w-full max-w-full md:max-w-md px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-Dblue";
+  const inputStyle = "w-full max-w-full md:max-w-md px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary";
   const formGroupStyle = "flex flex-col md:flex-row md:items-center gap-2 md:gap-4";
   const labelStyle = "w-full md:w-48 font-medium";
 
@@ -62,7 +63,7 @@ const ProfileForm: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <FaCloudUploadAlt className="text-gray-400 w-8 h-8" />
+              <CameraIcon className="text-gray-400 w-8 h-8" />
             )}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -104,7 +105,7 @@ const ProfileForm: React.FC = () => {
             name={name}
             type={type}
             placeholder={`Enter ${label.toLowerCase()}`}
-            value={(form as any)[name]}
+            value={form[name as keyof ProfileDetails]}
             onChange={handleChange}
             className={inputStyle}
           />
@@ -144,7 +145,7 @@ const ProfileForm: React.FC = () => {
       <div className="pt-4">
         <button
           type="submit"
-          className="bg-Dblue hover:bg-blue-700 text-white font-medium px-6 py-2 rounded w-full md:w-auto"
+          className="bg-primary hover:bg-blue-700 text-white font-medium px-6 py-2 rounded w-full md:w-auto"
         >
           Update
         </button>

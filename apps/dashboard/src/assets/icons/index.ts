@@ -7,3 +7,5 @@ export { default as ScheduleIcon }     from "./Schedule.svg?react";
 export { default as SettingsIcon }     from "./Settings.svg?react";
 export { default as LogoutIcon }       from "./Logout.svg?react";
 export { default as MenuIcon }         from "./MenuIcon.svg?react";
+export { default as CameraIcon }         from "./Camera.svg?react";
+export { default as PdfIcon }         from "./pdf.svg?react";

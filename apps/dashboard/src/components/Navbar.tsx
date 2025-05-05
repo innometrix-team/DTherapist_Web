@@ -12,29 +12,29 @@ const Navbar: React.FC = () => {
   return (
     <>
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
-        <div className="text-xl font-bold text-Dblue">
+        <div className="text-xl font-bold text-primary">
           <Link to="/">DTherapist</Link>
         </div>
 
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
           <li>
-            <Link to="/" className="hover:text-Dblue">
+            <Link to="/" className="hover:text-primary">
               Home
             </Link>
           </li>
           <li>
-            <Link to="/therapists" className="hover:text-Dblue">
+            <Link to="/therapists" className="hover:text-primary">
               Therapists
             </Link>
           </li>
           <li>
-            <Link to="/reviews" className="hover:text-Dblue">
+            <Link to="/reviews" className="hover:text-primary">
               Reviews
             </Link>
           </li>
           <li>
-            <Link to="/faqs" className="hover:text-Dblue">
+            <Link to="/faqs" className="hover:text-primary">
               FAQs
             </Link>
           </li>
@@ -44,7 +44,7 @@ const Navbar: React.FC = () => {
         <div className="hidden md:flex gap-4">
           <Link
             to="/auth/login"
-            className="text-sm border border-Dblue text-Dblue px-4 py-1 rounded hover:bg-primary hover:text-white transition-all"
+            className="text-sm border border-primary text-primary px-4 py-1 rounded hover:bg-primary hover:text-white transition-all"
           >
             Login
           </Link>
@@ -60,9 +60,9 @@ const Navbar: React.FC = () => {
         <div className="md:hidden">
           <button onClick={toggleMenu}>
             {menuOpen ? (
-              <FiX className="text-2xl text-Dblue" />
+              <FiX className="text-2xl text-primary" />
             ) : (
-              <FiMenu className="text-2xl text-Dblue" />
+              <FiMenu className="text-2xl text-primary" />
             )}
           </button>
         </div>
@@ -74,24 +74,24 @@ const Navbar: React.FC = () => {
           }`}
         >
           <div className="flex flex-col p-6 gap-6 text-sm font-medium">
-            <Link to="/" className="hover:text-Dblue" onClick={toggleMenu}>
+            <Link to="/" className="hover:text-primary" onClick={toggleMenu}>
               Home
             </Link>
             <Link
               to="/therapists"
-              className="hover:text-Dblue"
+              className="hover:text-primary"
               onClick={toggleMenu}
             >
               Therapists
             </Link>
             <Link
               to="/reviews"
-              className="hover:text-Dblue"
+              className="hover:text-primary"
               onClick={toggleMenu}
             >
               Reviews
             </Link>
-            <Link to="/faqs" className="hover:text-Dblue" onClick={toggleMenu}>
+            <Link to="/faqs" className="hover:text-primary" onClick={toggleMenu}>
               FAQs
             </Link>
 
@@ -99,7 +99,7 @@ const Navbar: React.FC = () => {
 
             <Link
               to="/auth/login"
-              className="border border-Dblue text-Dblue px-4 py-2 rounded hover:bg-primary hover:text-white transition-all"
+              className="border border-primary text-primary px-4 py-2 rounded hover:bg-primary hover:text-white transition-all"
               onClick={toggleMenu}
             >
               Login
