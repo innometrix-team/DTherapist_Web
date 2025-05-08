@@ -96,3 +96,4 @@ export const PASSED_SESSIONS: Session[] = [
     type: 'Video Call'
   }
 ];
+

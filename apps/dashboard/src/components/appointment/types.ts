@@ -10,3 +10,13 @@ export interface Session {
   }
   
   export type TabType = 'upcoming' | 'passed';
+
+  export interface Client {
+    id: string;
+    name: string;
+    occupation: string;
+    experience: string;
+    nationality: string;
+    about: string;
+    imageUrl: string;
+  }

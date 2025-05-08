@@ -13,8 +13,10 @@ import Appointments from "./pages/appointments/Appointments";
 import Library from "./pages/library/Library";
 import Settings from "./pages/settings/Settings";
 import MySchedule from "./pages/my-schedule/MySchedule";
+import ClientDetail from "./components/appointment/ClientDetail";
 import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
+
 
 function App() {
   return (
@@ -28,6 +30,7 @@ function App() {
         <Route path="my-schedule" element={<MySchedule />} />
         <Route path="anonymous" element={<DAnonymous />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="appointments/client-details" element={<ClientDetail/>}/>
       </Route>
 
       <Route path="auth" element={<Auth />}>

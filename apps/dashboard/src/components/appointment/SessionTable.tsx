@@ -1,5 +1,6 @@
 // src/components/SessionTable.tsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Session } from './types';
 import { UserIcon, ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon } from '../../assets/icons';
 
@@ -10,6 +11,7 @@ interface SessionTableProps {
 
 const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const toggleDropdown = (sessionId: string) => {
     if (activeDropdown === sessionId) {
@@ -17,6 +19,34 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
     } else {
       setActiveDropdown(sessionId);
     }
+  };
+
+  const handleActionClick = (action: string, sessionId: string) => {
+    setActiveDropdown(null); // Close dropdown after action
+    
+    switch(action) {
+      case 'startMeeting':
+        navigate(`/meeting/${sessionId}`);
+        break;
+      case 'chat':
+        navigate(`/chat/${sessionId}`);
+        break;
+      case 'reschedule':
+        navigate(`/reschedule/${sessionId}`);
+        break;
+      case 'viewNotes':
+        navigate(`/session-notes/${sessionId}`);
+        break;
+      case 'scheduleAgain':
+        navigate(`/schedule-session/${sessionId}`);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const navigateToProfile = (clientId: string) => {
+    navigate(`/profile/${clientId}`);
   };
 
   if (sessions.length === 0) {
@@ -28,11 +58,11 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
   }
 
   return (
-    <div className="space-y-4 mt-2 rounded-lg ">
+    <div className="space-y-4 mt-2 rounded-lg">
       {sessions.map((session) => (
         <div 
           key={session.id} 
-          className="grid grid-cols-4 gap-4 px-4 py-3 shadow-md rounded-lg hover:bg-gray-50 items-center"
+          className="grid grid-cols-1 md:grid-cols-4 gap-4 px-4 py-3 shadow-md rounded-lg hover:bg-gray-50 items-center"
         >
           {/* Client Name & Image */}
           <div className="flex items-center space-x-3">
@@ -45,10 +75,10 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
           </div>
           
           {/* Date */}
-          <div>{session.date}</div>
+          <div className="text-center md:text-left">{session.date}</div>
           
           {/* Time */}
-          <div>
+          <div className="text-center md:text-left">
             {session.time} <span className="text-gray-500">{session.timeZone}</span>
           </div>
           
@@ -72,26 +102,41 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
                   <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                     {type === 'upcoming' ? (
                       <>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50">
+                        <button 
+                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                          onClick={() => handleActionClick('startMeeting', session.id)}
+                        >
                           <MeetingIcon className="w-4 h-4 mr-2" />
                           <span>Start Meeting</span>
                         </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50">
+                        <button 
+                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                          onClick={() => handleActionClick('chat', session.id)}
+                        >
                           <ChatIcon className="w-4 h-4 mr-2" />
                           <span>Chat</span>
                         </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50">
+                        <button 
+                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                          onClick={() => handleActionClick('reschedule', session.id)}
+                        >
                           <RescheduleIcon className="w-4 h-4 mr-2" />
                           <span>Reschedule</span>
                         </button>
                       </>
                     ) : (
                       <>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50">
+                        <button 
+                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                          onClick={() => handleActionClick('viewNotes', session.id)}
+                        >
                           <ChatIcon className="w-4 h-4 mr-2" />
                           <span>View Notes</span>
                         </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50">
+                        <button 
+                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                          onClick={() => handleActionClick('scheduleAgain', session.id)}
+                        >
                           <RescheduleIcon className="w-4 h-4 mr-2" />
                           <span>Schedule Again</span>
                         </button>
@@ -100,7 +145,10 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, type }) => {
                   </div>
                 )}
               </div>
-              <button className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+              <button 
+                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                onClick={() => navigateToProfile(session.id)}
+              >
                 <UserIcon className="w-4 h-4" />
               </button>
             </div>
