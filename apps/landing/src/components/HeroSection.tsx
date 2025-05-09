@@ -13,7 +13,7 @@ const HeroSection = () => {
           Welcome to DTherapist
         </p>
         <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4 max-w-2xl mx-auto">
-          Caring Today for a Healthier Tomorrow and Forever
+        Empowering Healing, Nurturing Growth
         </h1>
         <p className="text-sm md:text-base mb-6 max-w-xl mx-auto">
           We connect you to the right professionals committed to helping you

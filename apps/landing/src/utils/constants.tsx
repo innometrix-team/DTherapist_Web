@@ -31,24 +31,29 @@ export const services: Service[] = [
 
 export const welcomeFeatures: WelcomeFeature[] = [
   {
-    icon: <FaUserMd size={24} className="text-blue-600" />,
-    title: 'Licensed Therapists',
-    description: 'Connect with certified professionals ready to help you heal.'
+    icon: <FaUserMd size={24} className="text-primary" />,
+    title: 'Grief and Loss Therapy',
+    description: 'Supporting individuals coping with bereavement, loss, and trauma.'
   },
   {
-    icon: <FaHeart size={24} className="text-red-500" />,
-    title: 'Holistic Care',
-    description: 'We focus on emotional, mental, and psychological well-being.'
+    icon: <FaHeart size={24} className="text-primary" />,
+    title: 'Child and Adolescent Mental Health Therapy',
+    description: 'Empowering young minds to overcome emotional struggles, social challenges, and academic difficulties.'
   },
   {
-    icon: <FaBrain size={24} className="text-purple-600" />,
-    title: 'Mental Clarity',
-    description: 'Break free from stress, anxiety, and overthinking.'
+    icon: <FaBrain size={24} className="text-primary" />,
+    title: 'Educational Therapy',
+    description: 'Bridging learning gaps, addressing learning difficulties, and promoting academic success.'
   },
   {
-    icon: <FaComments size={24} className="text-green-600" />,
-    title: '24/7 Chat Access',
-    description: 'Talk to your therapist whenever you need to.'
+    icon: <FaComments size={24} className="text-primary" />,
+    title: 'Family, Couple/Marriage Therapy',
+    description: 'Strengthening relationships, resolving conflicts, and fostering healthy communication.'
+  },
+  {
+    icon: <FaComments size={24} className="text-primary" />,
+    title: 'Synergy Circle',
+    description: 'Forging collective growth where everyone looks out for one another.'
   },
 ];
 
@@ -56,22 +61,22 @@ export const welcomeFeatures: WelcomeFeature[] = [
 
 export const steps: Step[] = [
   {
-    icon: <FaSearch size={24} className="text-blue-600" />,
+    icon: <FaSearch size={24} className="text-primary" />,
     title: 'Find a Therapist',
     desc: 'Browse our list of verified professionals.',
   },
   {
-    icon: <FaCalendarCheck size={24} className="text-green-600" />,
+    icon: <FaCalendarCheck size={24} className="text-primary" />,
     title: 'Book a Session',
     desc: 'Choose a time that works best for you.',
   },
   {
-    icon: <FaComments size={24} className="text-purple-600" />,
+    icon: <FaComments size={24} className="text-primary" />,
     title: 'Start Talking',
     desc: 'Begin your journey to better mental health.',
   },
   {
-    icon: <FaSmile size={24} className="text-yellow-500" />,
+    icon: <FaSmile size={24} className="text-primary" />,
     title: 'Feel Better',
     desc: 'Experience real change with consistent care.',
   },

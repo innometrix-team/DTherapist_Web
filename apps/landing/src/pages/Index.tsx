@@ -1,14 +1,14 @@
-import React from 'react';
-import Navbar from '../components/Navbar';
-import HeroSection from '../components/HeroSection';
-import ServiceList from '../components/ServiceCards/ServiceList';
-import AboutSection from '../components/AboutSection';
-import Welcome from '../components/Welcome/Welcome';
-import Steps from '../components/Steps';
-import RecommendedTherapists from '../components/RecommendedTherapists';
-import Testimonials from '../components/Testimonials';
-import FAQ from '../components/FAQ';
-import Footer from '../components/Footer';
+import React from "react";
+import Navbar from "../components/Navbar";
+import HeroSection from "../components/HeroSection";
+import ServiceList from "../components/ServiceCards/ServiceList";
+import AboutSection from "../components/AboutSection";
+import Welcome from "../components/Welcome/Welcome";
+import Steps from "../components/Steps";
+import RecommendedTherapists from "../components/RecommendedTherapists";
+import Testimonials from "../components/Testimonials";
+import FAQ from "../components/FAQ";
+import Footer from "../components/Footer";
 
 const Index: React.FC = () => {
   return (
@@ -22,7 +22,8 @@ const Index: React.FC = () => {
         imageUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/home6.jpg?updatedAt=1746018048918"
         subtitle="About Us"
         title="Committed to Health, Committed to You."
-        description="At DTherapist, we believe mental health is just as important as physical health..."
+        description="At DTherapist, we believe in the power of technology to make mental health support more accessible than ever before. Our secure, user-friendly platform allows you to connect with highly qualified therapists from the comfort of your own space. We offer flexible scheduling, video sessions, and a range of interactive tools to enhance your therapeutic journey.
+"
         buttonText={true}
       />
       <Welcome />
