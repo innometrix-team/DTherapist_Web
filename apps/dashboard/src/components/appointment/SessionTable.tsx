@@ -68,12 +68,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50 text-sm font-medium text-gray-700 rounded-lg shadow-md">
+    <div className="w-full overflow-x-auto rounded-lg">
+      <table className="w-full border-collapse">
+        <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Names
+              Client
             </th>
             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Date
@@ -89,40 +89,42 @@ const SessionTable: React.FC<SessionTableProps> = ({
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200 rounded-lg shadow-md">
+        <tbody className="bg-white divide-y divide-gray-200">
           {sessions.map((session) => (
             <tr key={session.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap">
+              <td className="px-4 py-4">
                 <div className="flex items-center space-x-3">
                   <img 
                     src={session.clientImage} 
                     alt={session.clientName} 
-                    className="w-8 h-8 rounded-full"
+                    className="w-8 h-8 rounded-full flex-shrink-0"
                   />
-                  <span className="font-medium text-sm md:text-base">{session.clientName}</span>
+                  <span className="font-medium text-sm">
+                    {session.clientName}
+                  </span>
                 </div>
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm">
+              <td className="px-4 py-4 text-sm whitespace-nowrap">
                 {session.date}
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm">
-                {session.time} <span className="text-gray-500 hidden md:inline">{session.timeZone}</span>
+              <td className="px-4 py-4 text-sm whitespace-nowrap">
+                {session.time} <span className="text-gray-500 hidden sm:inline">{session.timeZone}</span>
               </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">
+              <td className="px-4 py-4">
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm whitespace-nowrap">
                   {session.type}
                 </span>
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-4 py-4 text-sm text-gray-500">
                 <div className="flex items-center space-x-2">
                   <div className="relative">
                     <button 
-                      className="flex items-center space-x-1 px-2 py-1 text-xs md:text-sm text-gray-600 hover:text-gray-900 border-gray-400"
+                      className="flex items-center space-x-1 px-3 py-1 text-gray-600 hover:text-gray-900"
                       onClick={() => toggleDropdown(session.id)}
                     >
-                      <span className="hidden md:inline">Action</span>
-                      <span className="md:hidden">⋯</span>
-                      <ChevronDownIcon className="w-4 h-4 hidden md:block" />
+                      <span className="hidden sm:inline">Action</span>
+                      <span className="sm:hidden">⋯</span>
+                      <ChevronDownIcon className="w-4 h-4 hidden sm:block" />
                     </button>
                     
                     {/* Action Dropdown */}
@@ -167,7 +169,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     )}
                   </div>
                   <button 
-                    className="p-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
                     onClick={() => navigateToProfile(session.id)}
                   >
                     <UserIcon className="w-4 h-4" />
