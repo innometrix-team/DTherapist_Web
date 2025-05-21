@@ -7,3 +7,7 @@ export { default as ScheduleIcon }     from "./Schedule.svg?react";
 export { default as SettingsIcon }     from "./Settings.svg?react";
 export { default as LogoutIcon }       from "./Logout.svg?react";
 export { default as MenuIcon }         from "./MenuIcon.svg?react";
+export {default as TopUpIcon} from "./topup.svg?react";
+export {default as WithdrawIcon} from "./withdraw.svg?react";
+export {default as TimerIcon} from "./timer.svg?react";
+export {default as UptrendIcon} from "./uptrend.svg?react";
