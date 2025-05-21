@@ -1,4 +1,4 @@
-// src/constants/sessionData.ts
+// src/components/appointment/constants.ts
 import { Session } from './types';
 
 export const UPCOMING_SESSIONS: Session[] = [
@@ -9,16 +9,26 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Physical'
+    type: 'Physical',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '2',
-    clientName: 'Royce Kambell',
+    clientName: 'Royce jake',
     clientImage: '/api/placeholder/40/40',
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '3',
@@ -27,7 +37,12 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '4',
@@ -36,7 +51,12 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '5',
@@ -45,7 +65,12 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '6',
@@ -54,7 +79,12 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: '7',
@@ -63,7 +93,12 @@ export const UPCOMING_SESSIONS: Session[] = [
     date: 'Thur, May 18th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   }
 ];
 
@@ -75,7 +110,12 @@ export const PASSED_SESSIONS: Session[] = [
     date: 'Thur, May 11th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: 'p2',
@@ -84,7 +124,12 @@ export const PASSED_SESSIONS: Session[] = [
     date: 'Thur, May 4th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   },
   {
     id: 'p3',
@@ -93,7 +138,11 @@ export const PASSED_SESSIONS: Session[] = [
     date: 'Thur, Apr 27th, 2025',
     time: '10:00 - 11:00AM',
     timeZone: '(WAT)',
-    type: 'Video Call'
+    type: 'Video Call',
+    profession: 'Software Engineer',
+    experience: '12 Years Experience',
+    nationality: 'Nigerian',
+    price: 58.00,
+    clientBio: 'Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat. Lorem ipsum dolor sit amet consectetur. Mauris purus vulputate amet consequat.'
   }
 ];
-

@@ -8,21 +8,37 @@ import { UPCOMING_SESSIONS, PASSED_SESSIONS } from '../../components/appointment
 
 // Import components
 import TabNavigation from '../../components/appointment/TabNavigation';
-import TableHeader from '../../components/appointment/TableHeader';
 import SessionTable from '../../components/appointment/SessionTable';
-
+import ScheduleSession from '../../components/appointment/ScheduleSession';
 
 const Appointments: React.FC = () => {
   // State for active tab (Upcoming or Passed)
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
+  
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'schedule' | 'reschedule'>('schedule');
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Function to handle tab change
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
   };
 
+  // Function to open modal
+  const handleOpenModal = (type: 'schedule' | 'reschedule', sessionId: string) => {
+    setModalType(type);
+    setSelectedSessionId(sessionId);
+    setIsModalOpen(true);
+  };
+
+  // Function to close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 relative">
       {/* Header Banner */}
       <div 
         className="w-full h-32 rounded-lg mb-6 flex items-center justify-center px-8 bg-black/50 bg-no-repeat bg-center bg-cover"
@@ -40,18 +56,34 @@ const Appointments: React.FC = () => {
 
       {/* Sessions Table */}
       <div className="mt-4">
-        {/* Table Header */}
-        <TableHeader />
+
 
         {/* Table Content */}
         {activeTab === 'upcoming' && (
-          <SessionTable sessions={UPCOMING_SESSIONS} type="upcoming" />
+          <SessionTable 
+            sessions={UPCOMING_SESSIONS} 
+            type="upcoming" 
+            onReschedule={(sessionId) => handleOpenModal('reschedule', sessionId)}
+          />
         )}
         
         {activeTab === 'passed' && (
-          <SessionTable sessions={PASSED_SESSIONS} type="passed" />
+          <SessionTable 
+            sessions={PASSED_SESSIONS} 
+            type="passed" 
+            onScheduleAgain={(sessionId) => handleOpenModal('schedule', sessionId)}
+          />
         )}
       </div>
+
+      {/* Modal for Scheduling/Rescheduling */}
+      {isModalOpen && selectedSessionId && (
+        <ScheduleSession 
+          sessionId={selectedSessionId}
+          isReschedule={modalType === 'reschedule'}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

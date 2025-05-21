@@ -16,7 +16,7 @@ import MySchedule from "./pages/my-schedule/MySchedule";
 import ClientDetail from "./components/appointment/ClientDetail";
 import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
-
+// No need to import ScheduleSession as it's now a modal
 
 function App() {
   return (
@@ -25,12 +25,12 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="counselor" element={<Counselor />} />
         <Route path="appointments" element={<Appointments />} />
+        <Route path="appointments/client-details" element={<ClientDetail/>}/>
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
         <Route path="my-schedule" element={<MySchedule />} />
         <Route path="anonymous" element={<DAnonymous />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="appointments/client-details" element={<ClientDetail/>}/>
       </Route>
 
       <Route path="auth" element={<Auth />}>

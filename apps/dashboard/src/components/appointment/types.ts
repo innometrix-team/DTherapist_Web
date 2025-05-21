@@ -7,6 +7,13 @@ export interface Session {
     time: string;
     timeZone: string;
     type: string;
+
+    clientBio?: string;
+    profession?: string;
+    experience?: string;
+    nationality?: string;
+    price?: number;
+  
   }
   
   export type TabType = 'upcoming' | 'passed';

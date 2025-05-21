@@ -13,3 +13,5 @@ export { default as RescheduleIcon }         from "./reschedule.svg?react";
 export { default as UserIcon }         from "./user.svg?react";
 export { default as ChatIcon }         from "./chat.svg?react";
 export { default as ChevronLeftIcon }         from "./chevronleft.svg?react";
+export { default as ChevronRightIcon }         from "./chevronright.svg?react";
+export { default as ChevronxIcon }         from "./x.svg?react";
