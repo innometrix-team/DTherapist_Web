@@ -45,7 +45,7 @@ const MySchedule: React.FC = () => {
               dateTime,
               pricing,
             });
-            alert('Setup complete! (Data logged in console)');
+            
           }}
           onBack={handleBack}
         />
