@@ -45,7 +45,7 @@ const MySchedule: React.FC = () => {
               dateTime,
               pricing,
             });
-            
+              // TODO: Save data to the server or perform any other action
           }}
           onBack={handleBack}
         />
