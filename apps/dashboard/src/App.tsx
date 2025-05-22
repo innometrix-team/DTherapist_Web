@@ -15,7 +15,6 @@ import Settings from "./pages/settings/Settings";
 import MySchedule from "./pages/my-schedule/MySchedule";
 import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
-
 function App() {
   return (
     <Routes>
