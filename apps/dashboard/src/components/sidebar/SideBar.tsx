@@ -12,7 +12,7 @@ const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
       { to: "/", label: "Dashboard" },
       { to: "/counselor", label: "Counselors" },
       { to: "/appointments", label: "Appointments" },
-      { to: "/anonymous", label: "DAnonymous" },
+      { to: "/anonymous", label: "DAnonymous", matchNested: true },
       { to: "/library", label: "Library" },
     ],
     secondary: [{ to: "/privacy-policy", label: "Privacy Policy" }],
@@ -53,10 +53,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   return (
     <>
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-white overflow-y-auto transition-transform duration-200 ease-in-out
+        className={`fixed inset-y-0 left-0 z-80 w-64 transform bg-white overflow-y-auto transition-transform duration-200 ease-in-out
               ${
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
-              } md:translate-x-0 md:static md:inset-auto`}
+              } lg:translate-x-0 lg:static lg:inset-auto`}
       >
         <div className=" p-4 border-b-divider border-b h-16">
           <Link to="/" className="h-full">
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 md:hidden"
+          className="fixed inset-0 bg-black opacity-50 lg:hidden z-70"
           onClick={() => setSidebarOpen(false)}
         />
       )}

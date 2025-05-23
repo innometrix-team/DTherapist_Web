@@ -1,4 +1,4 @@
-export type Role = 'user' | 'counselor';
+export type Role = 'user' | 'counselor' ;
 
 export interface AuthState {
   role: Role | null;

@@ -7,7 +7,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => (
       <div className=" font-light">Current Balance</div>
       <div className="text-2xl font-bold">{amount}</div>
 
-      <div className="space-x-4">
+      <div className="space-x-4 space-y-2">
         {actions.includes("topUp") && (
           <button className="bg-success border border-success px-5 py-2 rounded-lg text-xs inline-flex items-center space-x-2 font-bold">
             <TopUpIcon />

@@ -10,7 +10,9 @@ interface SidebarLinkProps {
 
 export const SidebarLink: React.FC<SidebarLinkProps> = ({ item, onClick }) => {
   const { pathname } = useLocation();
-  const isActive = pathname === item.to;
+  const isActive = item.matchNested
+    ? pathname.startsWith(item.to)
+    : pathname === item.to;
   const Icon = ICONS[item.label];
 
   return (
