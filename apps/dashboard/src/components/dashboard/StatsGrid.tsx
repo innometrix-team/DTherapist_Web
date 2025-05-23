@@ -7,7 +7,7 @@ const StatsGrid: React.FC<{ stats: StatCardConfig[] }> = ({ stats }) => (
       {stats.map((s) => (
         <div
           key={s.label}
-          className="bg-white flex p-6 lg:p-4 rounded-lg justify-between grow-0 shrink-0 basis-auto w-[70%] lg:w-[calc(33.33%-10px)] shadow-[0px_4px_10px_0px_#00000008] "
+          className="bg-white flex p-6 lg:p-4 rounded-lg justify-between grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(33.33%-10px)] shadow-[0px_4px_10px_0px_#00000008] "
         >
           <div>
             <div className="text-sm text-[#B3B3B3]">{s.label}</div>
