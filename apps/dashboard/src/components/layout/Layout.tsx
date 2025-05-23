@@ -14,13 +14,13 @@ const Layout: React.FC = () => {
   }, [pathname]);
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-dvh bg-white">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col ">
         <header className="flex items-center justify-between p-4 bg-white border-b-divider border-b h-16">
-          <button className="md:hidden" onClick={() => setSidebarOpen(true)}>
+          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <MenuIcon className="h-8 w-8 " />
           </button>
 
@@ -33,7 +33,7 @@ const Layout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-y-auto  bg-[#f7f7f8]">
           <Outlet />
         </main>
       </div>

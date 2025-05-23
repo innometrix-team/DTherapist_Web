@@ -1,22 +1,21 @@
+import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Auth from "./pages/Auth";
-import SignupForm from "./components/auth/SignupForm";
-import LoginForm from "./components/auth/LoginForm";
-import ForgotPassword from "./components/auth/ForgotPassword";
+import DAnonymousChat from "./components/anonymous/DAnonymousChat";
+import ChangePasswordForm from "./components/auth/ChangePasswordForm";
 import EmailVerification from "./components/auth/EmailVerification";
-import ChangePasswordForm from './components/auth/ChangePasswordForm';
+import ForgotPassword from "./components/auth/ForgotPassword";
+import LoginForm from "./components/auth/LoginForm";
+import SignupForm from "./components/auth/SignupForm";
 import Layout from "./components/layout/Layout";
-import Dashboard from "./pages/dashboard/Dashboard";
-import Counselor from "./pages/counselor/Counselor";
 import Appointments from "./pages/appointments/Appointments";
-import Library from "./pages/library/Library";
-
-import Settings from "./pages/settings/Settings";
-import MySchedule from "./pages/my-schedule/MySchedule";
+import Auth from "./pages/Auth";
+import Counselor from "./pages/counselor/Counselor";
 import DAnonymous from "./pages/danonymous/DAnonymous";
+import Dashboard from "./pages/dashboard/Dashboard";
+import Library from "./pages/library/Library";
+import MySchedule from "./pages/my-schedule/MySchedule";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
-
+import Settings from "./pages/settings/Settings";
 function App() {
   return (
     <Routes>
@@ -27,7 +26,10 @@ function App() {
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
         <Route path="my-schedule" element={<MySchedule />} />
-        <Route path="anonymous" element={<DAnonymous />} />
+        <Route path="anonymous" element={<DAnonymous />}>
+          <Route index />
+          <Route path=":groupId" element={<DAnonymousChat />} />
+        </Route>
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
       </Route>
 
@@ -39,9 +41,8 @@ function App() {
         <Route path="verify-email" element={<EmailVerification />} />
         <Route path="change-password" element={<ChangePasswordForm />} />
       </Route>
-  </Routes>
- 
-  )
+    </Routes>
+  );
 }
 
 export default App;

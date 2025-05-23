@@ -23,7 +23,7 @@ const FAQ: React.FC = () => {
 
         {/* FAQ content section */}
         <div>
-          <h5 className="text-sm text-Dblue font-bold mb-2">FAQs</h5>
+          <h5 className="text-sm text-primary font-bold mb-2">FAQs</h5>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Frequently Asked Questions</h2>
           <p className="text-gray-600 mb-6 text-sm md:text-base">
             Have questions? We’ve got answers. Here’s everything you need to know about using DTherapist.
@@ -37,7 +37,7 @@ const FAQ: React.FC = () => {
               >
                 <div className="flex justify-between items-center">
                   <h4 className="font-semibold text-base md:text-lg text-gray-800">{question}</h4>
-                  <span className="text-Dblue text-xl">{openIndex === index ? '-' : '+'}</span>
+                  <span className="text-primary text-xl">{openIndex === index ? '-' : '+'}</span>
                 </div>
                 {openIndex === index && (
                   <p className="text-sm text-gray-600 mt-2">{answer}</p>

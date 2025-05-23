@@ -15,3 +15,11 @@ export { default as CancelIcon }     from "./Cancel.svg?react";
 export { default as CopyIcon }     from "./Copy.svg?react";
 export { default as AddIcon }     from "./Add.svg?react";
 export { default as TimeIcon }     from "./timer.svg?react";
+
+export { default as CameraIcon }         from "./Camera.svg?react";
+export { default as PdfIcon }         from "./pdf.svg?react";
+
+export {default as TopUpIcon} from "./topup.svg?react";
+export {default as WithdrawIcon} from "./withdraw.svg?react";
+export {default as TimerIcon} from "./timer.svg?react";
+export {default as UptrendIcon} from "./uptrend.svg?react";

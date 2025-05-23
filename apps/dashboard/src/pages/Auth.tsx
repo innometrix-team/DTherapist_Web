@@ -7,7 +7,7 @@ const Auth: React.FC = () => {
   return (
     <>
     <Navbar/>
-    <div className="min-h-[calc(100vh-64px)] flex border-b-[16px] border-Dblue">
+    <div className="min-h-[calc(100vh-64px)] flex border-b-[16px] border-primary">
       {/* Left side - Image and Info */}
       <div className="hidden lg:flex w-1/2  items-center justify-center p-12">
           <img 
