@@ -20,22 +20,22 @@ const Navbar: React.FC = () => {
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
           <li>
-            <a href="#home" className="hover:text-Dblue">
+            <a href="#home" className="hover:text-primary">
               Home
             </a>
           </li>
           <li>
-            <a href="#therapists" className="hover:text-Dblue">
+            <a href="#therapists" className="hover:text-primary">
               Therapists
             </a>
           </li>
           <li>
-            <a href="#reviews" className="hover:text-Dblue">
+            <a href="#reviews" className="hover:text-primary">
               Reviews
             </a>
           </li>
           <li>
-            <a href="#faq" className="hover:text-Dblue">
+            <a href="#faq" className="hover:text-primary">
               FAQs
             </a>
           </li>
@@ -43,7 +43,7 @@ const Navbar: React.FC = () => {
 
         {/* Buttons (Always Visible) */}
         <div className="hidden md:flex gap-4">
-          <button className="text-sm border border-Dblue text-Dblue px-4 py-1 rounded hover:bg-primary hover:text-white transition-all">
+          <button className="text-sm border border-primary text-primary px-4 py-1 rounded hover:bg-primary hover:text-white transition-all">
             Login
           </button>
           <button className="text-sm bg-primary text-white px-4 py-1 rounded hover:bg-primary transition-all">
@@ -55,9 +55,9 @@ const Navbar: React.FC = () => {
         <div className="md:hidden">
           <button onClick={toggleMenu}>
             {menuOpen ? (
-              <FiX className="text-2xl text-Dblue" />
+              <FiX className="text-2xl text-primary" />
             ) : (
-              <FiMenu className="text-2xl text-Dblue" />
+              <FiMenu className="text-2xl text-primary" />
             )}
           </button>
         </div>
@@ -69,30 +69,30 @@ const Navbar: React.FC = () => {
           }`}
         >
           <div className="flex flex-col p-6 gap-6 text-sm font-medium">
-            <a href="#home" className="hover:text-Dblue" onClick={toggleMenu}>
+            <a href="#home" className="hover:text-primary" onClick={toggleMenu}>
               Home
             </a>
             <a
               href="#therapists"
-              className="hover:text-Dblue"
+              className="hover:text-primary"
               onClick={toggleMenu}
             >
               Therapists
             </a>
             <a
               href="#reviews"
-              className="hover:text-Dblue"
+              className="hover:text-primary"
               onClick={toggleMenu}
             >
               Reviews
             </a>
-            <a href="#faq" className="hover:text-Dblue" onClick={toggleMenu}>
+            <a href="#faq" className="hover:text-primary" onClick={toggleMenu}>
               FAQs
             </a>
 
             <hr />
 
-            <button className="border border-Dblue text-Dblue px-4 py-2 rounded hover:bg-primary hover:text-white transition-all">
+            <button className="border border-primary text-primary px-4 py-2 rounded hover:bg-primary hover:text-white transition-all">
               Login
             </button>
             <button className="bg-primary text-white px-4 py-2 rounded hover:bg-primary transition-all">
