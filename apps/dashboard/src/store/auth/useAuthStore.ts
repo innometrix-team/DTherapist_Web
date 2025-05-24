@@ -5,7 +5,7 @@ import { create } from "zustand";
 export const useAuthStore = create<AuthState>()(
       persist(
         (set) => ({
-          role: "counselor", //will replace when API is integrated
+          role: "user", //will replace when API is integrated
           token: null,
   
           setRole: (role) => set({ role }),

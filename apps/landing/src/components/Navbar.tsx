@@ -25,23 +25,18 @@ const Navbar: React.FC = () => {
             </a>
           </li>
           <li>
-            <a href="/counselors" className="hover:text-primary">
-              Counselors
+            <a href="#therapists" className="hover:text-primary">
+              Therapists
             </a>
           </li>
           <li>
-            <a href="/danonymous" className="hover:text-primary">
-              DAnonymous
+            <a href="#reviews" className="hover:text-primary">
+              Reviews
             </a>
           </li>
           <li>
-            <a href="/about" className="hover:text-primary">
-              About us
-            </a>
-          </li>
-          <li>
-            <a href="/Library" className="hover:text-primary">
-              Library
+            <a href="#faq" className="hover:text-primary">
+              FAQs
             </a>
           </li>
         </ul>
@@ -78,14 +73,14 @@ const Navbar: React.FC = () => {
               Home
             </a>
             <a
-              href="/counselors"
+              href="#therapists"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
               Counselors
             </a>
             <a
-              href="/danonymous"
+              href="#reviews"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
@@ -94,8 +89,8 @@ const Navbar: React.FC = () => {
             <a href="/about" className="hover:text-primary" onClick={toggleMenu}>
               About us
             </a>
-            <a href="/library" className="hover:text-primary" onClick={toggleMenu}>
-              Library
+            <a href="#faq" className="hover:text-primary" onClick={toggleMenu}>
+              FAQs
             </a>
 
             <hr />
