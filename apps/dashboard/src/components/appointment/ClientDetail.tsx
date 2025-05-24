@@ -1,47 +1,65 @@
 // ClientDetail.tsx
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {  MeetingIcon, ChevronLeftIcon } from '../../assets/icons';
-import { Client } from './types';
-
-
-
-// Dummy client data to use as fallback
-const dummyClient: Client = {
-  id: "dummy-123",
-  name: "Royce Stephenson",
-  occupation: "Software Engineer",
-  experience: "12 Years Experience",
-  nationality: "Nigerian",
-  about: "Lorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulpu\n\nLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulputLorem ipsum dolor sit amet consectetur. Mauris purus vulpu",
-  imageUrl: "/api/placeholder/400/500"
-};
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { MeetingIcon, ChevronLeftIcon } from '../../assets/icons';
+import { Client, Session } from './types';
+import { UPCOMING_SESSIONS, PASSED_SESSIONS } from './constants';
 
 const ClientDetail = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to convert Session data to Client data
+  const convertSessionToClient = (session: Session): Client => {
+    return {
+      id: session.id,
+      name: session.clientName,
+      occupation: session.profession,
+      experience: session.experience,
+      nationality: session.nationality,
+      about: session.clientBio,
+      imageUrl: session.clientImage
+    };
+  };
+
+  // Function to find session by ID from constants
+  const findSessionById = (sessionId: string): Session | null => {
+    const allSessions = [...UPCOMING_SESSIONS, ...PASSED_SESSIONS];
+    return allSessions.find(session => session.id === sessionId) || null;
+  };
+
   useEffect(() => {
     // Simulate loading
     setTimeout(() => {
+      let foundSession: Session | null = null;
+
+      // Check if session data was passed via navigation state
+      const sessionData = location.state?.sessionData as Session;
       
-      if (clientId) {
-       
-        // For now dummy data with the ID from URL
-        setClient({
-          ...dummyClient,
-          id: clientId
-        });
-      } else {
-        // If no clientId is provided, use dummy data
-        setClient(dummyClient);
+      if (sessionData) {
+        // Use session data passed from navigation
+        foundSession = sessionData;
+      } else if (clientId) {
+        // Try to find session data by ID from constants
+        foundSession = findSessionById(clientId);
       }
+
+      if (foundSession) {
+        // Convert session data to client data
+        const clientData = convertSessionToClient(foundSession);
+        setClient(clientData);
+      } else {
+        // No session found - set client to null
+        setClient(null);
+      }
+      
       setLoading(false);
     }, 500);
-  }, [clientId]);
+  }, [clientId, location.state]);
 
   const handleBackClick = () => {
     // React Router navigation to the appointments page
@@ -65,11 +83,18 @@ const ClientDetail = () => {
     );
   }
 
-  
   if (!client) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p className="text-gray-600">Client Details not available try again..</p>
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Client not found</p>
+          <button 
+            onClick={handleBackClick}
+            className="bg-primary hover:bg-darkerb text-white py-2 px-4 rounded-md transition-colors"
+          >
+            Go Back to Appointments
+          </button>
+        </div>
       </div>
     );
   }

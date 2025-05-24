@@ -25,7 +25,7 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="counselor" element={<Counselor />} />
         <Route path="appointments" element={<Appointments />} />
-        <Route path="appointments/client-details" element={<ClientDetail/>}/>
+        <Route path="appointments/client-details/:clientId" element={<ClientDetail/>}/>
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
         <Route path="my-schedule" element={<MySchedule />} />

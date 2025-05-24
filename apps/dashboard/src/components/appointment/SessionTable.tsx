@@ -55,8 +55,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
     }
   };
 
-  const navigateToProfile = (clientId: string) => {
-    navigate(`/profile/${clientId}`);
+  // Updated to navigate with session data
+  const navigateToProfile = (session: Session) => {
+    // Navigate to client details with session ID and pass session data via state
+    navigate(`/appointments/client-details/${session.id}`, { 
+      state: { 
+        sessionData: session 
+      } 
+    });
   };
 
   if (sessions.length === 0) {
@@ -170,7 +176,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   </div>
                   <button 
                     className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    onClick={() => navigateToProfile(session.id)}
+                    onClick={() => navigateToProfile(session)}
                   >
                     <UserIcon className="w-4 h-4" />
                   </button>

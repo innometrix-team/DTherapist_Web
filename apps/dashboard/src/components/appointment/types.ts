@@ -8,11 +8,11 @@ export interface Session {
     timeZone: string;
     type: string;
 
-    clientBio?: string;
-    profession?: string;
-    experience?: string;
-    nationality?: string;
-    price?: number;
+    clientBio: string;
+    profession: string;
+    experience: string;
+    nationality: string;
+    price: number;
   
   }
   
