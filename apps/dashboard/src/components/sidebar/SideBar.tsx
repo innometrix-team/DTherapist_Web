@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { LogoutIcon } from "../../assets/icons";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { NavGroup } from "../layout/types";
 import { SidebarLink } from "./SideBarLink";
 import { SidebarProps } from "./types";
+import { STORE_KEYS } from "../../configs/store.config";
+import { useNavigate } from "react-router-dom";
 
 const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
   user: {
@@ -34,7 +36,15 @@ const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const { role } = useAuthStore();
+  const { logout } = useAuthStore();
+  const role = useAuthStore((state) => state.role);
+  const navigate = useNavigate();
+
+  const handleLogout = useCallback(() => {
+    logout();
+    localStorage.removeItem(STORE_KEYS.AUTH);
+    navigate("/auth");
+  }, [logout, navigate]);
 
   const sections = useMemo(
     () =>
@@ -82,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
           <div className="w-full pr-4">
             <button
-              onClick={() => {}}
+              onClick={handleLogout}
               className="max-w-4/6 px-6 py-4 mt-16 mx-auto text-white bg-primary  flex items-center justify-center rounded-lg cursor-pointer"
             >
               <LogoutIcon />

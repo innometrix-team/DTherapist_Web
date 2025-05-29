@@ -5,5 +5,6 @@ export interface AuthState {
   token: string | null;
   setRole: (role: Role) => void;
   setToken: (token: string) => void;
+  setAuth: ({role, token}: {role: Role; token: string}) => void;
   logout: () => void;
 }
