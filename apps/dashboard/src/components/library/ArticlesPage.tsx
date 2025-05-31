@@ -44,7 +44,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div 
-          className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 relative overflow-hidden"
+          className="h-48 bg-gradient-to-r from-primary to-purple-600 relative overflow-hidden"
           style={{
             backgroundImage: "url('https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637')",
             backgroundSize: 'cover',
@@ -70,14 +70,14 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
                 placeholder="Search Articles"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
             
             {/* Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <Filter className="w-4 h-4" />
               Filter
@@ -137,7 +137,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
             <div className="text-gray-500 text-lg">No articles found matching your criteria.</div>
             <button
               onClick={handleClearFilters}
-              className="mt-4 text-blue-600 hover:text-blue-800 underline"
+              className="mt-4 text-primary hover:text-primary underline"
             >
               Clear filters
             </button>

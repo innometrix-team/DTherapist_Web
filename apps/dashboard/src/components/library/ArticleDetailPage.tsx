@@ -12,7 +12,7 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
           alt={article.title}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div className="absolute inset-0 bg-black/40 "></div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center text-white max-w-4xl px-4">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">{article.title}</h1>
@@ -25,7 +25,7 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="mb-6 flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+          className="mb-6 flex items-center text-blue-600 hover:text-primary transition-colors"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -44,7 +44,7 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
               <User className="w-4 h-4" />
               {article.author}
             </div>
-            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+            <span className="bg-blue-100 text-primary px-3 py-1 rounded-full">
               {article.category}
             </span>
             <span className="text-gray-500">{article.readTime}</span>
@@ -63,17 +63,17 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
         </div>
 
         {/* Call to Action */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6 text-center">
+        {/* <div className="mt-8 bg-blue-50 rounded-lg p-6 text-center">
           <h3 className="text-xl font-semibold text-gray-800 mb-2">
             Need Professional Support?
           </h3>
           <p className="text-gray-600 mb-4">
             Our licensed therapists are here to help you on your mental health journey.
           </p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors">
+          <button className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-primary transition-colors">
             Schedule a Session
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );
