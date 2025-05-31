@@ -13,7 +13,11 @@ const Navbar: React.FC = () => {
     <>
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
         <div className="text-xl font-bold text-primary">
-          <Link to="/">DTherapist</Link>
+          <Link to="/"><img
+                    src="https://ik.imagekit.io/rqi1dzw2h/DT_Logo.png?updatedAt=1746132133582"
+                    alt="DTherapist Logo"
+                    className="h-10 md:h-12 w-auto object-contain"
+                  /></Link>
         </div>
 
         {/* Desktop Links */}
@@ -24,18 +28,18 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
           <li>
-            <Link to="/therapists" className="hover:text-Dblue">
-              Therapists
+            <Link to="/counselor" className="hover:text-Dblue">
+              Counselors
             </Link>
           </li>
           <li>
-            <Link to="/reviews" className="hover:text-Dblue">
-              Reviews
+            <Link to="/anonymous" className="hover:text-Dblue">
+              DAnonymous
             </Link>
           </li>
           <li>
-            <Link to="/faqs" className="hover:text-Dblue">
-              FAQs
+            <Link to="/appointments" className="hover:text-Dblue">
+              Appointments
             </Link>
           </li>
         </ul>
@@ -78,24 +82,22 @@ const Navbar: React.FC = () => {
               Home
             </Link>
             <Link
-              to="/therapists"
+              to="/counselor"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
               Counselors
             </Link>
             <Link
-              to="/reviews"
+              to="/anonymous"
               className="hover:text-Dblue"
               onClick={toggleMenu}
             >
               DAnonymous
             </Link>
-            <Link to="/About" className="hover:text-primary" onClick={toggleMenu}>
-              About us
-            </Link>
-            <Link to="/faqs" className="hover:text-Dblue" onClick={toggleMenu}>
-              FAQs
+           
+            <Link to="/appointments" className="hover:text-Dblue" onClick={toggleMenu}>
+              Appointments
             </Link>
 
             <hr />

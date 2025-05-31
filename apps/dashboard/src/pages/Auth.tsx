@@ -11,7 +11,7 @@ const Auth: React.FC = () => {
       {/* Left side - Image and Info */}
       <div className="hidden lg:flex w-1/2  items-center justify-center p-12">
           <img 
-            src="https://res.cloudinary.com/dqfzpmiiw/image/upload/v1744094284/img1_pxdd9l.jpg" 
+            src="https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637" 
             alt="Therapy illustration" 
             className="max-w-full h-auto object-contain rounded-2xl"
           />

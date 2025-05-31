@@ -65,7 +65,7 @@ function EmailVerification() {
   }, []);
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-4 text-center">
+    <div className="max-w-md w-full mx-auto space-y-4 ">
       <h2 className="text-3xl font-bold">Verify Your Email</h2>
       <p className="text-gray-500 text-sm">
         We’ve sent an OTP to your email:{" "}
@@ -87,13 +87,16 @@ function EmailVerification() {
       >
         {isPending ? "Verifying..." : " Verify Email "}
       </button>
+      <p className="text-gray-500 text-sm">
+        Didn’t receive the OTP?
       <button
         onClick={() => handleResendOTP({ email })}
         disabled={isResending}
         className="bg-transparent text-primary py-2 px-4 rounded font-medium disabled:opacity-50"
       >
-        {isResending ? "Resending..." : "Resend OTP"}
+      {isResending ? "Resending..." : "Resend OTP(30s)"}
       </button>
+      </p>
     </div>
   );
 }

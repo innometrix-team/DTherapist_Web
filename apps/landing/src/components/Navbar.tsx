@@ -26,12 +26,12 @@ const Navbar: React.FC = () => {
           </li>
           <li>
             <a href="#therapists" className="hover:text-primary">
-              Therapists
+              Counselors
             </a>
           </li>
           <li>
-            <a href="#reviews" className="hover:text-primary">
-              Reviews
+            <a href="#DAnonymous" className="hover:text-primary">
+              DAnonymous
             </a>
           </li>
           <li>
@@ -85,9 +85,6 @@ const Navbar: React.FC = () => {
               onClick={toggleMenu}
             >
               DAnonymous
-            </a>
-            <a href="/about" className="hover:text-primary" onClick={toggleMenu}>
-              About us
             </a>
             <a href="#faq" className="hover:text-primary" onClick={toggleMenu}>
               FAQs
