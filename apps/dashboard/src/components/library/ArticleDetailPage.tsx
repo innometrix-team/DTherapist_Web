@@ -6,7 +6,7 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Image */}
-      <div className="relative h-96 overflow-hidden">
+      <div className="relative h-64 overflow-hidden rounded-xl m-6">
         <img 
           src={article.image} 
           alt={article.title}

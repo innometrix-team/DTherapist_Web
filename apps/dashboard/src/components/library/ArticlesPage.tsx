@@ -42,9 +42,9 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm m-6 ">
         <div 
-          className="h-48 bg-gradient-to-r from-primary to-purple-600 relative overflow-hidden"
+          className="h-48  relative overflow-hidden rounded-xl"
           style={{
             backgroundImage: "url('https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637')",
             backgroundSize: 'cover',
