@@ -47,7 +47,7 @@ const DAnonymous = () => {
             <input
               type="text"
               placeholder="Search for Groups"
-              className="w-full px-4 py-3 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none lg:text-sm"
+              className="w-full px-4 py-3 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-primary focus:outline-none lg:text-sm"
             />
           </div>
         </div>
