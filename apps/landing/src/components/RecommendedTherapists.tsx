@@ -6,7 +6,7 @@ const RecommendedTherapists: React.FC = () => {
   return (
     <section className="bg-gray-50 py-16 px-10 md:px-16">
       <div className="text-center mb-12">
-        <h5 className="text-sm text-Dblue font-bold">Recommended</h5>
+        <h5 className="text-sm text-primary font-bold">Recommended</h5>
         <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
           Meet Our Therapists
         </h2>
@@ -56,7 +56,7 @@ const RecommendedTherapists: React.FC = () => {
                     Book Now
                   </button>
                   <FaUserCircle
-                    className="text-lg text-gray-600 cursor-pointer hover:text-Dblue"
+                    className="text-lg text-gray-600 cursor-pointer hover:text-primary"
                     title="View Profile"
                   />
                 </div>

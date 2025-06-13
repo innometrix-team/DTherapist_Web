@@ -12,6 +12,7 @@ export type NavLabel =
 export interface NavItem {
     to: string;
     label: NavLabel;
+    matchNested?: boolean;
   }
   
 export interface NavGroup {

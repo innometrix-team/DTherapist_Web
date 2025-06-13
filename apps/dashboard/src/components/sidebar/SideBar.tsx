@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { LogoutIcon } from "../../assets/icons";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { NavGroup } from "../layout/types";
 import { SidebarLink } from "./SideBarLink";
 import { SidebarProps } from "./types";
+import { STORE_KEYS } from "../../configs/store.config";
+import { useNavigate } from "react-router-dom";
 
 const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
   user: {
@@ -12,7 +14,7 @@ const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
       { to: "/", label: "Dashboard" },
       { to: "/counselor", label: "Counselors" },
       { to: "/appointments", label: "Appointments" },
-      { to: "/anonymous", label: "DAnonymous" },
+      { to: "/anonymous", label: "DAnonymous", matchNested: true },
       { to: "/library", label: "Library" },
     ],
     secondary: [{ to: "/privacy-policy", label: "Privacy Policy" }],
@@ -34,7 +36,15 @@ const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const { role } = useAuthStore();
+  const { logout } = useAuthStore();
+  const role = useAuthStore((state) => state.role);
+  const navigate = useNavigate();
+
+  const handleLogout = useCallback(() => {
+    logout();
+    localStorage.removeItem(STORE_KEYS.AUTH);
+    navigate("/auth");
+  }, [logout, navigate]);
 
   const sections = useMemo(
     () =>
@@ -53,10 +63,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   return (
     <>
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-white overflow-y-auto transition-transform duration-200 ease-in-out
+        className={`fixed inset-y-0 left-0 z-80 w-64 transform bg-white overflow-y-auto transition-transform duration-200 ease-in-out
               ${
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
-              } md:translate-x-0 md:static md:inset-auto`}
+              } lg:translate-x-0 lg:static lg:inset-auto`}
       >
         <div className=" p-4 border-b-divider border-b h-16">
           <Link to="/" className="h-full">
@@ -82,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
           <div className="w-full pr-4">
             <button
-              onClick={() => {}}
+              onClick={handleLogout}
               className="max-w-4/6 px-6 py-4 mt-16 mx-auto text-white bg-primary  flex items-center justify-center rounded-lg cursor-pointer"
             >
               <LogoutIcon />
@@ -95,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black opacity-50 md:hidden"
+          className="fixed inset-0 bg-black opacity-50 lg:hidden z-70"
           onClick={() => setSidebarOpen(false)}
         />
       )}

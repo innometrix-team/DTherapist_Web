@@ -23,7 +23,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
           />
         </div>
         <div>
-          <h5 className="text-Dblue font-bold">{subtitle}</h5>
+          <h5 className="text-primary font-bold">{subtitle}</h5>
           <h2 className="text-2xl md:text-4xl font-bold text-gray-800 mb-4">
             {title}
           </h2>
