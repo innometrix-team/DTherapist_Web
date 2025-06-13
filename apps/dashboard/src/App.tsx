@@ -14,9 +14,12 @@ import DAnonymous from "./pages/danonymous/DAnonymous";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Library from "./pages/library/Library";
 import MySchedule from "./pages/my-schedule/MySchedule";
+import ClientDetail from "./components/appointment/ClientDetail";
 import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
 
+import Settings from "./pages/settings/Settings";
+import { Toaster } from "react-hot-toast";
 function App() {
   return (
     <Routes>
@@ -24,12 +27,28 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="counselor" element={<Counselor />} />
         <Route path="appointments" element={<Appointments />} />
+        <Route path="appointments/client-details/:clientId" element={<ClientDetail/>}/>
         <Route path="library" element={<Library />} />
         <Route path="settings" element={<Settings />} />
         <Route path="my-schedule" element={<MySchedule />} />
         <Route path="anonymous" element={<DAnonymous />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
       </Route>
+    <>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="counselor" element={<Counselor />} />
+          <Route path="appointments" element={<Appointments />} />
+          <Route path="library" element={<Library />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="my-schedule" element={<MySchedule />} />
+          <Route path="anonymous" element={<DAnonymous />}>
+            <Route index />
+            <Route path=":groupId" element={<DAnonymousChat />} />
+          </Route>
+          <Route path="privacy-policy" element={<PrivacyPolicy />} />
+        </Route>
 
         <Route path="auth" element={<Auth />}>
           <Route index element={<Navigate to="login" replace />} />
