@@ -76,13 +76,15 @@ const Appointments: React.FC = () => {
         )}
       </div>
 
-      {/* Modal for Scheduling/Rescheduling */}
+      {/* Modal for Scheduling/Rescheduling with High Z-Index */}
       {isModalOpen && selectedSessionId && (
-        <ScheduleSession 
-          sessionId={selectedSessionId}
-          isReschedule={modalType === 'reschedule'}
-          onClose={handleCloseModal}
-        />
+        <div className="fixed inset-0 z-[9999]">
+          <ScheduleSession 
+            sessionId={selectedSessionId}
+            isReschedule={modalType === 'reschedule'}
+            onClose={handleCloseModal}
+          />
+        </div>
       )}
     </div>
   );
