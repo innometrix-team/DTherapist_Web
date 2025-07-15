@@ -4,13 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-hot-toast";
 import { useMutation } from "@tanstack/react-query";
-import { FaTrash, FaUpload } from "react-icons/fa";
+import { FaTrash, FaUpload, FaCheck } from "react-icons/fa";
 import { 
   uploadCVApi, 
   uploadCertificationApi, 
-  saveCredentialsApi, 
-  removeCVApi, 
-  removeCertificationApi 
+  saveCredentialsApi
 } from "../../api/Credential.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { PdfIcon } from "../../assets/icons";
@@ -55,7 +53,7 @@ type CredentialFormData = z.infer<typeof credentialSchema>;
 
 interface UploadedFile {
   name: string;
-  url?: string;
+  url: string;
   uploaded: boolean;
 }
 
@@ -109,11 +107,19 @@ const CredentialForm: React.FC = () => {
     onSuccess: (result) => {
       if (!result) return;
       
+      const url = result.data?.cvUrl;
+      
+      if (!url) {
+        toast.error("Upload successful but URL not received. Please try again.");
+        console.error("CV Upload response:", result);
+        return;
+      }
+      
       setUploadedFiles(prev => ({
         ...prev,
         resume: {
           name: resumeFile?.name || "CV",
-          url: result.data?.resumeUrl,
+          url: url,
           uploaded: true,
         },
       }));
@@ -136,11 +142,19 @@ const CredentialForm: React.FC = () => {
     onSuccess: (result) => {
       if (!result) return;
       
+      const url = result.data?.certUrl;
+      
+      if (!url) {
+        toast.error("Upload successful but URL not received. Please try again.");
+        console.error("Certification Upload response:", result);
+        return;
+      }
+      
       setUploadedFiles(prev => ({
         ...prev,
         certification: {
           name: certificationFile?.name || "Certification",
-          url: result.data?.certificationUrl,
+          url: url,
           uploaded: true,
         },
       }));
@@ -155,74 +169,23 @@ const CredentialForm: React.FC = () => {
 
   // Save credentials mutation
   const { mutateAsync: handleSaveCredentials, isPending: isSaving } = useMutation({
-    mutationFn: () => {
+    mutationFn: (data: { cvUrl: string; certificationUrl: string }) => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      return saveCredentialsApi({ signal: controller.signal });
+      return saveCredentialsApi(data, { signal: controller.signal });
     },
     onSuccess: (result) => {
       if (!result) return;
       toast.success(result.message || "Credentials saved successfully!");
+      // Reset form and uploaded files after successful save
       reset();
+      setUploadedFiles({
+        resume: null,
+        certification: null,
+      });
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Failed to save credentials. Please try again.";
-      toast.error(message);
-    },
-  });
-
-  // Remove CV mutation
-  const { mutateAsync: handleRemoveCV, isPending: isRemovingCV } = useMutation({
-    mutationFn: () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return removeCVApi({ signal: controller.signal });
-    },
-    onSuccess: (result) => {
-      if (!result) return;
-      
-      setUploadedFiles(prev => ({
-        ...prev,
-        resume: null,
-      }));
-      
-      setValue("resume", null);
-      if (resumeInputRef.current) {
-        resumeInputRef.current.value = "";
-      }
-      
-      toast.success(result.message || "CV removed successfully!");
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Failed to remove CV. Please try again.";
-      toast.error(message);
-    },
-  });
-
-  // Remove Certification mutation
-  const { mutateAsync: handleRemoveCertification, isPending: isRemovingCertification } = useMutation({
-    mutationFn: () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return removeCertificationApi({ signal: controller.signal });
-    },
-    onSuccess: (result) => {
-      if (!result) return;
-      
-      setUploadedFiles(prev => ({
-        ...prev,
-        certification: null,
-      }));
-      
-      setValue("certification", null);
-      if (certificationInputRef.current) {
-        certificationInputRef.current.value = "";
-      }
-      
-      toast.success(result.message || "Certification removed successfully!");
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Failed to remove certification. Please try again.";
       toast.error(message);
     },
   });
@@ -250,21 +213,39 @@ const CredentialForm: React.FC = () => {
   }, [handleCVUpload, handleCertificationUpload, setValue]);
 
   const onSubmit: SubmitHandler<CredentialFormData> = useCallback(async () => {
-    if (!uploadedFiles.resume || !uploadedFiles.certification) {
+    if (!uploadedFiles.resume?.uploaded || !uploadedFiles.certification?.uploaded) {
       toast.error("Please upload both CV and certification files before saving.");
       return;
     }
     
-    await handleSaveCredentials();
+    if (!uploadedFiles.resume.url || !uploadedFiles.certification.url) {
+      toast.error("File URLs are missing. Please try uploading the files again.");
+      return;
+    }
+    
+    await handleSaveCredentials({
+      cvUrl: uploadedFiles.resume.url,
+      certificationUrl: uploadedFiles.certification.url,
+    });
   }, [uploadedFiles, handleSaveCredentials]);
 
-  const handleRemoveFile = useCallback(async (type: "resume" | "certification") => {
-    if (type === "resume") {
-      await handleRemoveCV();
-    } else {
-      await handleRemoveCertification();
+  
+  const handleRemoveFile = useCallback((type: "resume" | "certification") => {
+    setUploadedFiles(prev => ({
+      ...prev,
+      [type]: null,
+    }));
+    
+    setValue(type, null);
+    
+    if (type === "resume" && resumeInputRef.current) {
+      resumeInputRef.current.value = "";
+    } else if (type === "certification" && certificationInputRef.current) {
+      certificationInputRef.current.value = "";
     }
-  }, [handleRemoveCV, handleRemoveCertification]);
+    
+    toast.success(`${type === "resume" ? "CV" : "Certification"} removed successfully!`);
+  }, [setValue]);
 
   useEffect(() => {
     return () => {
@@ -298,43 +279,53 @@ const CredentialForm: React.FC = () => {
           Upload Resume/CV
         </label>
         <div className="flex-1 max-w-full md:max-w-md">
-          <div className="relative">
-            <input
-              ref={resumeInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => handleFileChange(e, "resume")}
-              disabled={isSubmitting}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
-            />
-            <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
-              errors.resume ? "border-red-500" : "border-gray-300"
-            } ${isSubmitting ? "opacity-50" : ""}`}>
-              <PdfIcon />
-              <span className="text-sm text-gray-600 flex-1">
-                {uploadedFiles.resume?.uploaded 
-                  ? `${uploadedFiles.resume.name} (Uploaded)` 
-                  : "Choose resume/CV"}
-              </span>
-              {isUploadingCV && (
-                <FaUpload className="text-blue-500 animate-spin" />
-              )}
-              {uploadedFiles.resume?.uploaded && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile("resume")}
-                  disabled={isRemovingCV || isSubmitting}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                >
-                  <FaTrash size={14} />
-                </button>
-              )}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={resumeInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileChange(e, "resume")}
+                disabled={isSubmitting}
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
+              />
+              <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
+                errors.resume ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "opacity-50" : ""}`}>
+                <PdfIcon />
+                <span className="text-sm text-gray-600 flex-1">
+                  {uploadedFiles.resume?.uploaded 
+                    ? uploadedFiles.resume.name
+                    : "Choose resume/CV"}
+                </span>
+                {isUploadingCV && (
+                  <FaUpload className="text-blue-500 animate-spin" />
+                )}
+                {uploadedFiles.resume?.uploaded && (
+                  <FaCheck className="text-green-500" />
+                )}
+              </div>
             </div>
+            
+            {uploadedFiles.resume?.uploaded && (
+              <button
+                type="button"
+                onClick={() => handleRemoveFile("resume")}
+                disabled={isSubmitting}
+                className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
+                title="Remove CV"
+              >
+                <FaTrash size={14} />
+              </button>
+            )}
           </div>
+          
           {errors.resume && (
-            <p className="text-red-500 text-xs mt-1">{typeof errors.resume.message === 'string' 
+            <p className="text-red-500 text-xs mt-1">
+              {typeof errors.resume.message === 'string' 
                 ? errors.resume.message 
-                : 'Invalid file'}</p>
+                : 'Invalid file'}
+            </p>
           )}
         </div>
       </div>
@@ -345,43 +336,53 @@ const CredentialForm: React.FC = () => {
           Upload Certification
         </label>
         <div className="flex-1 max-w-full md:max-w-md">
-          <div className="relative">
-            <input
-              ref={certificationInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => handleFileChange(e, "certification")}
-              disabled={isSubmitting}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
-            />
-            <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
-              errors.certification ? "border-red-500" : "border-gray-300"
-            } ${isSubmitting ? "opacity-50" : ""}`}>
-              <PdfIcon />
-              <span className="text-sm text-gray-600 flex-1">
-                {uploadedFiles.certification?.uploaded 
-                  ? `${uploadedFiles.certification.name} (Uploaded)` 
-                  : "Choose certification"}
-              </span>
-              {isUploadingCertification && (
-                <FaUpload className="text-blue-500 animate-spin" />
-              )}
-              {uploadedFiles.certification?.uploaded && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFile("certification")}
-                  disabled={isRemovingCertification || isSubmitting}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                >
-                  <FaTrash size={14} />
-                </button>
-              )}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={certificationInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileChange(e, "certification")}
+                disabled={isSubmitting}
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
+              />
+              <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
+                errors.certification ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "opacity-50" : ""}`}>
+                <PdfIcon />
+                <span className="text-sm text-gray-600 flex-1">
+                  {uploadedFiles.certification?.uploaded 
+                    ? uploadedFiles.certification.name
+                    : "Choose certification"}
+                </span>
+                {isUploadingCertification && (
+                  <FaUpload className="text-blue-500 animate-spin" />
+                )}
+                {uploadedFiles.certification?.uploaded && (
+                  <FaCheck className="text-green-500" />
+                )}
+              </div>
             </div>
+            
+            {uploadedFiles.certification?.uploaded && (
+              <button
+                type="button"
+                onClick={() => handleRemoveFile("certification")}
+                disabled={isSubmitting}
+                className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
+                title="Remove Certification"
+              >
+                <FaTrash size={14} />
+              </button>
+            )}
           </div>
+          
           {errors.certification && (
-            <p className="text-red-500 text-xs mt-1"> {typeof errors.certification.message === 'string' 
+            <p className="text-red-500 text-xs mt-1">
+              {typeof errors.certification.message === 'string' 
                 ? errors.certification.message 
-                : 'Invalid file'}</p>
+                : 'Invalid file'}
+            </p>
           )}
         </div>
       </div>
@@ -396,8 +397,6 @@ const CredentialForm: React.FC = () => {
           {isSaving ? "Saving..." : "Save Credentials"}
         </button>
       </div>
-
-
     </form>
   );
 };

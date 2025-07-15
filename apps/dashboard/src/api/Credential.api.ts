@@ -19,8 +19,8 @@ interface User {
 interface ICredentialResponseData {
   user?: User;
   message: string;
-  resumeUrl?: string;
-  certificationUrl?: string;
+  cvUrl?: string;
+  certUrl?: string;
 }
 
 interface APIResponse {
@@ -120,12 +120,13 @@ export async function uploadCertificationApi(
   }
 }
 
-// Save Credentials (final submission)
+// Save Credentials (final submission with URLs)
 export async function saveCredentialsApi(
+  data: { cvUrl: string; certificationUrl: string },
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<ICredentialResponseData> | null> {
   try {
-    const response = await Api.post<APIResponse>("/api/profile/save-credentials", {}, {
+    const response = await Api.post<APIResponse>("/api/profile/save-credentials", data, {
       ...config,
     });
     
@@ -133,74 +134,6 @@ export async function saveCredentialsApi(
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "Credentials saved successfully",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const error = e as AxiosError<IAPIResult>;
-    const statusCode = error.response?.status || 0;
-    const errorMessage = error.response?.data.message || error.message || "An error occurred";
-    const status = error.response?.data.status || "error";
-    
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Remove CV
-export async function removeCVApi(
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<ICredentialResponseData> | null> {
-  try {
-    const response = await Api.delete<APIResponse>("/api/profile/remove-cv", {
-      ...config,
-    });
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "CV removed successfully",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const error = e as AxiosError<IAPIResult>;
-    const statusCode = error.response?.status || 0;
-    const errorMessage = error.response?.data.message || error.message || "An error occurred";
-    const status = error.response?.data.status || "error";
-    
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Remove Certification
-export async function removeCertificationApi(
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<ICredentialResponseData> | null> {
-  try {
-    const response = await Api.delete<APIResponse>("/api/profile/remove-certification", {
-      ...config,
-    });
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "Certification removed successfully",
       data: response.data.data
     });
   } catch (e) {
