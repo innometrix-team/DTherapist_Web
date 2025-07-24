@@ -33,7 +33,7 @@ const counselorSchema = baseSchema.extend({
   bio: z.string().min(10, "Bio must be at least 10 characters"),
   specialization: z.string().min(2, "Specialization is required"),
   experience: z.number().min(0, "Years of experience must be 0 or greater"),
-  gender: z.enum(["Male", "Female", "Other"], {
+  gender: z.enum(["male", "female","non-binary" ,"other"], {
     errorMap: () => ({ message: "Please select a gender" }),
   }),
 });
@@ -46,6 +46,8 @@ const ProfileForm: React.FC = () => {
   const { role, setAuth } = useAuthStore();
   const auth = useAuthStore((state) => state);
   const isCounselor = role === "counselor";
+  
+  console.log('Current user role:', role);
   
   // Use appropriate schema based on role
   const schema = isCounselor ? counselorSchema : userSchema;
@@ -66,7 +68,7 @@ const ProfileForm: React.FC = () => {
           specialization: "",
           experience: 0,
           country: "",
-          gender: "Male",
+          gender: "male",
         }
       : {
           fullName: "",
@@ -84,18 +86,24 @@ const ProfileForm: React.FC = () => {
     mutationFn: (data: IProfileUpdateData) => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      console.log('Starting profile update with data:', {
+        ...data,
+        profilePicture: data.profilePicture ? 'File attached' : 'No file'
+      });
       return ProfileUpdateApi(data, { signal: controller.signal }, auth?.role ?? undefined);
     },
     onSuccess: (result) => {
       // Handle case where result is null (cancelled request)
       if (!result) {
+        console.log('Profile update was cancelled');
         return;
       }
+
+      console.log('Profile update successful:', result);
 
       // Handle case where result.data doesn't exist or is null
       if (!result.data) {
         toast.success(result.message || "Profile updated successfully!");
-        reset();
         return;
       }
 
@@ -122,13 +130,14 @@ const ProfileForm: React.FC = () => {
       if (isCounselor) {
         setValue("specialization", specialization ?? "");
         setValue("experience", experience ?? 0);
-        setValue("gender", (gender as "Male" | "Female" | "Other") ?? "Male");
+        setValue("gender", (gender as "male" | "female" | "non-binary" | "other") ?? "male");
       }
       
       // Update profile image preview if returned
       if (profilePicture) {
         setPreviewUrl(profilePicture);
         setProfileImage(null);
+        console.log('Profile picture updated:', profilePicture);
       }
 
       // Update auth token if provided
@@ -137,12 +146,23 @@ const ProfileForm: React.FC = () => {
           role: auth?.role || "user",
           token: token,
         });
+        console.log('Auth token updated');
       }
       
       toast.success(result.message || "Profile updated successfully!");
+      
+      // Reset the form to clear all fields and state
       reset();
+      
+      // Clear the form image state since it's now saved
+      setProfileImage(null);
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
     },
     onError: (error) => {
+      console.error('Profile update error:', error);
       // Handle different types of errors
       if (error && typeof error === 'object' && 'message' in error) {
         toast.error(error.message || "Failed to update profile. Please try again.");
@@ -155,14 +175,43 @@ const ProfileForm: React.FC = () => {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      console.log('Selected image file:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error('Image file must be less than 5MB');
+        return;
+      }
+
       setProfileImage(file);
+      
+      // Clean up previous preview URL
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
       
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      console.log('Image preview URL created:', url);
     }
-  }, []);
+  }, [previewUrl]);
 
   const removeImage = useCallback(() => {
+    console.log('Removing image');
     setProfileImage(null);
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
@@ -173,27 +222,33 @@ const ProfileForm: React.FC = () => {
   const onSubmit: SubmitHandler<ProfileFormData> = useCallback(
     (data) => {
       if (isPending || isSubmitting) {
+        console.log('Form submission blocked - already processing');
         return;
       }
 
-      const baseData = {
+      console.log('Form submitted with data:', data);
+      console.log('Profile image:', profileImage ? 'File selected' : 'No file');
+
+      // Prepare update data - now simplified since both endpoints handle images
+      const updateData: IProfileUpdateData = {
         fullName: data.fullName,
         email: data.email,
         bio: data.bio,
         country: data.country,
         profilePicture: profileImage || undefined,
+        // Add counselor-specific fields if user is counselor
+        ...(isCounselor && 'specialization' in data && {
+          specialization: data.specialization,
+          experience: data.experience,
+          gender: data.gender,
+        }),
       };
 
-      // Add counselor-specific fields if user is counselor
-      const updateData = isCounselor && 'specialization' in data
-        ? {
-            ...baseData,
-            specialization: data.specialization,
-            experience: data.experience,
-            gender: data.gender,
-          }
-        : baseData;
-
+      console.log('Final update data being sent:', {
+        ...updateData,
+        profilePicture: updateData.profilePicture ? 'File attached' : 'No file'
+      });
+      
       handleProfileUpdate(updateData);
     },
     [handleProfileUpdate, isPending, isSubmitting, profileImage, isCounselor]
@@ -201,6 +256,7 @@ const ProfileForm: React.FC = () => {
 
   useEffect(() => {
     return () => {
+      // Cleanup on component unmount
       abortControllerRef.current?.abort();
       if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl);

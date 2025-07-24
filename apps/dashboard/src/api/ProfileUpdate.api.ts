@@ -34,7 +34,6 @@ interface APIResponse {
   data: IResponseData;
 }
 
-// Helper function to safely get auth from localStorage
 function getAuthFromStorage(): AuthState | null {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -42,11 +41,60 @@ function getAuthFromStorage(): AuthState | null {
       return raw ? JSON.parse(raw) : null;
     }
     return null;
-  } catch (error) {
-    console.error('Error reading auth from localStorage:', error);
+  } catch {
     return null;
   }
 }
+
+function validateProfilePicture(file: File): void {
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error('Profile picture is too large. Maximum size is 5MB.');
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type.toLowerCase())) {
+    throw new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.');
+  }
+}
+
+function validateRequiredFields(data: IProfileUpdateData): void {
+  if (!data.fullName?.trim() || !data.email?.trim() || !data.country?.trim()) {
+    throw new Error('Required fields (fullName, email, country) are missing or empty');
+  }
+}
+
+function createProfileFormData(data: IProfileUpdateData, isTherapist: boolean): FormData {
+  const formData = new FormData();
+
+  formData.append('fullName', data.fullName.trim());
+  formData.append('email', data.email.trim());
+  formData.append('bio', data.bio || '');
+  formData.append('country', data.country.trim());
+
+  if (isTherapist) {
+    formData.append('specialization', data.specialization?.trim() || '');
+
+    // Append experience as number string only if valid
+    if (typeof data.experience === 'number' && !isNaN(data.experience)) {
+      formData.append('experience', String(data.experience)); // will be parsed as number on backend
+    } else {
+      formData.append('experience', '0');
+    }
+  }
+
+  if (data.gender?.trim()) {
+    formData.append('gender', data.gender.trim());
+  }
+
+  if (data.profilePicture && data.profilePicture instanceof File) {
+    validateProfilePicture(data.profilePicture);
+    formData.append('profilePicture', data.profilePicture, data.profilePicture.name);
+  }
+
+  return formData;
+}
+
 
 export default async function ProfileUpdateApi(
   data: IProfileUpdateData,
@@ -54,97 +102,53 @@ export default async function ProfileUpdateApi(
   userRole?: string
 ): Promise<IAPIResult<IResponseData> | null> {
   try {
-    // Get user role from parameter or localStorage
+    validateRequiredFields(data);
+
     let role = userRole;
     if (!role) {
       const auth = getAuthFromStorage();
-      role = auth?.role || 'client';
+      role = auth?.role || 'user';
     }
 
-    // Determine endpoints based on user role
     const isTherapist = role === "therapist" || role === "counselor";
-    const isUser = role === "user" || role === "client";
+    const endpoint = isTherapist ? "/api/profile" : "/api/user";
 
-    let profileEndpoint: string;
-    let imageEndpoint: string;
-
-    if (isTherapist) {
-      profileEndpoint = "/api/profile";
-      imageEndpoint = "/api/profile/upload-profile-picture";
-    } else if (isUser) {
-      profileEndpoint = "/api/user";
-      imageEndpoint = "/api/user/upload-profile-picture";
-    } else {
-      // Fallback - default to user endpoints if role is unclear
-      profileEndpoint = "/api/user";
-      imageEndpoint = "/api/user/upload-profile-picture";
-    }
-
-    console.log('Selected profile endpoint:', profileEndpoint);
-    console.log('Selected image endpoint:', imageEndpoint);
-
-    // If there's a profile picture, upload it first
-    let profilePictureUrl: string | undefined;
-    if (data.profilePicture) {
-      const imageFormData = new FormData();
-      imageFormData.append('profilePicture', data.profilePicture);
-
-      try {
-        const imageResponse = await Api.post<APIResponse>(imageEndpoint, imageFormData, {
-          ...config,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            ...config?.headers,
-          },
-        });
-
-        if (imageResponse.data.data?.profilePicture) {
-          profilePictureUrl = imageResponse.data.data.profilePicture;
-        }
-      } catch (imageError) {
-        console.error('Error uploading profile picture:', imageError);
-        // Continue with profile update even if image upload fails
-      }
-    }
-
-    // Prepare profile update data
-    const profileUpdateData = {
-      fullName: data.fullName,
-      email: data.email,
-      bio: data.bio,
-      country: data.country,
-      ...(data.specialization && { specialization: data.specialization }),
-      ...(data.experience !== undefined && { experience: data.experience }),
-      ...(data.gender && { gender: data.gender }),
-      ...(profilePictureUrl && { profilePicture: profilePictureUrl }),
-    };
-
-    console.log('Profile update data:', profileUpdateData);
-
-    const response = await Api.put<APIResponse>(profileEndpoint, profileUpdateData, {
+    const formData = createProfileFormData(data, isTherapist);
+    
+    const requestConfig: AxiosRequestConfig = {
       ...config,
       headers: {
-        'Content-Type': 'application/json',
         ...config?.headers,
       },
-    });
+      timeout: 30000,
+    };
+
+    // Ensure Content-Type is NOT set manually for FormData
+    if (requestConfig.headers) {
+      delete requestConfig.headers['Content-Type'];
+    }
+
+    const response = await Api.patch<APIResponse>(endpoint, formData, requestConfig);
 
     return Promise.resolve({
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "Profile updated successfully",
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (e) {
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
+
     
+
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+      (e as AxiosError<IAPIResult>).response?.data?.message ||
+      (e as Error).message ||
+      "An error occurred while updating profile";
+    const status = (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
     return Promise.reject({
       code: statusCode,

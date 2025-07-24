@@ -111,7 +111,6 @@ const CredentialForm: React.FC = () => {
       
       if (!url) {
         toast.error("Upload successful but URL not received. Please try again.");
-        console.error("CV Upload response:", result);
         return;
       }
       
@@ -146,7 +145,7 @@ const CredentialForm: React.FC = () => {
       
       if (!url) {
         toast.error("Upload successful but URL not received. Please try again.");
-        console.error("Certification Upload response:", result);
+
         return;
       }
       
