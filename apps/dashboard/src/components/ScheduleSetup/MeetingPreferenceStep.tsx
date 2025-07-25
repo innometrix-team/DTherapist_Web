@@ -1,6 +1,6 @@
 import React, { JSX } from 'react';
 import { MeetingPreference } from './schedule.types';
-import { ScheduleIcon1, ScheduleIcon2, ScheduleIcon3 } from '../../assets/icons';
+import {  ScheduleIcon2, ScheduleIcon3 } from '../../assets/icons';
 
 interface Props {
   value: MeetingPreference;
@@ -12,7 +12,7 @@ const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext }) => 
   const options: { label: MeetingPreference; icon: JSX.Element }[] = [
     { label: 'In-person', icon: <ScheduleIcon3 className='fill-current' /> },
     { label: 'Video Session', icon: <ScheduleIcon2 className='fill-current'/> },
-    { label: 'Both', icon: <ScheduleIcon1 className='fill-current'/> },
+    
   ];
 
   return (
