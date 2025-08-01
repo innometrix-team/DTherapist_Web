@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { CancelIcon, CopyIcon, AddIcon } from "../../assets/icons";
+import { MeetingPreference } from "./schedule.types";
 
-const days = ["S", "M", "T", "W", "T", "F", "S"];
+
+const dayLabels = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"];
 
 const timeZones = [
   "West African Time (WAT)",
@@ -20,11 +22,22 @@ interface Slot {
 interface Props {
   value: string;
   onChange: (value: string) => void;
+  meetingPreference: MeetingPreference;
+  selectedTimeZone: string;
+  onTimeZoneChange: (timezone: string) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
+const DateTimeStep: React.FC<Props> = ({ 
+  value, 
+  onChange, 
+  meetingPreference,
+  selectedTimeZone,
+  onTimeZoneChange,
+  onNext, 
+  onBack 
+}) => {
   // Initialize from props.value if available
   const [availability, setAvailability] = useState<Slot[][]>(() => {
     try {
@@ -33,14 +46,16 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
       return Array(7).fill([]);
     }
   });
-  const [selectedTimeZone, setSelectedTimeZone] = useState(timeZones[0]);
 
   const toggleDay = (index: number) => {
     const updated = [...availability];
     if (updated[index].length) {
       updated[index] = [];
     } else {
-      updated[index] = [{ startTime: "09:00", endTime: "10:00", mode: "in-person" }];
+      // Set default mode based on meeting preference
+      const defaultMode = meetingPreference === 'Both' ? 'both' : 
+                         meetingPreference === 'Video Session' ? 'video' : 'in-person';
+      updated[index] = [{ startTime: "09:00", endTime: "10:00", mode: defaultMode }];
     }
     setAvailability(updated);
     
@@ -66,7 +81,10 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
 
   const addSlot = (dayIndex: number) => {
     const updated = [...availability];
-    updated[dayIndex].push({ startTime: "09:00", endTime: "10:00", mode: "in-person" });
+    // Set default mode based on meeting preference
+    const defaultMode = meetingPreference === 'Both' ? 'both' : 
+                       meetingPreference === 'Video Session' ? 'video' : 'in-person';
+    updated[dayIndex].push({ startTime: "09:00", endTime: "10:00", mode: defaultMode });
     setAvailability(updated);
     
     // Update the parent component state
@@ -84,13 +102,75 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
     onChange(availabilityString);
   };
 
+  const copySlot = (dayIndex: number, slotIndex: number) => {
+    const slotToCopy = availability[dayIndex][slotIndex];
+    const updated = [...availability];
+    updated[dayIndex].push({ ...slotToCopy });
+    setAvailability(updated);
+    
+    // Update the parent component state
+    const availabilityString = JSON.stringify(updated);
+    onChange(availabilityString);
+  };
+
+  const handleNext = () => {
+    // Validate that at least one day has at least one time slot
+    const hasAvailability = availability.some(daySlots => daySlots.length > 0);
+    if (!hasAvailability) {
+      alert("Please set availability for at least one day with a time slot.");
+      return;
+    }
+
+    // Additional validation: check that all selected time slots have valid times
+    const hasValidTimes = availability.every(daySlots => 
+      daySlots.every(slot => {
+        if (!slot.startTime || !slot.endTime) return false;
+        return slot.startTime < slot.endTime;
+      })
+    );
+
+    if (!hasValidTimes) {
+      alert("Please ensure all time slots have valid start and end times, with start time before end time.");
+      return;
+    }
+
+    onNext();
+  };
+
+  // Check if at least one day has availability
+  const hasAvailability = availability.some(daySlots => daySlots.length > 0);
+
+  // Get available modes based on meeting preference
+  const getAvailableModes = () => {
+    switch (meetingPreference) {
+      case 'In-person':
+        return [{ value: 'in-person', label: 'In-Person' }];
+      case 'Video Session':
+        return [{ value: 'video', label: 'Video' }];
+      case 'Both':
+        return [
+          { value: 'in-person', label: 'In-Person' },
+          { value: 'video', label: 'Video' },
+          { value: 'both', label: 'Both' }
+        ];
+      default:
+        return [
+          { value: 'in-person', label: 'In-Person' },
+          { value: 'video', label: 'Video' },
+          { value: 'both', label: 'Both' }
+        ];
+    }
+  };
+
+  const availableModes = getAvailableModes();
+
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-gray-900 mb-1">
         When are you available to meet with people?
       </h1>
       <p className="text-sm text-gray-600 mb-8">
-        You'll only be booked during these times(You can change these times and add other schedules later)
+        Select the days and times when you're available to meet with clients. You need to set availability for at least one day.
       </p>
 
       <div className="mb-6 flex items-center">
@@ -100,7 +180,7 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
           </svg>
           <select
             value={selectedTimeZone}
-            onChange={(e) => setSelectedTimeZone(e.target.value)}
+            onChange={(e) => onTimeZoneChange(e.target.value)}
             className="border-none bg-transparent focus:outline-none text-gray-700 pr-8"
           >
             {timeZones.map((zone) => (
@@ -113,7 +193,7 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
       </div>
 
       <div className="space-y-4">
-        {days.map((day, index) => (
+        {dayLabels.map((dayLabel, index) => (
           <div key={index} className="flex items-start">
             <button
               onClick={() => toggleDay(index)}
@@ -123,7 +203,7 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
                   : "bg-gray-200 text-gray-700"
               }`}
             >
-              {day}
+              {dayLabel}
             </button>
 
             {availability[index].length === 0 ? (
@@ -152,15 +232,19 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
                       onChange={(e) => updateSlot(index, slotIdx, "endTime", e.target.value)}
                       className="border rounded px-3 py-2 w-24"
                     />
-                    <select
-                      value={slot.mode}
-                      onChange={(e) => updateSlot(index, slotIdx, "mode", e.target.value)}
-                      className="border rounded px-3 py-2"
-                    >
-                      <option value="in-person">In-Person</option>
-                      <option value="online">Video</option>
-                      <option value="both">Both</option>
-                    </select>
+                    {availableModes.length > 1 && (
+                      <select
+                        value={slot.mode}
+                        onChange={(e) => updateSlot(index, slotIdx, "mode", e.target.value)}
+                        className="border rounded px-3 py-2"
+                      >
+                        {availableModes.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     
                     <div className="flex items-center gap-2">
                       <button 
@@ -171,6 +255,7 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
                         <CancelIcon className="w-4 h-4" />
                       </button>
                       <button 
+                        onClick={() => copySlot(index, slotIdx)}
                         className="text-gray-600 hover:text-black"
                         title="Copy slot"
                       >
@@ -204,8 +289,9 @@ const DateTimeStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
           Back
         </button>
         <button
-          onClick={onNext}
-          className="bg-blue-700 text-white px-6 py-2 rounded font-medium"
+          onClick={handleNext}
+          disabled={!hasAvailability}
+          className="bg-blue-700 text-white px-6 py-2 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continue
         </button>
