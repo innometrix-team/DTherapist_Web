@@ -6,7 +6,7 @@ import {STORE_KEYS} from '../../configs/store.config'
 export const useAuthStore = create<AuthState>()(
       persist(
         (set) => ({
-          role: "user", 
+          role: "counselor", 
           token: null,
           setRole: (role) => set({ role }),
           setToken: (token) => set({ token }),
