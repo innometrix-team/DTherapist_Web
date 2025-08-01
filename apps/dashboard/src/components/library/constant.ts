@@ -4,7 +4,7 @@ export const DUMMY_ARTICLES: Article[] = [
   {
     id: '1',
     title: 'Championing Healthier Mental State',
-    excerpt: 'Discover effective strategies for maintaining and improving your mental health through daily practices and mindful approaches.',
+    
     content: `Mental health is a crucial aspect of our overall well-being that deserves attention and care. In today's fast-paced world, it's essential to develop strategies that help us maintain a healthier mental state.
 
     One of the most effective approaches is establishing a consistent daily routine that incorporates mindfulness practices. This can include meditation, deep breathing exercises, or simply taking time to reflect on your thoughts and emotions.
@@ -16,14 +16,14 @@ export const DUMMY_ARTICLES: Article[] = [
     Remember, seeking professional help when needed is a sign of strength, not weakness. Mental health professionals can provide valuable tools and strategies tailored to your specific needs.`,
     date: 'June 18, 2025',
     category: 'Mental Health',
-    author: 'Dr. Sarah Johnson',
+    
     image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=250&fit=crop',
     readTime: '5 min read'
   },
   {
     id: '2',
     title: 'Understanding Anxiety and Coping Mechanisms',
-    excerpt: 'Learn about anxiety disorders and practical techniques to manage anxiety in your daily life.',
+    
     content: `Anxiety is a normal human emotion that everyone experiences from time to time. However, when anxiety becomes persistent and interferes with daily activities, it may indicate an anxiety disorder.
 
     Understanding the root causes of anxiety is the first step toward managing it effectively. Common triggers include work stress, relationship issues, financial concerns, and major life changes.
@@ -35,14 +35,14 @@ export const DUMMY_ARTICLES: Article[] = [
     Lifestyle modifications such as regular sleep schedules, limiting caffeine intake, and engaging in regular physical activity can significantly reduce anxiety levels over time.`,
     date: 'June 15, 2025',
     category: 'Anxiety',
-    author: 'Dr. Michael Chen',
+    
     image: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=250&fit=crop',
     readTime: '7 min read'
   },
   {
     id: '3',
     title: 'Building Resilience Through Difficult Times',
-    excerpt: 'Explore how to develop emotional resilience and bounce back from life\'s challenges with strength.',
+    
     content: `Resilience is the ability to adapt and bounce back from adversity, trauma, tragedy, or significant stress. It's not about avoiding difficulties but learning how to cope with them effectively.
 
     Developing a growth mindset is fundamental to building resilience. This involves viewing challenges as opportunities for learning and growth rather than insurmountable obstacles.
@@ -56,14 +56,14 @@ export const DUMMY_ARTICLES: Article[] = [
     Remember that building resilience is a gradual process that requires patience and practice. Each challenge you overcome makes you stronger for future difficulties.`,
     date: 'June 12, 2025',
     category: 'Resilience',
-    author: 'Dr. Emily Rodriguez',
+    
     image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=250&fit=crop',
     readTime: '6 min read'
   },
   {
     id: '4',
     title: 'The Importance of Self-Care in Modern Life',
-    excerpt: 'Why self-care isn\'t selfish and how to incorporate it into your busy schedule effectively.',
+    
     content: `Self-care is often misunderstood as being selfish or indulgent, but it's actually essential for maintaining physical, mental, and emotional well-being. It's about taking deliberate actions to care for your own health and happiness.
 
     Physical self-care includes activities that improve your physical health, such as getting enough sleep, eating nutritious meals, exercising regularly, and attending medical appointments.
@@ -79,14 +79,14 @@ export const DUMMY_ARTICLES: Article[] = [
     The key to effective self-care is making it a regular practice rather than something you only do when you're feeling overwhelmed.`,
     date: 'June 10, 2025',
     category: 'Self-Care',
-    author: 'Dr. James Wilson',
+    
     image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=250&fit=crop',
     readTime: '8 min read'
   },
   {
     id: '5',
     title: 'Navigating Relationship Challenges',
-    excerpt: 'Effective communication strategies and tools for building stronger, healthier relationships.',
+    
     content: `Healthy relationships are fundamental to our well-being, but they require effort, understanding, and effective communication to thrive. Every relationship faces challenges, and how we navigate them determines the relationship's strength and longevity.
 
     Active listening is one of the most important skills in any relationship. This means giving your full attention to the other person, asking clarifying questions, and reflecting back what you've heard to ensure understanding.
@@ -102,14 +102,14 @@ export const DUMMY_ARTICLES: Article[] = [
     Remember that healthy relationships require mutual respect, trust, and effort from all parties involved.`,
     date: 'June 8, 2025',
     category: 'Relationships',
-    author: 'Dr. Lisa Anderson',
+    
     image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=250&fit=crop',
     readTime: '9 min read'
   },
   {
     id: '6',
     title: 'Managing Work-Life Balance',
-    excerpt: 'Strategies for maintaining healthy boundaries between work and personal life in today\'s connected world.',
+   
     content: `In our always-connected world, maintaining a healthy work-life balance has become increasingly challenging. The boundaries between work and personal life often blur, leading to increased stress and burnout.
 
     Setting clear boundaries is the foundation of good work-life balance. This includes establishing specific work hours, creating a dedicated workspace if working from home, and learning to say no to non-essential requests.
@@ -125,7 +125,7 @@ export const DUMMY_ARTICLES: Article[] = [
     Remember that work-life balance looks different for everyone. Find what works for your situation and be willing to adjust as your circumstances change.`,
     date: 'June 5, 2025',
     category: 'Work-Life Balance',
-    author: 'Dr. Robert Kim',
+   
     image: 'https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=400&h=250&fit=crop',
     readTime: '7 min read'
   }
@@ -134,5 +134,5 @@ export const DUMMY_ARTICLES: Article[] = [
 export const FILTER_OPTIONS = {
   categories: ['All Categories', 'Mental Health', 'Anxiety', 'Resilience', 'Self-Care', 'Relationships', 'Work-Life Balance'],
   dateRanges: ['All Time', 'Last Week', 'Last Month', 'Last 3 Months', 'Last Year'],
-  authors: ['All Authors', 'Dr. Sarah Johnson', 'Dr. Michael Chen', 'Dr. Emily Rodriguez', 'Dr. James Wilson', 'Dr. Lisa Anderson', 'Dr. Robert Kim']
+  
 };
