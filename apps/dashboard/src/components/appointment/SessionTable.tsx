@@ -1,23 +1,27 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session } from './types';
-import { UserIcon, ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon } from '../../assets/icons';
+import { UserIcon, ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon, DownloadIcon } from '../../assets/icons';
+import { useAuthStore } from '../../store/auth/useAuthStore'; 
 
 interface SessionTableProps {
   sessions: Session[];
   type: 'upcoming' | 'passed';
   onReschedule?: (sessionId: string) => void;
   onScheduleAgain?: (sessionId: string) => void;
+  onDownloadInvoice?: (sessionId: string) => void;
 }
 
 const SessionTable: React.FC<SessionTableProps> = ({ 
   sessions, 
   type, 
   onReschedule, 
-  onScheduleAgain 
+  onScheduleAgain,
+  onDownloadInvoice
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { role } = useAuthStore();
 
   const toggleDropdown = (sessionId: string) => {
     if (activeDropdown === sessionId) {
@@ -42,12 +46,15 @@ const SessionTable: React.FC<SessionTableProps> = ({
           onReschedule(sessionId);
         }
         break;
-      case 'viewNotes':
-        navigate(`/session-notes/${sessionId}`);
-        break;
+
       case 'scheduleAgain':
         if (onScheduleAgain) {
           onScheduleAgain(sessionId);
+        }
+        break;
+      case 'downloadInvoice':
+        if (onDownloadInvoice) {
+          onDownloadInvoice(sessionId);
         }
         break;
       default:
@@ -55,7 +62,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
     }
   };
 
-  // Updated to navigate with session data
+  // Updated to navigate with session data - only for counselors
   const navigateToProfile = (session: Session) => {
     // Navigate to client details with session ID and pass session data via state
     navigate(`/appointments/client-details/${session.id}`, { 
@@ -63,6 +70,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
         sessionData: session 
       } 
     });
+  };
+
+  // Helper function to determine if profile button should be shown
+  const showProfileButton = (sessionType: 'upcoming' | 'passed') => {
+    if (role === 'counselor') {
+      return sessionType === 'upcoming'; // Only show for upcoming sessions for counselors
+    }
+    return false; // Never show for users
   };
 
   if (sessions.length === 0) {
@@ -137,49 +152,111 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     {activeDropdown === session.id && (
                       <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                         {type === 'upcoming' ? (
-                          <>
-                            <button 
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
-                              onClick={() => handleActionClick('startMeeting', session.id)}
-                            >
-                              <MeetingIcon className="w-4 h-4 mr-2" />
-                              <span>Start Meeting</span>
-                            </button>
-                            <button 
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
-                              onClick={() => handleActionClick('chat', session.id)}
-                            >
-                              <ChatIcon className="w-4 h-4 mr-2" />
-                              <span>Chat</span>
-                            </button>
-                            <button 
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
-                              onClick={() => handleActionClick('reschedule', session.id)}
-                            >
-                              <RescheduleIcon className="w-4 h-4 mr-2" />
-                              <span>Reschedule</span>
-                            </button>
-                          </>
+                          // Upcoming sessions
+                          role === 'counselor' ? (
+                            // Counselor - upcoming sessions
+                            <>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('startMeeting', session.id)}
+                              >
+                                <MeetingIcon className="w-4 h-4 mr-2" />
+                                <span>Start Meeting</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('chat', session.id)}
+                              >
+                                <ChatIcon className="w-4 h-4 mr-2" />
+                                <span>Chat</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('reschedule', session.id)}
+                              >
+                                <RescheduleIcon className="w-4 h-4 mr-2" />
+                                <span>Reschedule</span>
+                              </button>
+                            </>
+                          ) : (
+                            // User - upcoming sessions
+                            <>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('startMeeting', session.id)}
+                              >
+                                <MeetingIcon className="w-4 h-4 mr-2" />
+                                <span>Start Meeting</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('chat', session.id)}
+                              >
+                                <ChatIcon className="w-4 h-4 mr-2" />
+                                <span>Chat</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('reschedule', session.id)}
+                              >
+                                <RescheduleIcon className="w-4 h-4 mr-2" />
+                                <span>Reschedule</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('downloadInvoice', session.id)}
+                              >
+                                <DownloadIcon className="w-4 h-4 mr-2" />
+                                <span>Download Invoice</span>
+                              </button>
+                            </>
+                          )
                         ) : (
-                          <>
-                            <button 
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
-                              onClick={() => handleActionClick('scheduleAgain', session.id)}
-                            >
-                              <RescheduleIcon className="w-4 h-4 mr-2" />
-                              <span>Schedule Again</span>
-                            </button>
-                          </>
+                          // Passed sessions
+                          role === 'counselor' ? (
+                            // Counselor - passed sessions
+                            <>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('scheduleAgain', session.id)}
+                              >
+                                <RescheduleIcon className="w-4 h-4 mr-2" />
+                                <span>Schedule Again</span>
+                              </button>
+                            </>
+                          ) : (
+                            // User - passed sessions
+                            <>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('reschedule', session.id)}
+                              >
+                                <RescheduleIcon className="w-4 h-4 mr-2" />
+                                <span>Reschedule</span>
+                              </button>
+                              <button 
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                                onClick={() => handleActionClick('downloadInvoice', session.id)}
+                              >
+                                <DownloadIcon className="w-4 h-4 mr-2" />
+                                <span>Download Invoice</span>
+                              </button>
+                            </>
+                          )
                         )}
                       </div>
                     )}
                   </div>
-                  <button 
-                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    onClick={() => navigateToProfile(session)}
-                  >
-                    <UserIcon className="w-4 h-4" />
-                  </button>
+                  
+                  {/* Profile button - conditionally rendered */}
+                  {showProfileButton(type) && (
+                    <button 
+                      className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      onClick={() => navigateToProfile(session)}
+                    >
+                      <UserIcon className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>
