@@ -148,9 +148,9 @@ function SignUpForm() {
           <input type="checkbox" {...register("agreeTerms")} className="mt-1" />
           <p className="text-sm">
             I agree to the{" "}
-            <span className="font-semibold text-blue-700">
+            <Link to="/terms-and-conditions" className="text-blue-700 font-semibold">
               Terms & Conditions
-            </span>{" "}
+            </Link>{" "}
             of Dtherapist.
           </p>
         </div>
