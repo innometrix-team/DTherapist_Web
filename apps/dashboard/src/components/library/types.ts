@@ -1,19 +1,21 @@
 export interface Article {
-  id: string;
+  _id: string;
   title: string;
-  excerpt: string;
-  content: string;
-  date: string;
+  body: string; // Made required again since body is necessary
   category: string;
-  author: string;
   image: string;
-  readTime: string;
+  createdAt: string;
+  // Computed properties
+  date?: string;
 }
 
 export interface FilterOptions {
   category: string;
   dateRange: string;
-  author: string;
+}
+
+export interface ArticlesPageProps {
+  onArticleClick: (article: Article) => void;
 }
 
 export interface ArticleCardProps {
@@ -21,18 +23,14 @@ export interface ArticleCardProps {
   onClick: () => void;
 }
 
+export interface ArticleDetailPageProps {
+  article: Article;
+  onBack: () => void;
+}
+
 export interface FilterDropdownProps {
   label: string;
   options: string[];
   value: string;
   onChange: (value: string) => void;
-}
-
-export interface ArticlesPageProps {
-  onArticleClick: (article: Article) => void;
-}
-
-export interface ArticleDetailPageProps {
-  article: Article;
-  onBack: () => void;
 }

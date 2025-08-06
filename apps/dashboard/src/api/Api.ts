@@ -2,6 +2,7 @@
 import Axios, { AxiosRequestHeaders } from 'axios';
 import { STORE_KEYS } from '../configs/store.config';
 import { AuthState } from '../store/auth/types';
+import { StoreResult } from '../store/types';
 
 
 const Api = Axios.create({ baseURL: import.meta.env.VITE_API_URL });
@@ -19,10 +20,10 @@ Api.interceptors.request.use(
     } as AxiosRequestHeaders;
 
     const raw = localStorage.getItem(STORE_KEYS.AUTH);
-    const auth: AuthState | null = raw ? JSON.parse(raw) : null;
+    const auth: StoreResult<AuthState>  | null= raw ? JSON.parse(raw) : null;
 
-    if (auth?.token && !config.headers.authorization) {
-      config.headers.authorization = `Bearer ${auth.token}`;
+    if (auth?.state.token && !config.headers.authorization) {
+      config.headers.authorization = `Bearer ${auth.state.token}`;
     }
     return config;
   },

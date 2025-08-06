@@ -12,19 +12,18 @@ export const filterArticles = (
   return articles.filter(article => {
     const matchesSearch = searchTerm === '' || 
       article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.content.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      article.body.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = filters.category === 'All Categories' || 
       article.category === filters.category;
     
-    const matchesAuthor = filters.author === 'All Authors' || 
-      article.author === filters.author;
+    
     
     
     const matchesDate = filters.dateRange === 'All Time';
     
-    return matchesSearch && matchesCategory && matchesAuthor && matchesDate;
+    return matchesSearch && matchesCategory && matchesDate;
   });
 };
 

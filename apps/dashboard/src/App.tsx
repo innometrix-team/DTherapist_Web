@@ -10,11 +10,13 @@ import Layout from "./components/layout/Layout";
 import Appointments from "./pages/appointments/Appointments";
 import Auth from "./pages/Auth";
 import Counselor from "./pages/counselor/Counselor";
-import DAnonymous from "./pages/danonymous/DAnonymous";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Library from "./pages/library/Library";
 import MySchedule from "./pages/my-schedule/MySchedule";
+import ClientDetail from "./components/appointment/ClientDetail";
+import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
+
 import Settings from "./pages/settings/Settings";
 import TermsAndConditions from "./pages/Terms&Condition/Terms&Condition";
 import { Toaster } from "react-hot-toast";
@@ -26,6 +28,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="counselor" element={<Counselor />} />
           <Route path="appointments" element={<Appointments />} />
+          <Route path="appointments/client-details/:clientId" element={<ClientDetail/>}/>
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
           <Route path="my-schedule" element={<MySchedule />} />
