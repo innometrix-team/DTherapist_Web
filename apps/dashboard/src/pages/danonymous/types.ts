@@ -1,9 +1,11 @@
+import { IGroup, IMessage } from "../../api/Groups.api";
 
 
 export type ChatRole = 'user' | 'contributor'
 
 export interface DAnonymousGroupsProps {
-    onGroupSelect: () => void;
+  groups: IGroup[];
+  onGroupSelect: () => void;
 }
 
 export interface Group {
@@ -25,7 +27,7 @@ export interface ChatMessage {
 
 export interface MessageGroup {
         date: string;
-    messages: ChatMessage[];
+    messages: IMessage[];
 }
 
 

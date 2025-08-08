@@ -1,4 +1,5 @@
-import { ChatMessage, MessageGroup} from "../pages/danonymous/types"
+import { IMessage } from "../api/Groups.api";
+import { MessageGroup } from "../pages/danonymous/types";
 
 // Helper functions for date handling
 export const formatMessageDate = (dateString: string): string => {
@@ -30,14 +31,12 @@ export const formatMessageDate = (dateString: string): string => {
     });
   };
   
-  export const groupMessagesByDate = (messages: ChatMessage[]): MessageGroup[] => {
-    const groups: { [key: string]: ChatMessage[] } = {};
-  
-  
+  export const groupMessagesByDate = (messages: IMessage[]): MessageGroup[] => {
+    const groups: { [key: string]: IMessage[] } = {};
   
     // Group messages by date
-    messages.reverse().forEach(message => {
-      const dateKey = formatMessageDate(message.timestamp);
+    messages.forEach(message => {
+      const dateKey = formatMessageDate(message.createdAt);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }

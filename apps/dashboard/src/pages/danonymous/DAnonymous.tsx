@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
 import { PeopleIcon } from "../../assets/icons";
 import DAnonymousGroups from "../../components/anonymous/DAnonymousGroups";
-import { DUMMY_GROUPS } from "./types";
+import { useGroups } from "../../hooks/useGroups";
 
 const DAnonymous = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const selectedGroup = DUMMY_GROUPS.find((g) => g.id === groupId);
+  const { data: groupsData, isLoading, isError } = useGroups();
+  const groups = groupsData?.data || [];
+  const selectedGroup = groups.find((g) => g._id === groupId);
 
   return (
     <div className="flex bg-gray-50 relative h-full overflow-hidden">
@@ -52,7 +54,18 @@ const DAnonymous = () => {
           </div>
         </div>
 
-        <DAnonymousGroups onGroupSelect={() => setIsMobileMenuOpen(false)} />
+        {isLoading ? (
+          <div className="p-4 text-center text-gray-500">Loading...</div>
+        ) : isError ? (
+          <div className="p-4 text-center text-red-500">
+            Failed to load groups.
+          </div>
+        ) : (
+          <DAnonymousGroups
+            groups={groups}
+            onGroupSelect={() => setIsMobileMenuOpen(false)}
+          />
+        )}
       </div>
 
       <div
@@ -76,7 +89,7 @@ const DAnonymous = () => {
               <div className="flex items-center justify-center space-x-4 text-sm text-gray-400">
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4" />
-                  <span>{DUMMY_GROUPS.length} Active Groups</span>
+                  <span>{groups.length} Active Groups</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MessageCircle className="w-4 h-4" />
