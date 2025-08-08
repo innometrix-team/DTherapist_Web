@@ -39,6 +39,7 @@ function LoginForm() {
       }
       const { user, token } = result.data;
       setAuth({
+        id: user.id,
         role: user.role === "client" ? "user" : "counselor",
         token: token ?? null,
       });
