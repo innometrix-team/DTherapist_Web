@@ -12,6 +12,7 @@ export interface IRequestData {
 interface IResponseData {
   token: string;
   otp: string;
+  id: string ;
 }
 
 interface APIResponse {

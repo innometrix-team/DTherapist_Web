@@ -54,6 +54,7 @@ function SignUpForm() {
       setAuth({
         role: variables.role === "client" ? "user" : "counselor",
         token: responseData?.token,
+        id: responseData?.id ,
       });
       navigate(
         `/auth/verify-email?email=${encodeURIComponent(variables.email)}`

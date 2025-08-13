@@ -86,6 +86,7 @@ const PasswordForm: React.FC = () => {
         setAuth({
           role: mappedRole,
           token: token ?? null,
+          id: user.id ?? null,
         });
       }
       

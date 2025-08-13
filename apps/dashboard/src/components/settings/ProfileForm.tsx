@@ -145,6 +145,7 @@ const ProfileForm: React.FC = () => {
         setAuth({
           role: auth?.role || "user",
           token: token,
+          id: result.data.id,
         });
         console.log('Auth token updated');
       }
