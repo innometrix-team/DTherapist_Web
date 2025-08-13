@@ -18,6 +18,7 @@ import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
 
 import Settings from "./pages/settings/Settings";
+import TermsAndConditions from "./pages/Terms&Condition/Terms&Condition";
 import { Toaster } from "react-hot-toast";
 function App() {
   return (
@@ -36,8 +37,9 @@ function App() {
             <Route path=":groupId" element={<DAnonymousChat />} />
           </Route>
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
+          
         </Route>
-
+        <Route path="terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="auth" element={<Auth />}>
           <Route index element={<Navigate to="login" replace />} />
           <Route path="signup" element={<SignupForm />} />
