@@ -1,5 +1,5 @@
 export interface Therapist {
-  id: string;
+  userId: string;
   name: string;
   image: string;
   category: string;
@@ -13,7 +13,7 @@ export interface Therapist {
 }
 
 export interface Testimonial {
-  id: string;
+  userId: string;
   clientName: string;
   clientImage: string;
   rating: number;

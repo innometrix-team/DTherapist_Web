@@ -13,13 +13,14 @@ interface AppState {
 }
 
 const Counselor: React.FC = () => {
- const [appState, setAppState] = useState<AppState>({
+  const [appState, setAppState] = useState<AppState>({
     currentView: 'list',
     selectedTherapistId: null,
     selectedSessionType: null
   });
 
   const navigateToBooking = (therapistId: string, sessionType: SessionType) => {
+    console.log('Navigating to booking:', { therapistId, sessionType }); // Debug log
     setAppState({
       currentView: 'booking',
       selectedTherapistId: therapistId,
@@ -28,6 +29,7 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToProfile = (therapistId: string) => {
+    console.log('Navigating to profile:', { therapistId }); // Debug log
     setAppState({
       currentView: 'detail',
       selectedTherapistId: therapistId,
@@ -36,6 +38,7 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToBookingFromProfile = (therapistId: string, sessionType: SessionType) => {
+    console.log('Navigating to booking from profile:', { therapistId, sessionType }); // Debug log
     setAppState({
       currentView: 'booking',
       selectedTherapistId: therapistId,
@@ -44,6 +47,7 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToList = () => {
+    console.log('Navigating to list'); // Debug log
     setAppState({
       currentView: 'list',
       selectedTherapistId: null,
@@ -52,6 +56,8 @@ const Counselor: React.FC = () => {
   };
 
   const renderCurrentPage = () => {
+    console.log('Current app state:', appState); // Debug log
+
     switch (appState.currentView) {
       case 'list':
         return (
@@ -62,14 +68,17 @@ const Counselor: React.FC = () => {
         );
       
       case 'booking':
-        if (!appState.selectedTherapistId || !appState.selectedSessionType) {
+        // More detailed validation and error messages
+        if (!appState.selectedTherapistId) {
+          console.error('Missing therapist ID for booking');
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Missing booking information</h2>
+              <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Missing Therapist Information</h2>
+                <p className="text-gray-600 mb-6">Please select a therapist to book an appointment.</p>
                 <button
                   onClick={navigateToList}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Go to Therapist List
                 </button>
@@ -77,6 +86,25 @@ const Counselor: React.FC = () => {
             </div>
           );
         }
+        
+        if (!appState.selectedSessionType) {
+          console.error('Missing session type for booking');
+          return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+              <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Missing Session Type</h2>
+                <p className="text-gray-600 mb-6">Please select a session type for your appointment.</p>
+                <button
+                  onClick={navigateToList}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Go to Therapist List
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <BookingSession
             therapistId={appState.selectedTherapistId}
@@ -87,13 +115,15 @@ const Counselor: React.FC = () => {
       
       case 'detail':
         if (!appState.selectedTherapistId) {
+          console.error('Missing therapist ID for detail view');
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Missing therapist information</h2>
+              <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Missing Therapist Information</h2>
+                <p className="text-gray-600 mb-6">Please select a therapist to view their profile.</p>
                 <button
                   onClick={navigateToList}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Go to Therapist List
                 </button>
@@ -101,6 +131,7 @@ const Counselor: React.FC = () => {
             </div>
           );
         }
+        
         return (
           <TherapistDetail
             therapistId={appState.selectedTherapistId}
@@ -110,13 +141,15 @@ const Counselor: React.FC = () => {
         );
       
       default:
+        console.error('Unknown view type:', appState.currentView);
         return (
           <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Page not found</h2>
+            <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Page Not Found</h2>
+              <p className="text-gray-600 mb-6">The requested page could not be found.</p>
               <button
                 onClick={navigateToList}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Go to Therapist List
               </button>

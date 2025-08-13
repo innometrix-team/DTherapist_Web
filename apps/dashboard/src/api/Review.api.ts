@@ -8,7 +8,7 @@ export interface IReviewRequest {
 }
 
 export interface IReview {
-  id: string;
+  _id: string;
   therapistId: string;
   userId: string;
   userName: string;

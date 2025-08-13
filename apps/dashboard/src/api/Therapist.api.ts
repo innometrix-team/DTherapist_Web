@@ -9,7 +9,10 @@ export interface ITherapist {
   profilePicture: string;
   category: string;
   experience: number; // Number of years
-  cost: number | null; // Can be null
+  cost: {
+    video: number;
+    inPerson: number;
+  } | number | null; // Updated to handle both formats
   about?: string;
   specializations?: string[];
   availability?: {
@@ -18,6 +21,7 @@ export interface ITherapist {
   reviews: {
     averageRating: number | null;
     totalReviews: number;
+    count?: number; // Add this for backward compatibility
   };
   userId: string;
 }
