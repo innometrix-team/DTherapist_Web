@@ -5,7 +5,7 @@ export { default as PeopleIcon }       from "./people.svg?react";
 export { default as BooksIcon }        from "./books.svg?react";
 export { default as ScheduleIcon }     from "./Schedule.svg?react";
 export { default as SettingsIcon }     from "./Settings.svg?react";
-export { default as LogoutIcon }       from "./Logout.svg?react";
+export { default as LogoutIcon }       from "./logout.svg?react";
 export { default as MenuIcon }         from "./MenuIcon.svg?react";
 export { default as ScheduleIcon1 } from "./schedule1.svg?react";
 export { default as ScheduleIcon2 } from "./schedule2.svg?react";
