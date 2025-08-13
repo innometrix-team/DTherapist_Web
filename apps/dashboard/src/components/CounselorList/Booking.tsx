@@ -382,7 +382,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
                   <p className="text-gray-700 mb-1">{therapist.category}</p>
                   <p className="text-gray-700 mb-2">{therapist.experience} years experience</p>
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
-                    ${sessionCost}.00/hr
+                    ₦{sessionCost}.00/hr
                   </p>
                 </div>
               </div>
@@ -520,7 +520,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
               <div className="lg:hidden">
                 <div className="flex justify-between items-center mb-4 text-lg sm:text-xl font-bold">
                   <span>Total:</span>
-                  <span>${sessionCost}.00</span>
+                  <span>₦{sessionCost}.00</span>
                 </div>
                 <button
                   onClick={handlePayment}
@@ -545,7 +545,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
               <div className="hidden lg:block pt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-2xl font-bold text-gray-900">Total:</span>
-                  <span className="text-2xl font-bold text-gray-900">${sessionCost}.00</span>
+                  <span className="text-2xl font-bold text-gray-900">₦{sessionCost}.00</span>
                 </div>
 
                 <button

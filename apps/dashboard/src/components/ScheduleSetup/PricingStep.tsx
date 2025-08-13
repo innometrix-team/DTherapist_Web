@@ -118,7 +118,7 @@ const PricingStep: React.FC<Props> = ({
                   className="w-full pl-4 pr-16 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  $/hr
+                  ₦/hr
                 </span>
               </div>
             </div>
@@ -138,7 +138,7 @@ const PricingStep: React.FC<Props> = ({
                   className="w-full pl-4 pr-16 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  $/hr
+                  ₦/hr
                 </span>
               </div>
             </div>

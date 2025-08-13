@@ -101,13 +101,13 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
 
   const getCostDisplay = (cost: { video: number; inPerson: number } | number | null): string => {
   if (typeof cost === 'number') {
-    return `$${cost}.00/hr`;
+    return `₦${cost}.00/hr`;
   }
   if (typeof cost === 'object' && cost !== null) {
     if (cost.video === cost.inPerson) {
-      return `$${cost.video}.00/hr`;
+      return `₦${cost.video}.00/hr`;
     } else {
-      return `$${cost.video}/$${cost.inPerson}/hr`;
+      return `₦${cost.video}/₦${cost.inPerson}/hr`;
     }
   }
   return 'Contact for pricing';
