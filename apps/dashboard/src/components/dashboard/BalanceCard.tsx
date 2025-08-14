@@ -123,6 +123,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     if (paymentStatus === 'success') {
       toast.success("Payment successful! Your wallet has been funded.");
       refetchBalance();
+      // Close the modal if it's open
+      setShowTopUpModal(false);
+      setTopUpAmount("");
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
       localStorage.removeItem('paymentReference');
@@ -179,7 +182,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
 
       {/* Top-up Modal */}
       {showTopUpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-80">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Fund Wallet</h3>
             <div className="space-y-4">
