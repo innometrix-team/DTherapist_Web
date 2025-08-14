@@ -3,7 +3,7 @@ import Api, { IAPIResult } from "./Api";
 
 export interface IBookingRequest {
   therapistId: string;
-  sessionType: "video" | "physical";
+  sessionType: "video" | "in-person";
   date: string; // YYYY-MM-DD format
   startTime: string; // HH:MM format
   endTime: string; // HH:MM format
