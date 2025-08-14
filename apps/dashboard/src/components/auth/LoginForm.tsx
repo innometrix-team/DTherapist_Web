@@ -42,6 +42,7 @@ function LoginForm() {
         id: user.id,
         role: user.role === "client" ? "user" : "counselor",
         token: token ?? null,
+        email: user.email ?? null,
       });
       navigate("/");
     },

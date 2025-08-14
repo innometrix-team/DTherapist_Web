@@ -31,7 +31,7 @@ export default async function createBookingApi(
 ): Promise<IAPIResult<IBookingResponse> | null> {
   try {
     const response = await Api.post<APIResponse<IBookingResponse>>(
-      '/api/user/counselor/booking',
+      '/api/user/booking',
       data,
       { ...config }
     );
@@ -82,7 +82,7 @@ export async function getBookingStatusApi(
 ): Promise<IAPIResult<{ status: string; booking: string }> | null> {
   try {
     const response = await Api.get<APIResponse<{ status: string; booking: string }>>(
-      `/api/user/bookings/${encodeURIComponent(bookingId)}`,
+      `/api/user/booking/${encodeURIComponent(bookingId)}`,
       { ...config }
     );
     return Promise.resolve({
