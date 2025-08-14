@@ -247,7 +247,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
     const bookingData: IBookingRequest = {
-      therapistId: therapist.userId,
+      therapistId: therapistId,
       sessionType: bookingApiSessionType,
       date: selectedDate,
       startTime: selectedTime,
