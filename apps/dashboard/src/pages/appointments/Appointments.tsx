@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 // Import types
 import { TabType } from '../../components/appointment/types';
-
-// Import constants
-import { UPCOMING_SESSIONS, PASSED_SESSIONS } from '../../components/appointment/constants';
+import { getCounselorAppointments } from '../../api/Appointments.api';
 
 // Import components
 import TabNavigation from '../../components/appointment/TabNavigation';
@@ -19,6 +18,35 @@ const Appointments: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'schedule' | 'reschedule'>('schedule');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch appointments data
+  const { data: appointmentsData, isLoading, error, refetch } = useQuery({
+    queryKey: ['counselor-appointments'],
+    queryFn: () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return getCounselorAppointments({ signal: controller.signal });
+    },
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Calculate stats from the appointments data
+  const appointments = appointmentsData?.data || [];
+  const upcomingAppointments = appointments.filter(
+    appointment => appointment.status === 'upcoming' || appointment.status === 'confirmed'
+  );
+  const passedAppointments = appointments.filter(
+    appointment => appointment.status === 'passed'
+  );
 
   // Function to handle tab change
   const handleTabChange = (tab: TabType) => {
@@ -35,7 +63,48 @@ const Appointments: React.FC = () => {
   // Function to close modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    // Refetch data when modal closes to get updated information
+    refetch();
   };
+
+  // Callback functions for SessionTable
+  const handleReschedule = (appointmentId: string) => {
+    handleOpenModal('reschedule', appointmentId);
+  };
+
+  const handleDownloadInvoice = (appointmentId: string) => {
+    console.log(`Downloading invoice for appointment: ${appointmentId}`);
+    // Additional logic for invoice download can be added here
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">hmm something went wrong</p>
+          <button 
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -67,7 +136,7 @@ const Appointments: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-semibold text-blue-600">
-                    {activeTab === 'upcoming' ? UPCOMING_SESSIONS.length : PASSED_SESSIONS.length}
+                    {activeTab === 'upcoming' ? upcomingAppointments.length : passedAppointments.length}
                   </div>
                   <div className="text-xs text-blue-600/70 uppercase tracking-wider">
                     {activeTab === 'upcoming' ? 'Upcoming' : 'Completed'}
@@ -75,7 +144,7 @@ const Appointments: React.FC = () => {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-semibold text-gray-600">
-                    {activeTab === 'upcoming' ? PASSED_SESSIONS.length : UPCOMING_SESSIONS.length}
+                    {activeTab === 'upcoming' ? passedAppointments.length : upcomingAppointments.length}
                   </div>
                   <div className="text-xs text-gray-500 uppercase tracking-wider">
                     {activeTab === 'upcoming' ? 'Completed' : 'Upcoming'}
@@ -88,22 +157,10 @@ const Appointments: React.FC = () => {
             {activeTab === 'upcoming' && (
               <div className="space-y-4">
                 {/* Desktop Summary */}
-                <div className="hidden md:flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-medium text-gray-900">Upcoming Sessions</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {UPCOMING_SESSIONS.length} session{UPCOMING_SESSIONS.length !== 1 ? 's' : ''} scheduled
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-600">{UPCOMING_SESSIONS.length}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider">Total</div>
-                  </div>
-                </div>
+                
                 <SessionTable 
-                  sessions={UPCOMING_SESSIONS} 
                   type="upcoming" 
-                  onReschedule={(sessionId) => handleOpenModal('reschedule', sessionId)}
+                  onReschedule={handleReschedule}
                 />
               </div>
             )}
@@ -111,57 +168,17 @@ const Appointments: React.FC = () => {
             {activeTab === 'passed' && (
               <div className="space-y-4">
                 {/* Desktop Summary */}
-                <div className="hidden md:flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-medium text-gray-900">Passed Sessions</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {PASSED_SESSIONS.length} session{PASSED_SESSIONS.length !== 1 ? 's' : ''} completed
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-success">{PASSED_SESSIONS.length}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider">Completed</div>
-                  </div>
-                </div>
+                
                 <SessionTable 
-                  sessions={PASSED_SESSIONS} 
                   type="passed" 
-                  onScheduleAgain={(sessionId) => handleOpenModal('schedule', sessionId)}
+                  onDownloadInvoice={handleDownloadInvoice}
                 />
               </div>
             )}
           </div>
         </div>
 
-        {/* Floating Action Button - Mobile Only */}
-        <div className="fixed bottom-6 right-4 md:hidden z-30">
-          <button 
-            className="bg-primary hover:bg-blue-800 text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110"
-            onClick={() => handleOpenModal('schedule', 'new')}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Quick Stats Footer - Desktop Only */}
-        <div className="hidden lg:block mt-6">
-          <div className="grid grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{UPCOMING_SESSIONS.length}</div>
-              <div className="text-sm text-gray-500 mt-1">Upcoming Sessions</div>
-            </div>
-            <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{PASSED_SESSIONS.length}</div>
-              <div className="text-sm text-gray-500 mt-1">Completed Sessions</div>
-            </div>
-            <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-gray-600">{UPCOMING_SESSIONS.length + PASSED_SESSIONS.length}</div>
-              <div className="text-sm text-gray-500 mt-1">Total Sessions</div>
-            </div>
-          </div>
-        </div>
+    
       </div>
 
       {/* Modal for Scheduling/Rescheduling with High Z-Index */}
