@@ -16,7 +16,7 @@ const Navbar: React.FC = () => {
           <Link to="/"><img
                     src="https://ik.imagekit.io/rqi1dzw2h/DT_Logo.png?updatedAt=1746132133582"
                     alt="DTherapist Logo"
-                    className="h-10 md:h-12 w-auto object-contain"
+                    className="h-12 md:h-14 w-auto object-contain"
                   /></Link>
         </div>
 
