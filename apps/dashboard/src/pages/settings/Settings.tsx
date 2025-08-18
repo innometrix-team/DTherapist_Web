@@ -14,7 +14,7 @@ const Settings: React.FC = () => {
     const baseTabs = [
       { id: "profile", label: "Profile" },
       { id: "password", label: "Password" },
-      { id: "bank", label: "Bank Details" }
+      { id: "transaction", label: "Transaction History" }
     ];
     
     // Only counselors see credentials tab
@@ -44,7 +44,7 @@ const Settings: React.FC = () => {
         return <CredentialForm />;
       case "password":
         return <PasswordForm />;
-      case "bank":
+      case "transaction":
         return <BankDetailsForm />;
       default:
         return null;
