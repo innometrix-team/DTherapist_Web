@@ -122,8 +122,8 @@ const Appointments: React.FC = () => {
           </h1>
         </div>
 
-        {/* Main Content Container */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {/* Main Content Container - Removed overflow-hidden to prevent dropdown clipping */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {/* Tab Navigation */}
           <div className="p-4 sm:p-6 pb-0">
             <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
@@ -153,32 +153,22 @@ const Appointments: React.FC = () => {
               </div>
             </div>
 
-            {/* Table Content */}
+            {/* Table Content - Removed unnecessary nested containers and space-y-4 */}
             {activeTab === 'upcoming' && (
-              <div className="space-y-4">
-                {/* Desktop Summary */}
-                
-                <SessionTable 
-                  type="upcoming" 
-                  onReschedule={handleReschedule}
-                />
-              </div>
+              <SessionTable 
+                type="upcoming" 
+                onReschedule={handleReschedule}
+              />
             )}
             
             {activeTab === 'passed' && (
-              <div className="space-y-4">
-                {/* Desktop Summary */}
-                
-                <SessionTable 
-                  type="passed" 
-                  onDownloadInvoice={handleDownloadInvoice}
-                />
-              </div>
+              <SessionTable 
+                type="passed" 
+                onDownloadInvoice={handleDownloadInvoice}
+              />
             )}
           </div>
         </div>
-
-    
       </div>
 
       {/* Modal for Scheduling/Rescheduling with High Z-Index */}

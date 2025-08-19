@@ -183,12 +183,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
     }
   };
 
-  // const navigateToProfile = (appointment: Appointment) => {
-  //   navigate(`/appointments/client-details/${appointment.id}`, { 
-  //     state: { appointmentData: appointment } 
-  //   });
-  // };
-
   // Don't render if no role
   if (!role) {
     return (
@@ -200,7 +194,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Loading state
+  // Loading state (including tab switching animation)
   const isLoading = isCounselor ? counselorLoading : userLoading;
   if (isLoading) {
     return (
@@ -364,12 +358,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
                         </div>
                       )}
                     </div>
-                    {/* <button 
-                      className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                      onClick={() => navigateToProfile(appointment)}
-                    >
-                      <UserIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                    </button> */}
                   </div>
                 </td>
               </tr>
@@ -404,12 +392,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   </div>
                 </div>
               </div>
-              {/* <button 
-                className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                onClick={() => navigateToProfile(appointment)}
-              >
-                <UserIcon className="w-4 h-4" />
-              </button> */}
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
