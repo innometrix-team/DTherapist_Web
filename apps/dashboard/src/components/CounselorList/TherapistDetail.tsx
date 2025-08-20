@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SessionType } from './types';
-import { ArrowLeft, Video, MapPin, Star, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Video, MapPin, Star, Loader2, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTherapistDetailsApi } from '../../api/Therapist.api';
 import createReviewApi, { getTherapistReviewsApi, IReviewRequest } from '../../api/Review.api';
@@ -102,6 +102,10 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
   const allReviews = reviewsResponse?.data?.reviews || [];
   const reviewStats = reviewsResponse?.data;
 
+  // Debug logs for troubleshooting
+  useEffect(() => {
+  }, [therapistId, therapist, reviewsResponse, allReviews, reviewStats]);
+
   // Get the 5 most recent reviews and sort them by creation date
   const recentReviews = allReviews
     .slice()
@@ -177,6 +181,17 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     }
   };
 
+  
+  const handleVideoBooking = () => {
+   
+    onBookSession(therapistId, 'video');
+  };
+
+  const handlePhysicalBooking = () => {
+    
+    onBookSession(therapistId, 'physical');
+  };
+
   // Loading state
   if (therapistLoading) {
     return (
@@ -236,7 +251,6 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
             <div className="bg-white rounded-lg p-6 space-y-6">
               {/* Therapist Image */}
               <div className="w-full">
-                
                 <img
                   src={therapist.profilePicture || 'https://via.placeholder.com/200x200/e5e7eb/9ca3af?text=User'}
                   alt={therapist.name}
@@ -246,10 +260,10 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 />
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - FIXED: Use correct therapistId */}
               <div className="space-y-4">
                 <button
-                  onClick={() => onBookSession(therapist.id, 'video')}
+                  onClick={handleVideoBooking}
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
                 >
                   <Video className="w-5 h-5" />
@@ -257,7 +271,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onBookSession(therapist.id, 'physical')}
+                  onClick={handlePhysicalBooking}
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
                 >
                   <MapPin className="w-5 h-5" />
@@ -266,9 +280,9 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
               </div>
 
               {/* Advertisement Space */}
-              <div className="bg-gray-300 rounded-lg h-48 flex items-center justify-center text-gray-600 font-semibold text-lg">
+              {/* <div className="bg-gray-300 rounded-lg h-48 flex items-center justify-center text-gray-600 font-semibold text-lg">
                 ADVERT SPACE
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -288,7 +302,6 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 </div>
                 <p className="text-gray-700 text-lg mb-2">{therapist.category}</p>
                 <p className="text-gray-700 text-lg mb-2">{therapist.experience} years experience</p>
-
               </div>
 
               {/* About Section */}
@@ -298,12 +311,9 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   {therapist.about ? (
                     <p>{therapist.about}</p>
                   ) : (
-                    <>
-                      <p>
-                        DTherapist is a platform that connects you with professional counselors and therapists to help you through your mental health journey.
-                      </p>
-                      
-                    </>
+                    <p>
+                      DTherapist is a platform that connects you with professional counselors and therapists to help you through your mental health journey.
+                    </p>
                   )}
                 </div>
                 
@@ -451,11 +461,17 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 {/* Reviews Error */}
                 {reviewsError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <p className="text-red-600">Failed to load reviews</p>
+                    <p className="text-red-600">Failed to load reviews. Error: {reviewsError.message}</p>
+                    <button 
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ['reviews', therapistId] })}
+                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                    >
+                      Retry
+                    </button>
                   </div>
                 )}
 
-                {/* Reviews Carousel */}
+
                 {!reviewsLoading && !reviewsError && (
                   <>
                     {recentReviews.length > 0 ? (
@@ -463,34 +479,31 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                         {/* Reviews Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                           {getCurrentReviews().map((review) => (
-                            <div key={review.userId} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex">
-                                  {renderStars(review.rating)}
+                            <div key={review._id || review.userId} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
+                              {/* Review Header */}
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-gray-600" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-gray-900">
+                                      {review.userName || 'Anonymous User'}
+                                    </div>
+                                    <div className="flex">
+                                      {renderStars(review.rating)}
+                                    </div>
+                                  </div>
                                 </div>
                                 <span className="text-sm text-gray-500">
                                   {formatDate(review.createdAt)}
                                 </span>
                               </div>
-                              <p className="text-gray-600 mb-4 leading-relaxed">
+                              
+                              {/* Review Comment */}
+                              <p className="text-gray-600 leading-relaxed">
                                 {review.comment}
                               </p>
-                              <div className="flex items-center">
-                                {review.userAvatar && (
-                                  <img
-                                    src={review.userAvatar}
-                                    alt={review.userName}
-                                    className="w-8 h-8 rounded-full mr-3"
-                                    onError={(e) => {
-                                      const img = e.target as HTMLImageElement;
-                                      img.style.display = 'none';
-                                    }}
-                                  />
-                                )}
-                                <span className="text-sm font-medium text-gray-900">
-                                  {review.userName}
-                                </span>
-                              </div>
                             </div>
                           ))}
                         </div>
