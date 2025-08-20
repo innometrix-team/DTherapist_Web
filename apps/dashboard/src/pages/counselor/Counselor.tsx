@@ -20,7 +20,7 @@ const Counselor: React.FC = () => {
   });
 
   const navigateToBooking = (therapistId: string, sessionType: SessionType) => {
-    console.log('Navigating to booking:', { therapistId, sessionType }); // Debug log
+    
     setAppState({
       currentView: 'booking',
       selectedTherapistId: therapistId,
@@ -29,7 +29,7 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToProfile = (therapistId: string) => {
-    console.log('Navigating to profile:', { therapistId }); // Debug log
+    
     setAppState({
       currentView: 'detail',
       selectedTherapistId: therapistId,
@@ -38,7 +38,7 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToBookingFromProfile = (therapistId: string, sessionType: SessionType) => {
-    console.log('Navigating to booking from profile:', { therapistId, sessionType }); // Debug log
+    
     setAppState({
       currentView: 'booking',
       selectedTherapistId: therapistId,
@@ -88,7 +88,7 @@ const Counselor: React.FC = () => {
         }
         
         if (!appState.selectedSessionType) {
-          console.error('Missing session type for booking');
+         
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg">
@@ -115,7 +115,7 @@ const Counselor: React.FC = () => {
       
       case 'detail':
         if (!appState.selectedTherapistId) {
-          console.error('Missing therapist ID for detail view');
+          
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg">
@@ -141,7 +141,7 @@ const Counselor: React.FC = () => {
         );
       
       default:
-        console.error('Unknown view type:', appState.currentView);
+       
         return (
           <div className="min-h-screen bg-gray-50 flex items-center justify-center">
             <div className="text-center bg-white p-8 rounded-lg shadow-lg">
