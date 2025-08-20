@@ -1,31 +1,34 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SessionType } from './types';
-import { ChevronDown, User, Video, MapPin, Loader2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  getTherapistsApi, 
-  getCategoriesApi, 
-  ITherapist, 
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { SessionType } from "./types";
+import { ChevronDown, User, Video, MapPin, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getTherapistsApi,
+  getCategoriesApi,
+  ITherapist,
   ITherapistListParams,
-  convertCategoriesToObjects 
-} from '../../api/Therapist.api';
-import toast from 'react-hot-toast';
+  convertCategoriesToObjects,
+} from "../../api/Therapist.api";
+import toast from "react-hot-toast";
 
 interface TherapistListProps {
   onBookAppointment: (therapistId: string, sessionType: SessionType) => void;
   onViewProfile: (therapistId: string) => void;
 }
 
-const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onViewProfile }) => {
+const TherapistList: React.FC<TherapistListProps> = ({
+  onBookAppointment,
+  onViewProfile,
+}) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Function to Ensure only one dropdown opens at a time
   const toggleDropdown = (therapistId: string) => {
-    setOpenDropdown(prev => prev === therapistId ? null : therapistId);
+    setOpenDropdown((prev) => (prev === therapistId ? null : therapistId));
   };
 
   const handleBooking = (therapistId: string, sessionType: SessionType) => {
@@ -36,82 +39,89 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
   // Add click outside handler to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
+      if (
+        openDropdown &&
+        !(event.target as Element).closest(".dropdown-container")
+      ) {
         setOpenDropdown(null);
       }
     };
 
     if (openDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openDropdown]);
 
   // Fetch categories
-  const { 
-    data: categoriesResponse, 
+  const {
+    data: categoriesResponse,
     isLoading: categoriesLoading,
-    error: categoriesError
+    error: categoriesError,
   } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ["categories"],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
       const result = await getCategoriesApi({ signal: controller.signal });
-      if (!result) throw new Error('Request cancelled');
+      if (!result) throw new Error("Request cancelled");
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch therapists with filters
-  const { 
-    data: therapistsResponse, 
-    isLoading: therapistsLoading, 
+  const {
+    data: therapistsResponse,
+    isLoading: therapistsLoading,
     error: therapistsError,
-    refetch: refetchTherapists
+    refetch: refetchTherapists,
   } = useQuery({
-    queryKey: ['therapists', selectedCategory, searchQuery, currentPage],
+    queryKey: ["therapists", selectedCategory, searchQuery, currentPage],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
+
       const params: ITherapistListParams = {
         page: currentPage,
         limit: 10,
       };
-      
-      if (selectedCategory && selectedCategory !== 'all') {
+
+      if (selectedCategory && selectedCategory !== "all") {
         params.category = selectedCategory;
       }
-      
+
       if (searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
 
-      const result = await getTherapistsApi(params, { signal: controller.signal });
-      if (!result) throw new Error('Request cancelled');
+      const result = await getTherapistsApi(params, {
+        signal: controller.signal,
+      });
+      if (!result) throw new Error("Request cancelled");
       return result;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  const getCostDisplay = (cost: { video: number; inPerson: number } | number | null): string => {
-  if (typeof cost === 'number') {
-    return `₦${cost}.00/hr`;
-  }
-  if (typeof cost === 'object' && cost !== null) {
-    if (cost.video === cost.inPerson) {
-      return `₦${cost.video}.00/hr`;
-    } else {
-      return `₦${cost.video}/₦${cost.inPerson}/hr`;
+  const getCostDisplay = (
+    cost: { video: number; inPerson: number } | number | null
+  ): string => {
+    if (typeof cost === "number") {
+      return `₦${cost}.00/hr`;
     }
-  }
-  return 'Contact for pricing';
-};
+    if (typeof cost === "object" && cost !== null) {
+      if (cost.video === cost.inPerson) {
+        return `₦${cost.video}.00/hr`;
+      } else {
+        return `₦${cost.video}/₦${cost.inPerson}/hr`;
+      }
+    }
+    return "Contact for pricing";
+  };
 
   // Handle search with debouncing
   const handleSearch = useCallback((query: string) => {
@@ -135,13 +145,13 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
   // Show error messages
   useEffect(() => {
     if (categoriesError) {
-      toast.error('Failed to load categories');
+      toast.error("Failed to load categories");
     }
   }, [categoriesError]);
 
   useEffect(() => {
     if (therapistsError) {
-      toast.error('Failed to load therapists');
+      toast.error("Failed to load therapists");
     }
   }, [therapistsError]);
 
@@ -150,7 +160,9 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
     return Array.from({ length: 5 }, (_, i) => (
       <span
         key={i}
-        className={`text-base ${i < validRating ? 'text-yellow-400' : 'text-gray-300'}`}
+        className={`text-base ${
+          i < validRating ? "text-yellow-400" : "text-gray-300"
+        }`}
       >
         ★
       </span>
@@ -158,23 +170,34 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
   };
 
   // Handle image error handling
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const img = e.target as HTMLImageElement;
-    if (img.src !== 'https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User') {
-      img.src = 'https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User';
-    }
-  }, []);
+  const handleImageError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      const img = e.target as HTMLImageElement;
+      if (
+        img.src !== "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User"
+      ) {
+        img.src = "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User";
+      }
+    },
+    []
+  );
 
-  const handleImageErrorLarge = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const img = e.target as HTMLImageElement;
-    if (img.src !== 'https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User') {
-      img.src = 'https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User';
-    }
-  }, []);
+  const handleImageErrorLarge = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      const img = e.target as HTMLImageElement;
+      if (
+        img.src !== "https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User"
+      ) {
+        img.src = "https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User";
+      }
+    },
+    []
+  );
 
-  const categories = categoriesResponse?.data?.categories ? 
-    convertCategoriesToObjects(categoriesResponse.data.categories) : [];
-  
+  const categories = categoriesResponse?.data?.categories
+    ? convertCategoriesToObjects(categoriesResponse.data.categories)
+    : [];
+
   const therapists = therapistsResponse?.data?.therapists || [];
   const totalPages = therapistsResponse?.data?.totalPages || 1;
   const totalCount = therapistsResponse?.data?.totalCount || 0;
@@ -182,7 +205,14 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative h-32 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-sm p-6 m-6">
+      <div
+        className="relative h-32 bg-black/50 bg-no-repeat bg-center bg-cover overflow-hidden rounded-lg shadow-sm p-6 m-6"
+        style={{
+          backgroundImage:
+            "url(https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637)",
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20"></div>
         <div className="absolute inset-0 flex items-center justify-center">
           <h1 className="text-white text-3xl font-semibold">Our Counselors</h1>
         </div>
@@ -193,7 +223,7 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
             <div className="relative w-full sm:w-auto">
-              <select 
+              <select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="appearance-none px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto"
@@ -219,7 +249,8 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
             </div>
           </div>
           <div className="text-sm text-gray-600">
-            {totalCount > 0 && `${totalCount} counselor${totalCount > 1 ? 's' : ''} found`}
+            {totalCount > 0 &&
+              `${totalCount} counselor${totalCount > 1 ? "s" : ""} found`}
           </div>
         </div>
 
@@ -251,8 +282,8 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
             {(selectedCategory || searchQuery) && (
               <button
                 onClick={() => {
-                  setSelectedCategory('');
-                  setSearchQuery('');
+                  setSelectedCategory("");
+                  setSearchQuery("");
                 }}
                 className="mt-4 px-4 py-2 text-blue-600 hover:text-blue-800 transition-colors"
               >
@@ -273,7 +304,9 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
               <div className="font-medium text-gray-700">Experience</div>
               <div className="font-medium text-gray-700">Cost</div>
               <div className="font-medium text-gray-700">Action</div>
-              <div className="font-medium text-gray-700 text-center">Profile</div>
+              <div className="font-medium text-gray-700 text-center">
+                Profile
+              </div>
             </div>
 
             {/* Table Rows */}
@@ -285,17 +318,24 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       key={`desktop-${therapist.userId}`}
-                      src={therapist.profilePicture || 'https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User'}
+                      src={
+                        therapist.profilePicture ||
+                        "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User"
+                      }
                       alt={therapist.name}
                       className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       onError={handleImageError}
                     />
-                    <span className="font-medium text-gray-900 truncate">{therapist.name}</span>
+                    <span className="font-medium text-gray-900 truncate">
+                      {therapist.name}
+                    </span>
                   </div>
 
                   {/* Category */}
                   <div className="min-w-0">
-                    <span className="text-gray-600 text-sm leading-tight">{therapist.category}</span>
+                    <span className="text-gray-600 text-sm leading-tight">
+                      {therapist.category}
+                    </span>
                   </div>
 
                   {/* Reviews */}
@@ -307,14 +347,16 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
 
                   {/* Experience */}
                   <div className="flex items-center">
-                    <span className="text-gray-600">{therapist.experience} years</span>
+                    <span className="text-gray-600">
+                      {therapist.experience} years
+                    </span>
                   </div>
 
                   {/* Cost */}
                   <div className="flex items-center">
                     <span className="font-semibold text-gray-900">
                       {getCostDisplay(therapist.cost)}
-                     </span>
+                    </span>
                   </div>
 
                   {/* Action Button */}
@@ -323,22 +365,32 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                       onClick={() => toggleDropdown(therapist.userId)}
                       className="flex items-center gap-2 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                     >
-                      <span className="whitespace-nowrap">Book Appointment</span>
-                      <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${openDropdown === therapist.userId ? 'rotate-180' : ''}`} />
+                      <span className="whitespace-nowrap">
+                        Book Appointment
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 flex-shrink-0 transition-transform ${
+                          openDropdown === therapist.userId ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
 
                     {/* Dropdown Menu */}
                     {openDropdown === therapist.userId && (
                       <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-300 z-50">
                         <button
-                          onClick={() => handleBooking(therapist.userId, 'video')}
+                          onClick={() =>
+                            handleBooking(therapist.userId, "video")
+                          }
                           className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
                         >
                           <Video className="w-5 h-5 text-primary" />
                           <span>Video Call</span>
                         </button>
                         <button
-                          onClick={() => handleBooking(therapist.userId, 'physical')}
+                          onClick={() =>
+                            handleBooking(therapist.userId, "physical")
+                          }
                           className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50"
                         >
                           <MapPin className="w-5 h-5 text-success" />
@@ -365,24 +417,31 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                   <div className="flex items-start gap-4 mb-4">
                     <img
                       key={`mobile-${therapist.userId}`}
-                      src={therapist.profilePicture || 'https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User'}
+                      src={
+                        therapist.profilePicture ||
+                        "https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User"
+                      }
                       alt={therapist.name}
                       className="w-16 h-16 rounded-full object-cover"
                       onError={handleImageErrorLarge}
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 text-lg mb-1">{therapist.name}</h3>
+                      <h3 className="font-medium text-gray-900 text-lg mb-1">
+                        {therapist.name}
+                      </h3>
                       <p className="text-gray-600 mb-2">{therapist.category}</p>
                       <div className="flex items-center gap-4 mb-3">
                         <div className="flex">
                           {renderStars(therapist.reviews.averageRating)}
                         </div>
-                        <span className="text-gray-600">{therapist.experience} years</span>
+                        <span className="text-gray-600">
+                          {therapist.experience} years
+                        </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-900">
-                      {getCostDisplay(therapist.cost)}
-                     </span>
+                          {getCostDisplay(therapist.cost)}
+                        </span>
                         <button
                           onClick={() => onViewProfile(therapist.userId)}
                           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -392,7 +451,7 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Mobile Action Button */}
                   <div className="relative dropdown-container">
                     <button
@@ -400,21 +459,29 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                       className="flex items-center justify-center gap-2 w-full px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <span>Book Appointment</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${openDropdown === therapist.userId ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
+                          openDropdown === therapist.userId ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
 
                     {/* Mobile Dropdown Menu */}
                     {openDropdown === therapist.userId && (
                       <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-lg border z-50">
                         <button
-                          onClick={() => handleBooking(therapist.userId, 'video')}
+                          onClick={() =>
+                            handleBooking(therapist.userId, "video")
+                          }
                           className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
                         >
                           <Video className="w-5 h-5 text-primary" />
                           <span>Video Call</span>
                         </button>
                         <button
-                          onClick={() => handleBooking(therapist.userId, 'physical')}
+                          onClick={() =>
+                            handleBooking(therapist.userId, "physical")
+                          }
                           className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50"
                         >
                           <MapPin className="w-5 h-5 text-success" />
@@ -439,7 +506,7 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
             >
               Previous
             </button>
-            
+
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const pageNum = i + 1;
               return (
@@ -448,17 +515,19 @@ const TherapistList: React.FC<TherapistListProps> = ({ onBookAppointment, onView
                   onClick={() => setCurrentPage(pageNum)}
                   className={`px-3 py-2 border rounded-lg ${
                     currentPage === pageNum
-                      ? 'bg-primary text-white border-blue-800'
-                      : 'border-gray-300 hover:bg-gray-50'
+                      ? "bg-primary text-white border-blue-800"
+                      : "border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {pageNum}
                 </button>
               );
             })}
-            
+
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage >= totalPages}
               className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
