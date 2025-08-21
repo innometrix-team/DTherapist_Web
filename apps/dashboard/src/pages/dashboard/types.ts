@@ -40,7 +40,7 @@ export const DUMMY_DASHBOARD_CONFIG: Record<Role, DashboardConfig> = {
   },
 
   counselor: {
-    balance: { amount: "₦30,000", actions: ["withdraw"] },
+    balance: { amount: "₦00,000", actions: ["withdraw"] },
     promo: {
       title: "Your Next Session Awaits",
       subtitle: "Quick stats on your appointments…",

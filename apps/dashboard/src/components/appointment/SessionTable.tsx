@@ -322,7 +322,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   </div>
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
-                  {new Date(appointment.date).toLocaleDateString()}
+                  {new Date(appointment.date + 'T00:00:00').toLocaleDateString()}
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
                   {appointment.time}
@@ -420,7 +420,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
             <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
               <div>
                 <span className="text-gray-500 block text-xs uppercase tracking-wider font-medium mb-1">Date</span>
-                <span className="text-gray-900 font-medium">{new Date(appointment.date).toLocaleDateString()}</span>
+                <span className="text-gray-900 font-medium">{new Date(appointment.date + 'T00:00:00').toLocaleDateString()}</span>
               </div>
               <div>
                 <span className="text-gray-500 block text-xs uppercase tracking-wider font-medium mb-1">Time</span>
