@@ -125,7 +125,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
             className="bg-white flex p-6 lg:p-4 rounded-lg justify-between grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(33.33%-10px)] shadow-[0px_4px_10px_0px_#00000008]"
           >
             <div>
-              <div className="text-sm text-[#B3B3B3]">{stat.label}</div>
+              <div className="text-lg text-[#B3B3B3]">{stat.label}</div>
               <div className="text-2xl font-bold my-3">{stat.value}</div>
               <div className="text-xs">
                 <UptrendIcon className="inline text-[#014CB1] w-4" /> {stat.trend}

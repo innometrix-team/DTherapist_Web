@@ -25,10 +25,10 @@ export interface DashboardConfig {
 
 export const DUMMY_DASHBOARD_CONFIG: Record<Role, DashboardConfig> = {
   user: {
-    balance: { amount: "₦30,000", actions: ["topUp", "withdraw"] },
+    balance: { amount: "₦00,000", actions: ["topUp", "withdraw"] },
     promo: {
       title: "Trust the Healing Process",
-      subtitle: "Lorem ipsum dolor sit amet consectLorem ipsum dolor sit amet consect sit amet consect",
+      subtitle: " Your mental health matters. Here’s how we can help you.",
       ctaLabel: "Get Therapy",
     },
     stats: [
