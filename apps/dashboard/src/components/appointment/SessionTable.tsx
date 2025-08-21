@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { getCounselorAppointments, getUserAppointments, Appointment, UserDashboardData } from '../../api/Appointments.api';
+import DashboardApi from '../../api/Dashboard.api';
 import {  ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon, WithdrawIcon } from '../../assets/icons';
 import { useAuthStore } from '../../store/auth/useAuthStore';
 
@@ -10,12 +11,14 @@ interface SessionTableProps {
   type: 'upcoming' | 'passed';
   onReschedule?: (appointmentId: string) => void;
   onDownloadInvoice?: (appointmentId: string) => void;
+  dataSource?: 'dashboard' | 'appointments'; // New prop to determine data source
 }
 
 const SessionTable: React.FC<SessionTableProps> = ({ 
   type, 
   onReschedule, 
-  onDownloadInvoice 
+  onDownloadInvoice,
+  dataSource = 'appointments' // Default to appointments API
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -27,10 +30,26 @@ const SessionTable: React.FC<SessionTableProps> = ({
   
   // Determine if user is counselor
   const isCounselor = role === 'counselor';
-  
-  console.log('🔑 Auth Info:', { role, isCounselor });
 
-  // Query for counselor appointments
+  // Dashboard API queries
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+    refetch: refetchDashboard
+  } = useQuery({
+    queryKey: ['dashboard-data', isCounselor ? 'service-provider' : 'user'],
+    queryFn: async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return await DashboardApi(isCounselor ? 'service-provider' : 'user', { signal: controller.signal });
+    },
+    retry: 1,
+    refetchOnWindowFocus: false,
+    enabled: dataSource === 'dashboard' && !!role
+  });
+
+  // Appointments API queries (existing logic)
   const {
     data: counselorData,
     isLoading: counselorLoading,
@@ -41,15 +60,13 @@ const SessionTable: React.FC<SessionTableProps> = ({
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      console.log('🔄 Fetching counselor appointments...');
       return await getCounselorAppointments({ signal: controller.signal });
     },
     retry: 1,
     refetchOnWindowFocus: false,
-    enabled: isCounselor && !!role
+    enabled: dataSource === 'appointments' && isCounselor && !!role
   });
 
-  // Query for user appointments
   const {
     data: userData,
     isLoading: userLoading,
@@ -60,51 +77,54 @@ const SessionTable: React.FC<SessionTableProps> = ({
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      console.log('🔄 Fetching user appointments...');
       return await getUserAppointments({ signal: controller.signal });
     },
     retry: 1,
     refetchOnWindowFocus: false,
-    enabled: !isCounselor && !!role
+    enabled: dataSource === 'appointments' && !isCounselor && !!role
   });
 
   // Process appointments data
   useEffect(() => {
-    console.log('🔍 Processing appointments data...', { isCounselor, counselorData, userData });
-    
     let appointmentsList: Appointment[] = [];
 
-    if (isCounselor) {
-      // Handle counselor data
-      if (counselorData && counselorData.data) {
-        appointmentsList = Array.isArray(counselorData.data) ? counselorData.data : [];
-        console.log(`📋 Counselor appointments received: ${appointmentsList.length}`);
+    if (dataSource === 'dashboard') {
+      // Handle dashboard data
+      if (dashboardData && dashboardData.data) {
+        // Transform dashboard appointments to match Appointment interface
+        const dashboardAppointments = dashboardData.data.upcomingAppointments.map(appointment => ({
+          bookingId: appointment._id,
+          fullName: appointment.fullname,
+          profilePicture: appointment.profilePicture,
+          date: appointment.date,
+          time: appointment.time,
+          type: appointment.type,
+          chatId: null, // Dashboard API doesn't provide chatId
+          status: 'upcoming' as const, // Dashboard only shows upcoming
+          action: {
+            joinMeetingLink: appointment.joinLink,
+            invoiceDownloadLink: undefined // Changed from null to undefined
+          }
+        }));
+        appointmentsList = dashboardAppointments;
       }
     } else {
-      // Handle user data - FIXED: Check if data is direct array or nested in upcomingAppointments
-      if (userData && userData.data) {
-        console.log('🔍 Raw user data structure:', userData.data);
-        
-        // Check if data is directly an array of appointments (like your API response)
-        if (Array.isArray(userData.data)) {
-          appointmentsList = userData.data;
-          console.log(`📋 User appointments (direct array): ${appointmentsList.length}`);
-        } else {
-          // Check if it's nested in upcomingAppointments (as per UserDashboardData type)
-          const dashboardData = userData.data as UserDashboardData;
-          appointmentsList = dashboardData.upcomingAppointments || [];
-          console.log(`📋 User appointments (nested): ${appointmentsList.length}`);
+      // Handle appointments API data (existing logic)
+      if (isCounselor) {
+        if (counselorData && counselorData.data) {
+          appointmentsList = Array.isArray(counselorData.data) ? counselorData.data : [];
+        }
+      } else {
+        if (userData && userData.data) {
+          if (Array.isArray(userData.data)) {
+            appointmentsList = userData.data;
+          } else {
+            const dashboardData = userData.data as UserDashboardData;
+            appointmentsList = dashboardData.upcomingAppointments || [];
+          }
         }
       }
     }
-
-    console.log('📊 All appointments before filtering:', appointmentsList.map(apt => ({
-      id: apt.id,
-      fullName: apt.fullName,
-      status: apt.status,
-      date: apt.date,
-      time: apt.time
-    })));
 
     // Filter appointments based on type and status
     const filteredAppointments = appointmentsList.filter(appointment => {
@@ -120,24 +140,11 @@ const SessionTable: React.FC<SessionTableProps> = ({
         shouldInclude = appointment.status === 'passed';
       }
       
-      console.log(`🔸 Appointment ${appointment.id}: status="${appointment.status}", type="${type}", included=${shouldInclude}`);
       return shouldInclude;
     });
     
-    console.log(`✨ Final filtered appointments for '${type}':`, {
-      role,
-      isCounselor,
-      totalReceived: appointmentsList.length,
-      filteredCount: filteredAppointments.length,
-      filteredAppointments: filteredAppointments.map(apt => ({
-        id: apt.id,
-        fullName: apt.fullName,
-        status: apt.status
-      }))
-    });
-    
     setAppointments(filteredAppointments);
-  }, [counselorData, userData, type, isCounselor, role]);
+  }, [counselorData, userData, dashboardData, type, isCounselor, role, dataSource]);
 
   useEffect(() => {
     return () => {
@@ -151,31 +158,30 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   const handleActionClick = (action: string, appointment: Appointment) => {
     setActiveDropdown(null);
-    console.log(`🎯 Action clicked: ${action} for appointment ${appointment.id}`);
     
     switch(action) {
       case 'startMeeting':
         if (appointment.action?.joinMeetingLink) {
           window.open(appointment.action.joinMeetingLink, '_blank');
         } else {
-          navigate(`/meeting/${appointment.id}`);
+          navigate(`/meeting/${appointment.bookingId}`);
         }
         break;
       case 'chat':
         if (appointment.chatId) {
           navigate(`/chat/${appointment.chatId}`);
         } else {
-          navigate(`/chat/${appointment.id}`);
+          navigate(`/chat/${appointment.bookingId}`);
         }
         break;
       case 'reschedule':
-        onReschedule?.(appointment.id);
+        onReschedule?.(appointment.bookingId);
         break;
       case 'downloadInvoice':
         if (appointment.action?.invoiceDownloadLink) {
           window.open(appointment.action.invoiceDownloadLink, '_blank');
         } else if (onDownloadInvoice) {
-          onDownloadInvoice(appointment.id);
+          onDownloadInvoice(appointment.bookingId);
         } else {
           toast.error('Invoice not available');
         }
@@ -194,8 +200,11 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Loading state (including tab switching animation)
-  const isLoading = isCounselor ? counselorLoading : userLoading;
+  // Determine loading state based on data source
+  const isLoading = dataSource === 'dashboard' 
+    ? dashboardLoading 
+    : (isCounselor ? counselorLoading : userLoading);
+
   if (isLoading) {
     return (
       <div className="text-center py-8 px-4 text-gray-500">
@@ -203,15 +212,24 @@ const SessionTable: React.FC<SessionTableProps> = ({
           Loading {type} appointments...
         </div>
         <div className="text-xs text-gray-400 mt-2">
-          Debug: Role={role}, Endpoint={isCounselor ? '/api/service-provider/appointments' : '/api/user/appointments'}
+          Debug: Role={role}, DataSource={dataSource}, Endpoint={
+            dataSource === 'dashboard' 
+              ? (isCounselor ? '/api/service-provider/dashboard' : '/api/user/dashboard')
+              : (isCounselor ? '/api/service-provider/appointments' : '/api/user/appointments')
+          }
         </div>
       </div>
     );
   }
 
-  // Error state
-  const error = isCounselor ? counselorError : userError;
-  const refetch = isCounselor ? refetchCounselor : refetchUser;
+  // Determine error state and refetch function based on data source
+  const error = dataSource === 'dashboard' 
+    ? dashboardError 
+    : (isCounselor ? counselorError : userError);
+  
+  const refetch = dataSource === 'dashboard' 
+    ? refetchDashboard 
+    : (isCounselor ? refetchCounselor : refetchUser);
   
   if (error) {
     return (
@@ -234,6 +252,13 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   // Empty state with more debugging info
   if (appointments.length === 0) {
+    const debugInfo = dataSource === 'dashboard' 
+      ? (dashboardData?.data ? dashboardData.data.upcomingAppointments.length : 'No data')
+      : (isCounselor 
+          ? (counselorData?.data ? Array.isArray(counselorData.data) ? counselorData.data.length : 'Not array' : 'No data')
+          : (userData?.data ? Array.isArray(userData.data) ? userData.data.length : 'Not array' : 'No data')
+        );
+
     return (
       <div className="text-center py-8 px-4 text-gray-500">
         <div className="text-sm sm:text-base mb-2">
@@ -241,10 +266,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
         </div>
         <div className="text-xs text-gray-400 space-y-1">
           <div>Debug: Role={role}, IsCounselor={isCounselor}</div>
-          <div>Raw data length: {isCounselor 
-            ? (counselorData?.data ? Array.isArray(counselorData.data) ? counselorData.data.length : 'Not array' : 'No data')
-            : (userData?.data ? Array.isArray(userData.data) ? userData.data.length : 'Not array' : 'No data')
-          }</div>
+          <div>DataSource: {dataSource}</div>
+          <div>Raw data length: {debugInfo}</div>
           <div>Filter type: {type}</div>
         </div>
       </div>
@@ -277,7 +300,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {appointments.map((appointment) => (
-              <tr key={appointment.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={appointment.bookingId} className="hover:bg-gray-50 transition-colors">
                 <td className="px-3 lg:px-6 py-4">
                   <div className="flex items-center space-x-3">
                     <img 
@@ -314,13 +337,13 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     <div className="relative">
                       <button 
                         className="flex items-center space-x-1 px-2 lg:px-3 py-1 text-gray-600 hover:text-gray-900 rounded transition-colors"
-                        onClick={() => toggleDropdown(appointment.id)}
+                        onClick={() => toggleDropdown(appointment.bookingId)}
                       >
                         <span className="text-xs lg:text-sm">Actions</span>
                         <ChevronDownIcon className="w-3 h-3 lg:w-4 lg:h-4" />
                       </button>
                       
-                      {activeDropdown === appointment.id && (
+                      {activeDropdown === appointment.bookingId && (
                         <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
                           {type === 'upcoming' ? (
                             <>
@@ -369,7 +392,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {appointments.map((appointment) => (
-          <div key={appointment.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div key={appointment.bookingId} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">
                 <img 

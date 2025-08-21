@@ -8,13 +8,13 @@ export interface AppointmentAction {
 }
 
 export interface Appointment {
-  id: string;
+  bookingId: string;
   fullName: string;
   profilePicture: string;
   date: string;
   time: string;
   type: string;
-  chatId: string;
+  chatId: string | null;
   status: "upcoming" | "passed" | "confirmed";
   action: AppointmentAction;
 }
@@ -64,31 +64,12 @@ export async function getCounselorAppointments(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<Appointment[]> | null> {
   try {
-    console.log('📞 Making API call to fetch counselor appointments...');
+    
     
     const response = await Api.get<AppointmentsAPIResponse>(
       '/api/service-provider/appointments',
       config
     );
-    
-    console.log('✅ API Response received:', {
-      status: response.status,
-      dataLength: response.data.data?.length || 0,
-      responseData: response.data
-    });
-
-    // Additional debugging - log each appointment if any exist
-    if (response.data.data && response.data.data.length > 0) {
-      console.log('📋 Appointments found:', response.data.data.map(apt => ({
-        id: apt.id,
-        fullName: apt.fullName,
-        status: apt.status,
-        date: apt.date,
-        time: apt.time
-      })));
-    } else {
-      console.warn('⚠️ No appointments found in response');
-    }
     
     return Promise.resolve({
       code: response.status,
@@ -97,10 +78,10 @@ export async function getCounselorAppointments(
       data: response.data.data
     });
   } catch (e) {
-    console.error('❌ Error fetching counselor appointments:', e);
+   
     
     if (axios.isCancel(e)) {
-      console.log('🚫 Request was cancelled');
+      
       return Promise.resolve(null);
     }
 
@@ -110,12 +91,7 @@ export async function getCounselorAppointments(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    console.error('💥 Error details:', {
-      statusCode,
-      errorMessage,
-      status,
-      fullError: e
-    });
+  
     
     return Promise.reject({
       code: statusCode,
@@ -132,7 +108,7 @@ export async function getCounselorAppointmentsByTherapistId(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<Appointment[]> | null> {
   try {
-    console.log('📞 Making API call with therapist ID:', therapistId);
+    
     
     const endpoint = therapistId 
       ? `/api/service-provider/appointments?therapistId=${therapistId}`
@@ -140,11 +116,7 @@ export async function getCounselorAppointmentsByTherapistId(
     
     const response = await Api.get<AppointmentsAPIResponse>(endpoint, config);
     
-    console.log('✅ API Response with therapist ID:', {
-      endpoint,
-      status: response.status,
-      dataLength: response.data.data?.length || 0
-    });
+   
     
     return Promise.resolve({
       code: response.status,
@@ -153,7 +125,7 @@ export async function getCounselorAppointmentsByTherapistId(
       data: response.data.data
     });
   } catch (e) {
-    console.error('❌ Error fetching appointments by therapist ID:', e);
+    
     
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
@@ -179,31 +151,16 @@ export async function getUserAppointments(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<UserDashboardData> | null> {
   try {
-    console.log('📞 Making API call to fetch user appointments...');
+    
     
     const response = await Api.get<UserDashboardAPIResponse>(
       '/api/user/appointments',
       config
     );
     
-    console.log('✅ User API Response received:', {
-      status: response.status,
-      upcomingAppointmentsLength: response.data.data?.upcomingAppointments?.length || 0,
-      responseData: response.data
-    });
+    
 
-    // Additional debugging - log each appointment if any exist
-    if (response.data.data?.upcomingAppointments && response.data.data.upcomingAppointments.length > 0) {
-      console.log('📋 User appointments found:', response.data.data.upcomingAppointments.map(apt => ({
-        id: apt.id,
-        fullName: apt.fullName,
-        status: apt.status,
-        date: apt.date,
-        time: apt.time
-      })));
-    } else {
-      console.warn('⚠️ No user appointments found in response');
-    }
+   
     
     return Promise.resolve({
       code: response.status,
@@ -212,10 +169,9 @@ export async function getUserAppointments(
       data: response.data.data
     });
   } catch (e) {
-    console.error('❌ Error fetching user appointments:', e);
+    
     
     if (axios.isCancel(e)) {
-      console.log('🚫 User appointments request was cancelled');
       return Promise.resolve(null);
     }
 
@@ -225,12 +181,6 @@ export async function getUserAppointments(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    console.error('💥 User appointments error details:', {
-      statusCode,
-      errorMessage,
-      status,
-      fullError: e
-    });
     
     return Promise.reject({
       code: statusCode,
