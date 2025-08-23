@@ -7,6 +7,7 @@ export interface AppointmentAction {
   invoiceDownloadLink?: string;
 }
 
+// Updated interface to match actual API response
 export interface Appointment {
   bookingId: string;
   fullName: string;
@@ -17,6 +18,9 @@ export interface Appointment {
   chatId: string | null;
   status: "upcoming" | "passed" | "confirmed";
   action: AppointmentAction;
+  // Additional fields based on actual API responses
+  therapistId?: string; // Present in user appointments
+  userId?: string;     // Present in therapist appointments
 }
 
 export interface UserDashboardData {
@@ -64,8 +68,6 @@ export async function getCounselorAppointments(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<Appointment[]> | null> {
   try {
-    
-    
     const response = await Api.get<AppointmentsAPIResponse>(
       '/api/service-provider/appointments',
       config
@@ -78,10 +80,7 @@ export async function getCounselorAppointments(
       data: response.data.data
     });
   } catch (e) {
-   
-    
     if (axios.isCancel(e)) {
-      
       return Promise.resolve(null);
     }
 
@@ -90,8 +89,6 @@ export async function getCounselorAppointments(
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-  
     
     return Promise.reject({
       code: statusCode,
@@ -108,15 +105,11 @@ export async function getCounselorAppointmentsByTherapistId(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<Appointment[]> | null> {
   try {
-    
-    
     const endpoint = therapistId 
       ? `/api/service-provider/appointments?therapistId=${therapistId}`
       : '/api/service-provider/appointments';
     
     const response = await Api.get<AppointmentsAPIResponse>(endpoint, config);
-    
-   
     
     return Promise.resolve({
       code: response.status,
@@ -125,8 +118,6 @@ export async function getCounselorAppointmentsByTherapistId(
       data: response.data.data
     });
   } catch (e) {
-    
-    
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
@@ -151,16 +142,10 @@ export async function getUserAppointments(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<UserDashboardData> | null> {
   try {
-    
-    
     const response = await Api.get<UserDashboardAPIResponse>(
       '/api/user/appointments',
       config
     );
-    
-    
-
-   
     
     return Promise.resolve({
       code: response.status,
@@ -169,8 +154,6 @@ export async function getUserAppointments(
       data: response.data.data
     });
   } catch (e) {
-    
-    
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
@@ -180,7 +163,6 @@ export async function getUserAppointments(
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
     
     return Promise.reject({
       code: statusCode,

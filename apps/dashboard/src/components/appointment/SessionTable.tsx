@@ -169,9 +169,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
         break;
       case 'chat':
         if (appointment.chatId) {
-          navigate(`/chat/${appointment.chatId}`);
+          navigate(`chat/${appointment.chatId}`);
         } else {
-          navigate(`/chat/${appointment.bookingId}`);
+          navigate(`chat/${appointment.bookingId}`);
         }
         break;
       case 'reschedule':
