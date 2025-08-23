@@ -19,7 +19,7 @@ class SocketService {
     return new Promise((resolve, reject) => {
       try {
         // Use HTTP/HTTPS URL and specify the path as instructed by your backend engineer
-        this.socket = io(import.meta.env.VITE_SOCKET_URL, {
+        this.socket = io(import.meta.env.VITE_API_URL, {
           path: "/ws", // This is the key addition your backend engineer specified
           auth: {
             token: token
