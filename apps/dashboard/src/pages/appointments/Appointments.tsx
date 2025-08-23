@@ -3,34 +3,44 @@ import { useQuery } from '@tanstack/react-query';
 
 // Import types
 import { TabType } from '../../components/appointment/types';
-import { getCounselorAppointments } from '../../api/Appointments.api';
+import { getCounselorAppointments, getUserAppointments } from '../../api/Appointments.api';
+import { useAuthStore } from '../../store/auth/useAuthStore';
 
 // Import components
 import TabNavigation from '../../components/appointment/TabNavigation';
 import SessionTable from '../../components/appointment/SessionTable';
-import ScheduleSession from '../../components/appointment/ScheduleSession';
+import RescheduleSession from '../../components/appointment/RescheduleSession';
 
 const Appointments: React.FC = () => {
+  // Get user role from auth store
+  const { role } = useAuthStore();
+  const isCounselor = role === 'counselor';
+  
   // State for active tab (Upcoming or Passed)
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'schedule' | 'reschedule'>('schedule');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Fetch appointments data
+  // Fetch appointments data based on user role
   const { data: appointmentsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['counselor-appointments'],
-    queryFn: () => {
+    queryKey: isCounselor ? ['counselor-appointments'] : ['user-appointments'],
+    queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      return getCounselorAppointments({ signal: controller.signal });
+      
+      if (isCounselor) {
+        return await getCounselorAppointments({ signal: controller.signal });
+      } else {
+        return await getUserAppointments({ signal: controller.signal });
+      }
     },
     retry: 1,
     refetchOnWindowFocus: false,
+    enabled: !!role
   });
 
   useEffect(() => {
@@ -39,23 +49,47 @@ const Appointments: React.FC = () => {
     };
   }, []);
 
-  // Calculate stats from the appointments data
-  const appointments = appointmentsData?.data || [];
-  const upcomingAppointments = appointments.filter(
-    appointment => appointment.status === 'upcoming' || appointment.status === 'confirmed'
-  );
-  const passedAppointments = appointments.filter(
-    appointment => appointment.status === 'passed'
-  );
+  // Process appointments data to get stats
+  const processAppointmentsData = () => {
+    if (!appointmentsData?.data) return { appointments: [], upcomingCount: 0, passedCount: 0 };
+
+    let appointments = [];
+    
+    if (isCounselor) {
+      // Handle counselor data
+      appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data : [];
+    } else {
+      // Handle user data - check if it's direct array or nested in upcomingAppointments
+      if (Array.isArray(appointmentsData.data)) {
+        appointments = appointmentsData.data;
+      } else {
+        // Check if it's nested in upcomingAppointments (as per UserDashboardData type)
+        const dashboardData = appointmentsData.data ;
+        appointments = dashboardData.upcomingAppointments || [];
+      }
+    }
+
+    const upcomingCount = appointments.filter(
+      appointment => appointment.status === 'upcoming' || appointment.status === 'confirmed'
+    ).length;
+
+    const passedCount = appointments.filter(
+      appointment => appointment.status === 'passed'
+    ).length;
+
+    return { appointments, upcomingCount, passedCount };
+  };
+
+  const {  upcomingCount, passedCount } = processAppointmentsData();
 
   // Function to handle tab change
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
   };
 
-  // Function to open modal
-  const handleOpenModal = (type: 'schedule' | 'reschedule', sessionId: string) => {
-    setModalType(type);
+  // Function to open modal for rescheduling
+  const handleOpenModal = (sessionId: string) => {
+    
     setSelectedSessionId(sessionId);
     setIsModalOpen(true);
   };
@@ -63,19 +97,32 @@ const Appointments: React.FC = () => {
   // Function to close modal
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSelectedSessionId(null);
     // Refetch data when modal closes to get updated information
     refetch();
   };
 
   // Callback functions for SessionTable
   const handleReschedule = (appointmentId: string) => {
-    handleOpenModal('reschedule', appointmentId);
+    
+    handleOpenModal(appointmentId);
   };
 
   const handleDownloadInvoice = (appointmentId: string) => {
     console.log(`Downloading invoice for appointment: ${appointmentId}`);
     // Additional logic for invoice download can be added here
   };
+
+  // Don't render if no role
+  if (!role) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Please log in to view appointments.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {
@@ -94,7 +141,10 @@ const Appointments: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">hmm something went wrong</p>
+          <p className="text-red-600 mb-4">Failed to load appointments</p>
+          <p className="text-gray-600 mb-4">
+            {error instanceof Error ? error.message : 'Unknown error occurred'}
+          </p>
           <button 
             onClick={() => refetch()}
             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
@@ -136,7 +186,7 @@ const Appointments: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-semibold text-blue-600">
-                    {activeTab === 'upcoming' ? upcomingAppointments.length : passedAppointments.length}
+                    {activeTab === 'upcoming' ? upcomingCount : passedCount}
                   </div>
                   <div className="text-xs text-blue-600/70 uppercase tracking-wider">
                     {activeTab === 'upcoming' ? 'Upcoming' : 'Completed'}
@@ -144,7 +194,7 @@ const Appointments: React.FC = () => {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-semibold text-gray-600">
-                    {activeTab === 'upcoming' ? passedAppointments.length : upcomingAppointments.length}
+                    {activeTab === 'upcoming' ? passedCount : upcomingCount}
                   </div>
                   <div className="text-xs text-gray-500 uppercase tracking-wider">
                     {activeTab === 'upcoming' ? 'Completed' : 'Upcoming'}
@@ -171,23 +221,13 @@ const Appointments: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal for Scheduling/Rescheduling with High Z-Index */}
+      {/* Modal for Rescheduling with High Z-Index */}
       {isModalOpen && selectedSessionId && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
-            onClick={handleCloseModal}
-          ></div>
-          
-          {/* Modal Content */}
-          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <ScheduleSession 
-              sessionId={selectedSessionId}
-              isReschedule={modalType === 'reschedule'}
-              onClose={handleCloseModal}
-            />
-          </div>
+        <div className="fixed inset-0 z-[9999]">
+          <RescheduleSession 
+            sessionId={selectedSessionId}
+            onClose={handleCloseModal}
+          />
         </div>
       )}
     </div>

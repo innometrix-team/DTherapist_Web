@@ -6,20 +6,14 @@ import PromoCard from "../../components/dashboard/PromoCard";
 import StatsGrid from "../../components/dashboard/StatsGrid";
 import SessionTable from "../../components/appointment/SessionTable";
 import { DashboardConfig, DUMMY_DASHBOARD_CONFIG } from "./types";
-import { Session } from "../../components/appointment/types";
-import { UPCOMING_SESSIONS } from "../../components/appointment/constants";
 
 const Dashboard: React.FC = () => {
   const { role } = useAuthStore();
-  const [config, setConfig] = useState<DashboardConfig | null>();
-  const [upcomingSessions, setUpcomingSessions] = useState<Session[]>([]);
+  const [config, setConfig] = useState<DashboardConfig | null>(null);
 
   useEffect(() => {
     if (!role) return;
     setConfig(DUMMY_DASHBOARD_CONFIG[role]);
-    
-    // Limit to 5 sessions for dashboard display
-    setUpcomingSessions(UPCOMING_SESSIONS.slice(0, 5));
   }, [role]);
 
   const handleReschedule = (sessionId: string) => {
@@ -51,8 +45,8 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="p-6">
           <SessionTable 
-            sessions={upcomingSessions}
             type="upcoming"
+            dataSource="dashboard"
             onReschedule={handleReschedule}
           />
         </div>
