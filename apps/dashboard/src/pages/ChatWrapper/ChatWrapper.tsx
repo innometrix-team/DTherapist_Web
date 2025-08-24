@@ -134,7 +134,7 @@ const ChatWrapper: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
         <div className="text-gray-500">Loading chat...</div>
       </div>
@@ -144,7 +144,7 @@ const ChatWrapper: React.FC = () => {
   // Error state - appointment not found
   if (!appointment || !recipientDetails) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-red-500 mb-2">
             Chat not found. Invalid chat ID: {chatId}
@@ -158,11 +158,13 @@ const ChatWrapper: React.FC = () => {
   }
 
   return (
-    <ChatComponent 
-      appointmentId={chatId || ''} 
-      recipientDetails={recipientDetails}
-      appointment={appointment}
-    />
+    <div className="h-full w-full">
+      <ChatComponent 
+        appointmentId={chatId || ''} 
+        recipientDetails={recipientDetails}
+        appointment={appointment}
+      />
+    </div>
   );
 };
 
