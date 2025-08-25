@@ -4,8 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { getCounselorAppointments, getUserAppointments, Appointment, UserDashboardData } from '../../api/Appointments.api';
 import DashboardApi from '../../api/Dashboard.api';
-import {  ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon, WithdrawIcon } from '../../assets/icons';
+import { ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon, WithdrawIcon } from '../../assets/icons';
 import { useAuthStore } from '../../store/auth/useAuthStore';
+
+// Define error types
+interface QueryError {
+  name?: string;
+  code?: string;
+  message?: string;
+}
 
 interface SessionTableProps {
   type: 'upcoming' | 'passed';
@@ -44,12 +51,19 @@ const SessionTable: React.FC<SessionTableProps> = ({
       abortControllerRef.current = controller;
       return await DashboardApi(isCounselor ? 'service-provider' : 'user', { signal: controller.signal });
     },
-    retry: 1,
+    retry: (failureCount, error: unknown) => {
+      // Don't retry if the request was aborted
+      const queryError = error as QueryError;
+      if (queryError?.name === 'AbortError' || queryError?.code === 'ERR_CANCELED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false,
     enabled: dataSource === 'dashboard' && !!role
   });
 
-  // Appointments API queries (existing logic)
+  // Appointments API queries (existing logic with improved error handling)
   const {
     data: counselorData,
     isLoading: counselorLoading,
@@ -62,7 +76,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
       abortControllerRef.current = controller;
       return await getCounselorAppointments({ signal: controller.signal });
     },
-    retry: 1,
+    retry: (failureCount, error: unknown) => {
+      // Don't retry if the request was aborted
+      const queryError = error as QueryError;
+      if (queryError?.name === 'AbortError' || queryError?.code === 'ERR_CANCELED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false,
     enabled: dataSource === 'appointments' && isCounselor && !!role
   });
@@ -79,7 +100,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
       abortControllerRef.current = controller;
       return await getUserAppointments({ signal: controller.signal });
     },
-    retry: 1,
+    retry: (failureCount, error: unknown) => {
+      // Don't retry if the request was aborted
+      const queryError = error as QueryError;
+      if (queryError?.name === 'AbortError' || queryError?.code === 'ERR_CANCELED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false,
     enabled: dataSource === 'appointments' && !isCounselor && !!role
   });
@@ -148,9 +176,17 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      // Clean up abort controller on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
+
+  // Clean up dropdown when component unmounts or type changes
+  useEffect(() => {
+    setActiveDropdown(null);
+  }, [type]);
 
   const toggleDropdown = (appointmentId: string) => {
     setActiveDropdown(activeDropdown === appointmentId ? null : appointmentId);
@@ -231,23 +267,33 @@ const SessionTable: React.FC<SessionTableProps> = ({
     ? refetchDashboard 
     : (isCounselor ? refetchCounselor : refetchUser);
   
+  // Improved error handling - don't show error for aborted requests
   if (error) {
-    return (
-      <div className="text-center py-8 px-4 text-red-500">
-        <div className="text-sm sm:text-base mb-4">
-          Failed to load appointments
+    // Check if it's an AbortError or network cancellation
+    const queryError = error as QueryError;
+    const isAbortError = queryError?.name === 'AbortError' || 
+                        queryError?.code === 'ERR_CANCELED' || 
+                        queryError?.message?.includes('canceled') ||
+                        queryError?.message?.includes('aborted');
+    
+    if (!isAbortError) {
+      return (
+        <div className="text-center py-8 px-4 text-red-500">
+          <div className="text-sm sm:text-base mb-4">
+            Failed to load appointments
+          </div>
+          <div className="text-xs text-gray-600 mb-4">
+            Error: {error instanceof Error ? error.message : 'Unknown error'}
+          </div>
+          <button 
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
-        <div className="text-xs text-gray-600 mb-4">
-          Error: {error instanceof Error ? error.message : 'Unknown error'}
-        </div>
-        <button 
-          onClick={() => refetch()}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    );
+      );
+    }
   }
 
   // Empty state with more debugging info
