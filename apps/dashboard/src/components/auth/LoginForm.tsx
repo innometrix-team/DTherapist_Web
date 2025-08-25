@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +17,12 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 function LoginForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
+  
+  // Get the return URL from location state, or default to dashboard
+  const from = location.state?.from?.pathname || "/";
+  
   const {
     register,
     handleSubmit,
@@ -44,7 +49,13 @@ function LoginForm() {
         token: token ?? null,
         email: user.email ?? null,
       });
-      navigate("/");
+      
+      // Show success message
+      toast.success(`Welcome back, ${user.name}!`);
+      
+      // Navigate to the intended page or dashboard
+      // Use replace: true to prevent going back to login page
+      navigate(from, { replace: true });
     },
     onError: (error) => {
       toast.error(error.message || "Login failed");
@@ -67,6 +78,7 @@ function LoginForm() {
   return (
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Login to account</h2>
+    
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <input
           type="email"
@@ -94,8 +106,12 @@ function LoginForm() {
           {isSubmitting ? "Logging in..." : "Login"}
         </button>
         <p className="text-sm text-gray-600 text-center">
-          Don’t have an account?{" "}
-          <Link to="/auth/signup" className="text-blue-700 font-semibold">
+          Don't have an account?{" "}
+          <Link 
+            to="/auth/signup" 
+            state={{ from: location.state?.from }} // Pass along the return URL to signup
+            className="text-blue-700 font-semibold"
+          >
             Signup
           </Link>
         </p>

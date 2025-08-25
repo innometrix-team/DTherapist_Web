@@ -6,6 +6,7 @@ import EmailVerification from "./components/auth/EmailVerification";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
 import Appointments from "./pages/appointments/Appointments";
 import Auth from "./pages/Auth";
@@ -25,7 +26,12 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
           <Route index element={<Dashboard />} />
           <Route path="counselor" element={<Counselor />} />
           <Route path="appointments" element={<Appointments />} />
@@ -38,10 +44,11 @@ function App() {
             <Route path=":groupId" element={<DAnonymousChat />} />
           </Route>
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
-          {/* Move chat route to be accessible from anywhere */}
           <Route path="chat/:chatId" element={<ChatWrapper />} />
           <Route path="appointments/chat/:chatId" element={<ChatWrapper />} />
         </Route>
+        
+        {/* Public Routes */}
         <Route path="terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="auth" element={<Auth />}>
           <Route index element={<Navigate to="login" replace />} />
