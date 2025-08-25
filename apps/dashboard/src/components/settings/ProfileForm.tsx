@@ -8,8 +8,10 @@ import toast from "react-hot-toast";
 import { genderOptions } from "../../constant/settings.constants";
 import { FaTrash } from "react-icons/fa";
 import { CameraIcon } from "../../assets/icons";
-import ProfileUpdateApi, { IProfileUpdateData } from "../../api/ProfileUpdate.api";
-import { useAuthStore } from "../../store/auth/useAuthStore"; 
+import ProfileUpdateApi, {
+  IProfileUpdateData,
+} from "../../api/ProfileUpdate.api";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 // Base schema for common fields
 const baseSchema = z.object({
@@ -33,7 +35,7 @@ const counselorSchema = baseSchema.extend({
   bio: z.string().min(10, "Bio must be at least 10 characters"),
   specialization: z.string().min(2, "Specialization is required"),
   experience: z.number().min(0, "Years of experience must be 0 or greater"),
-  gender: z.enum(["male", "female","non-binary" ,"other"], {
+  gender: z.enum(["male", "female", "non-binary", "other"], {
     errorMap: () => ({ message: "Please select a gender" }),
   }),
 });
@@ -46,12 +48,10 @@ const ProfileForm: React.FC = () => {
   const { role, setAuth } = useAuthStore();
   const auth = useAuthStore((state) => state);
   const isCounselor = role === "counselor";
-  
-  console.log('Current user role:', role);
-  
+
   // Use appropriate schema based on role
   const schema = isCounselor ? counselorSchema : userSchema;
-  
+
   const {
     register,
     handleSubmit,
@@ -86,20 +86,17 @@ const ProfileForm: React.FC = () => {
     mutationFn: (data: IProfileUpdateData) => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      console.log('Starting profile update with data:', {
-        ...data,
-        profilePicture: data.profilePicture ? 'File attached' : 'No file'
-      });
-      return ProfileUpdateApi(data, { signal: controller.signal }, auth?.role ?? undefined);
+      return ProfileUpdateApi(
+        data,
+        { signal: controller.signal },
+        auth?.role ?? undefined
+      );
     },
     onSuccess: (result) => {
       // Handle case where result is null (cancelled request)
       if (!result) {
-        console.log('Profile update was cancelled');
         return;
       }
-
-      console.log('Profile update successful:', result);
 
       // Handle case where result.data doesn't exist or is null
       if (!result.data) {
@@ -108,36 +105,38 @@ const ProfileForm: React.FC = () => {
       }
 
       // Safely destructure data with fallbacks
-      const { 
-        fullName, 
-        email, 
-        bio, 
-        country, 
-        specialization, 
-        experience, 
+      const {
+        fullName,
+        email,
+        bio,
+        country,
+        specialization,
+        experience,
         gender,
         profilePicture,
-        token 
+        token,
       } = result.data;
-      
+
       // Update form with returned data
       setValue("fullName", fullName);
       setValue("email", email);
       setValue("bio", bio);
       setValue("country", country);
-      
+
       // Set counselor-specific fields if user is counselor
       if (isCounselor) {
         setValue("specialization", specialization ?? "");
         setValue("experience", experience ?? 0);
-        setValue("gender", (gender as "male" | "female" | "non-binary" | "other") ?? "male");
+        setValue(
+          "gender",
+          (gender as "male" | "female" | "non-binary" | "other") ?? "male"
+        );
       }
-      
+
       // Update profile image preview if returned
       if (profilePicture) {
         setPreviewUrl(profilePicture);
         setProfileImage(null);
-        console.log('Profile picture updated:', profilePicture);
       }
 
       // Update auth token if provided
@@ -146,75 +145,78 @@ const ProfileForm: React.FC = () => {
           role: auth?.role || "user",
           token: token,
           id: result.data.id,
+          email: result.data.email,
         });
-        console.log('Auth token updated');
       }
-      
+
       toast.success(result.message || "Profile updated successfully!");
-      
+
       // Reset the form to clear all fields and state
       reset();
-      
+
       // Clear the form image state since it's now saved
       setProfileImage(null);
-      if (previewUrl && previewUrl.startsWith('blob:')) {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
       }
     },
     onError: (error) => {
-      console.error('Profile update error:', error);
       // Handle different types of errors
-      if (error && typeof error === 'object' && 'message' in error) {
-        toast.error(error.message || "Failed to update profile. Please try again.");
+      if (error && typeof error === "object" && "message" in error) {
+        toast.error(
+          error.message || "Failed to update profile. Please try again."
+        );
       } else {
         toast.error("Failed to update profile. Please try again.");
       }
     },
   });
 
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      console.log('Selected image file:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
 
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
-        return;
-      }
+        // Validate file type
+        const allowedTypes = [
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+        ];
+        if (!allowedTypes.includes(file.type)) {
+          toast.error(
+            "Please select a valid image file (JPEG, PNG, GIF, or WebP)"
+          );
+          return;
+        }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        toast.error('Image file must be less than 5MB');
-        return;
-      }
+        // Validate file size (5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          toast.error("Image file must be less than 5MB");
+          return;
+        }
 
-      setProfileImage(file);
-      
-      // Clean up previous preview URL
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
+        setProfileImage(file);
+
+        // Clean up previous preview URL
+        if (previewUrl && previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(previewUrl);
+        }
+
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
       }
-      
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      
-      console.log('Image preview URL created:', url);
-    }
-  }, [previewUrl]);
+    },
+    [previewUrl]
+  );
 
   const removeImage = useCallback(() => {
-    console.log('Removing image');
     setProfileImage(null);
-    if (previewUrl && previewUrl.startsWith('blob:')) {
+    if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
     setPreviewUrl(null);
@@ -223,12 +225,8 @@ const ProfileForm: React.FC = () => {
   const onSubmit: SubmitHandler<ProfileFormData> = useCallback(
     (data) => {
       if (isPending || isSubmitting) {
-        console.log('Form submission blocked - already processing');
         return;
       }
-
-      console.log('Form submitted with data:', data);
-      console.log('Profile image:', profileImage ? 'File selected' : 'No file');
 
       // Prepare update data - now simplified since both endpoints handle images
       const updateData: IProfileUpdateData = {
@@ -238,18 +236,14 @@ const ProfileForm: React.FC = () => {
         country: data.country,
         profilePicture: profileImage || undefined,
         // Add counselor-specific fields if user is counselor
-        ...(isCounselor && 'specialization' in data && {
-          specialization: data.specialization,
-          experience: data.experience,
-          gender: data.gender,
-        }),
+        ...(isCounselor &&
+          "specialization" in data && {
+            specialization: data.specialization,
+            experience: data.experience,
+            gender: data.gender,
+          }),
       };
 
-      console.log('Final update data being sent:', {
-        ...updateData,
-        profilePicture: updateData.profilePicture ? 'File attached' : 'No file'
-      });
-      
       handleProfileUpdate(updateData);
     },
     [handleProfileUpdate, isPending, isSubmitting, profileImage, isCounselor]
@@ -259,14 +253,16 @@ const ProfileForm: React.FC = () => {
     return () => {
       // Cleanup on component unmount
       abortControllerRef.current?.abort();
-      if (previewUrl && previewUrl.startsWith('blob:')) {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
     };
   }, [previewUrl]);
 
-  const inputStyle = "w-full max-w-full md:max-w-md px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed";
-  const formGroupStyle = "flex flex-col md:flex-row md:items-center gap-2 md:gap-4";
+  const inputStyle =
+    "w-full max-w-full md:max-w-md px-4 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed";
+  const formGroupStyle =
+    "flex flex-col md:flex-row md:items-center gap-2 md:gap-4";
   const labelStyle = "w-full md:w-48 font-medium";
 
   return (
@@ -280,7 +276,9 @@ const ProfileForm: React.FC = () => {
 
       {/* Profile Image Section */}
       <div className="space-y-2">
-        <label className="block font-medium text-gray-700">Profile Picture</label>
+        <label className="block font-medium text-gray-700">
+          Profile Picture
+        </label>
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="w-24 h-24 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
             {previewUrl ? (
@@ -320,7 +318,9 @@ const ProfileForm: React.FC = () => {
 
       {/* Full Name */}
       <div className={formGroupStyle}>
-        <label htmlFor="fullName" className={labelStyle}>Full Name</label>
+        <label htmlFor="fullName" className={labelStyle}>
+          Full Name
+        </label>
         <div className="flex flex-col w-full max-w-full md:max-w-md">
           <input
             id="fullName"
@@ -331,14 +331,18 @@ const ProfileForm: React.FC = () => {
             className={inputStyle}
           />
           {errors.fullName && (
-            <p className="text-red-600 text-sm mt-1">{errors.fullName.message}</p>
+            <p className="text-red-600 text-sm mt-1">
+              {errors.fullName.message}
+            </p>
           )}
         </div>
       </div>
 
       {/* Email */}
       <div className={formGroupStyle}>
-        <label htmlFor="email" className={labelStyle}>Email</label>
+        <label htmlFor="email" className={labelStyle}>
+          Email
+        </label>
         <div className="flex flex-col w-full max-w-full md:max-w-md">
           <input
             id="email"
@@ -356,7 +360,9 @@ const ProfileForm: React.FC = () => {
 
       {/* Bio */}
       <div className={formGroupStyle}>
-        <label htmlFor="bio" className={labelStyle}>Bio</label>
+        <label htmlFor="bio" className={labelStyle}>
+          Bio
+        </label>
         <div className="flex flex-col w-full max-w-full md:max-w-md">
           <textarea
             id="bio"
@@ -374,7 +380,9 @@ const ProfileForm: React.FC = () => {
 
       {/* Country */}
       <div className={formGroupStyle}>
-        <label htmlFor="country" className={labelStyle}>Country</label>
+        <label htmlFor="country" className={labelStyle}>
+          Country
+        </label>
         <div className="flex flex-col w-full max-w-full md:max-w-md">
           <input
             id="country"
@@ -385,7 +393,9 @@ const ProfileForm: React.FC = () => {
             className={inputStyle}
           />
           {errors.country && (
-            <p className="text-red-600 text-sm mt-1">{errors.country.message}</p>
+            <p className="text-red-600 text-sm mt-1">
+              {errors.country.message}
+            </p>
           )}
         </div>
       </div>
@@ -395,7 +405,9 @@ const ProfileForm: React.FC = () => {
         <>
           {/* Area of Specialization */}
           <div className={formGroupStyle}>
-            <label htmlFor="specialization" className={labelStyle}>Area of Specialization</label>
+            <label htmlFor="specialization" className={labelStyle}>
+              Area of Specialization
+            </label>
             <div className="flex flex-col w-full max-w-full md:max-w-md">
               <input
                 id="specialization"
@@ -405,15 +417,21 @@ const ProfileForm: React.FC = () => {
                 disabled={isPending || isSubmitting}
                 className={inputStyle}
               />
-              {isCounselor && "specialization" in errors && errors.specialization && (
-                <p className="text-red-600 text-sm mt-1">{errors.specialization.message}</p>
-              )}
+              {isCounselor &&
+                "specialization" in errors &&
+                errors.specialization && (
+                  <p className="text-red-600 text-sm mt-1">
+                    {errors.specialization.message}
+                  </p>
+                )}
             </div>
           </div>
 
           {/* Years of Experience */}
           <div className={formGroupStyle}>
-            <label htmlFor="experience" className={labelStyle}>Years of Experience</label>
+            <label htmlFor="experience" className={labelStyle}>
+              Years of Experience
+            </label>
             <div className="flex flex-col w-full max-w-full md:max-w-md">
               <input
                 id="experience"
@@ -425,14 +443,18 @@ const ProfileForm: React.FC = () => {
                 className={inputStyle}
               />
               {"experience" in errors && errors.experience && (
-                <p className="text-red-600 text-sm mt-1">{errors.experience.message}</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.experience.message}
+                </p>
               )}
             </div>
           </div>
 
           {/* Gender */}
           <div className={formGroupStyle}>
-            <label htmlFor="gender" className={labelStyle}>Gender</label>
+            <label htmlFor="gender" className={labelStyle}>
+              Gender
+            </label>
             <div className="flex flex-col w-full max-w-full md:max-w-md">
               <select
                 id="gender"
@@ -447,7 +469,9 @@ const ProfileForm: React.FC = () => {
                 ))}
               </select>
               {isCounselor && "gender" in errors && errors.gender && (
-                <p className="text-red-600 text-sm mt-1">{errors.gender.message}</p>
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.gender.message}
+                </p>
               )}
             </div>
           </div>
