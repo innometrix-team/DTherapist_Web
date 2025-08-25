@@ -140,7 +140,7 @@ function SignUpForm() {
           >
             <option value="">Register as</option>
             <option value="client">Client</option>
-            <option value="therapist">Therapist</option>
+            <option value="therapist">Counselor</option>
           </select>
           {errors.role && (
             <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
