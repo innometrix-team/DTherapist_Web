@@ -92,9 +92,6 @@ function SignUpForm() {
   return (
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Create free account</h2>
-      <p className="text-gray-500 text-sm">
-        Lorem ipsum dolor sit amet consectetur. Mauris purus vulpuLore
-      </p>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <input
