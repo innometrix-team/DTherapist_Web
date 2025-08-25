@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import VerifyOtpApi, { IRequestData } from "../../api/VerifyOTP.api";
-import VerifyOTPResetApi, { IVerifyOTPResetRequestData } from "../../api/VerifyOtpReset.api";
+import VerifyOTPResetApi, { IVerifyOTPResetRequestData } from "../../api/VerifyOTPReset.api";
 import ResendOtpApi, { OTPRequestData } from "../../api/ResendOTP.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { useMutation } from "@tanstack/react-query";
