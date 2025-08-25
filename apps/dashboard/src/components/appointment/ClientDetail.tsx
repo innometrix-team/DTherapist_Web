@@ -61,7 +61,7 @@ const ClientDetail = () => {
   // Function to convert Appointment data to Client data
   const convertAppointmentToClient = (appointment: Appointment): Client => {
     return {
-      id: appointment.id,
+      id: appointment.bookingId,
       name: appointment.fullName,
       imageUrl: appointment.profilePicture,
       about: `Client information for ${appointment.fullName}. Appointment scheduled for ${new Date(appointment.date).toLocaleDateString()} at ${appointment.time}.`,
@@ -106,8 +106,8 @@ const ClientDetail = () => {
         }
 
         setClient(clientData);
-      } catch (error) {
-        console.error('Error processing client data:', error);
+      } catch  {
+       
         toast.error('Failed to load client details');
       } finally {
         setLoading(false);

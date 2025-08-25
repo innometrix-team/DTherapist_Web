@@ -16,10 +16,11 @@ import MySchedule from "./pages/my-schedule/MySchedule";
 import ClientDetail from "./components/appointment/ClientDetail";
 import DAnonymous from "./pages/danonymous/DAnonymous";
 import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
-
 import Settings from "./pages/settings/Settings";
 import TermsAndConditions from "./pages/Terms&Condition/Terms&Condition";
+import ChatWrapper from "./pages/ChatWrapper/ChatWrapper";
 import { Toaster } from "react-hot-toast";
+
 function App() {
   return (
     <>
@@ -37,7 +38,9 @@ function App() {
             <Route path=":groupId" element={<DAnonymousChat />} />
           </Route>
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
-          
+          {/* Move chat route to be accessible from anywhere */}
+          <Route path="chat/:chatId" element={<ChatWrapper />} />
+          <Route path="appointments/chat/:chatId" element={<ChatWrapper />} />
         </Route>
         <Route path="terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="auth" element={<Auth />}>
