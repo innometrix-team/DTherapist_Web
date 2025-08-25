@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SubmitHandler } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { genderOptions } from "../../constant/settings.constants";
 import { FaTrash } from "react-icons/fa";
@@ -11,6 +11,7 @@ import { CameraIcon } from "../../assets/icons";
 import ProfileUpdateApi, {
   IProfileUpdateData,
 } from "../../api/ProfileUpdate.api";
+import ProfileApi from "../../api/Profile.api"; // Import the profile fetching API
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 // Base schema for common fields
@@ -57,7 +58,6 @@ const ProfileForm: React.FC = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
     setValue,
-    reset,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(schema),
     defaultValues: isCounselor
@@ -80,7 +80,45 @@ const ProfileForm: React.FC = () => {
 
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [initialProfilePicture, setInitialProfilePicture] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch existing profile data
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['profile', role],
+    queryFn: () => ProfileApi(role as "user" | "counselor"),
+    enabled: !!role,
+    retry: 1,
+  });
+
+  // Populate form with existing data when profile data is loaded
+  useEffect(() => {
+    if (profileData?.data) {
+      const profile = profileData.data;
+      
+      // Set form values
+      setValue("fullName", profile.fullName || "");
+      setValue("email", profile.email || "");
+      setValue("bio", profile.bio || "");
+      setValue("country", profile.country || "");
+
+      // Set counselor-specific fields if user is counselor
+      if (isCounselor) {
+        setValue("specialization", profile.specialization || "");
+        setValue("experience", profile.experience || 0);
+        setValue(
+          "gender",
+          (profile.gender as "male" | "female" | "non-binary" | "other") || "male"
+        );
+      }
+
+      // Set profile picture if it exists
+      if (profile.profilePicture) {
+        setInitialProfilePicture(profile.profilePicture);
+        setPreviewUrl(profile.profilePicture);
+      }
+    }
+  }, [profileData, setValue, isCounselor]);
 
   const { mutateAsync: handleProfileUpdate, isPending } = useMutation({
     mutationFn: (data: IProfileUpdateData) => {
@@ -135,6 +173,7 @@ const ProfileForm: React.FC = () => {
 
       // Update profile image preview if returned
       if (profilePicture) {
+        setInitialProfilePicture(profilePicture);
         setPreviewUrl(profilePicture);
         setProfileImage(null);
       }
@@ -151,14 +190,11 @@ const ProfileForm: React.FC = () => {
 
       toast.success(result.message || "Profile updated successfully!");
 
-      // Reset the form to clear all fields and state
-      reset();
-
-      // Clear the form image state since it's now saved
+      // Clear only the new profile image since the form should keep updated values
       setProfileImage(null);
+      // Only revoke blob URLs, keep server URLs
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
       }
     },
     onError: (error) => {
@@ -202,7 +238,7 @@ const ProfileForm: React.FC = () => {
 
         setProfileImage(file);
 
-        // Clean up previous preview URL
+        // Clean up previous blob URL (but not server URLs)
         if (previewUrl && previewUrl.startsWith("blob:")) {
           URL.revokeObjectURL(previewUrl);
         }
@@ -216,11 +252,13 @@ const ProfileForm: React.FC = () => {
 
   const removeImage = useCallback(() => {
     setProfileImage(null);
+    // Clean up blob URL
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
-    setPreviewUrl(null);
-  }, [previewUrl]);
+    // Reset to initial profile picture or null
+    setPreviewUrl(initialProfilePicture);
+  }, [previewUrl, initialProfilePicture]);
 
   const onSubmit: SubmitHandler<ProfileFormData> = useCallback(
     (data) => {
@@ -253,6 +291,7 @@ const ProfileForm: React.FC = () => {
     return () => {
       // Cleanup on component unmount
       abortControllerRef.current?.abort();
+      // Only clean up blob URLs, not server URLs
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
@@ -264,6 +303,25 @@ const ProfileForm: React.FC = () => {
   const formGroupStyle =
     "flex flex-col md:flex-row md:items-center gap-2 md:gap-4";
   const labelStyle = "w-full md:w-48 font-medium";
+
+  // Show loading state while fetching profile
+  if (isLoadingProfile) {
+    return (
+      <div className="bg-white p-4 md:p-6 space-y-6 w-full">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col md:flex-row gap-4">
+                <div className="h-4 bg-gray-200 rounded w-48"></div>
+                <div className="h-10 bg-gray-200 rounded w-full max-w-md"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -293,7 +351,7 @@ const ProfileForm: React.FC = () => {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label className="cursor-pointer text-blue-600 font-medium">
-              Update Image
+              {previewUrl ? "Change Image" : "Upload Image"}
               <input
                 type="file"
                 accept="image/*"
