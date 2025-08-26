@@ -15,6 +15,7 @@ export interface StatCardConfig {
   label: string;
   value: string;
   trend: string;
+  trendUp?: boolean; // Added optional property for trend direction
 }
 
 export interface DashboardConfig {
@@ -28,16 +29,14 @@ export const DUMMY_DASHBOARD_CONFIG: Record<Role, DashboardConfig> = {
     balance: { amount: "₦00,000", actions: ["topUp", "withdraw"] },
     promo: {
       title: "Trust the Healing Process",
-      subtitle: " Your mental health matters. Here’s how we can help you.",
+      subtitle: " Your mental health matters. Here's how we can help you.",
       ctaLabel: "Get Therapy",
     },
     stats: [
-      { label: "Total Sessions", value: "20", trend: "30% This Month" },
-      { label: "Time Spent",    value: "150 hrs", trend: "30% This Month" },
-      { label: "Amount Paid",   value: "₦120,000", trend: "30% This Month" },
-        { label: "Amount Received",   value: "₦120,000", trend: "30% This Month" }
+      { label: "Active Users", value: "2,000", trend: "+30% This Month", trendUp: true },
+      { label: "Active Therapists", value: "40,000", trend: "+30% This Month", trendUp: true },
+      { label: "Deposits", value: "$120,000,000", trend: "+30% This Month", trendUp: true },
+      { label: "Withdrawals", value: "$120,000", trend: "30% This Month", trendUp: false }
     ],
   },
-
-  
 };

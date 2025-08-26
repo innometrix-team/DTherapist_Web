@@ -1,0 +1,468 @@
+// /components/Admin/AdminTransactionsTable.tsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { ChevronDownIcon, SearchIcon } from "lucide-react";
+
+import {
+  getAdminTransactionHistoryApi,
+  IAdminTransactionQueryParams,
+  IAdminTransaction,
+  formatAdminCurrency,
+  formatAdminDate,
+  getAdminStatusColor,
+  getAdminStatusText,
+  getAdminTypeColor,
+} from "../../api/AdminTransactions.api";
+import { useAuthStore } from "../../Store/auth/useAuthStore";
+
+interface AdminTransactionsTableProps {
+  className?: string;
+}
+
+const ITEMS_PER_PAGE = 10;
+
+const AdminTransactionsTable: React.FC<AdminTransactionsTableProps> = ({
+  className = "",
+}) => {
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("All Transactions");
+  const [filters, setFilters] = useState<IAdminTransactionQueryParams>({
+    page: 1,
+    limit: ITEMS_PER_PAGE,
+  });
+
+  const { role } = useAuthStore();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Check if user is admin
+  const isAdmin = role === "admin";
+
+  // Fetch admin transaction history
+  const {
+    data: transactionData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin-transactions", filters],
+    queryFn: async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return getAdminTransactionHistoryApi(filters, { signal: controller.signal });
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 2,
+    enabled: isAdmin, // Only run if user is admin
+  });
+
+  const actualData = transactionData?.data;
+  const transactions = actualData?.transactions || [];
+
+  // Calculate pagination
+  const totalTransactions = actualData?.total || 0;
+  const currentPage = filters.page || 1;
+  const totalPages = Math.ceil(totalTransactions / (filters.limit || ITEMS_PER_PAGE));
+
+  // Handle search
+  const handleSearch = useCallback((searchValue: string) => {
+    setSearchTerm(searchValue);
+    setFilters(prev => ({
+      ...prev,
+      search: searchValue.trim() || undefined,
+      page: 1,
+    }));
+  }, []);
+
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
+    setFilters(prev => ({
+      ...prev,
+      page,
+    }));
+  }, []);
+
+  // Handle items per page change
+  const handleItemsPerPageChange = useCallback((limit: number) => {
+    setFilters(prev => ({
+      ...prev,
+      limit,
+      page: 1, // Reset to first page when changing items per page
+    }));
+  }, []);
+
+  // Handle filter change
+  const handleFilterChange = useCallback((filterType: string) => {
+    setSelectedFilter(filterType);
+    let statusFilter: IAdminTransaction['status'] | undefined;
+    let typeFilter: IAdminTransaction['type'] | undefined;
+
+    switch (filterType) {
+      case "Completed":
+        statusFilter = "success";
+        break;
+      case "Pending":
+        statusFilter = "pending";
+        break;
+      case "Failed":
+        statusFilter = "failed";
+        break;
+      case "Deposit":
+        typeFilter = "deposit";
+        break;
+      case "Withdrawal":
+        typeFilter = "withdrawal";
+        break;
+      case "Payment":
+        typeFilter = "payment";
+        break;
+      default:
+        statusFilter = undefined;
+        typeFilter = undefined;
+    }
+
+    setFilters(prev => ({
+      ...prev,
+      status: statusFilter,
+      type: typeFilter,
+      page: 1,
+    }));
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Show error toast
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to load admin transactions. Please try again.");
+    }
+  }, [error]);
+
+  // If not admin, show unauthorized message
+  if (!isAdmin) {
+    return (
+      <div className={`bg-white p-4 sm:p-6 space-y-6 w-full ${className}`}>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+          <p className="text-yellow-600 text-sm">Access Denied</p>
+          <p className="text-yellow-500 text-xs mt-1">Admin access required to view transactions</p>
+        </div>
+      </div>
+    );
+  }
+
+  const filterOptions = [
+    "All Transactions",
+    "Completed", 
+    "Pending",
+    "Failed",
+    "Deposit",
+    "Withdrawal", 
+    "Payment"
+  ];
+
+  return (
+    <div className={`bg-white space-y-4 sm:space-y-6 w-full ${className}`}>
+      {/* Header with Stats */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 pt-4 sm:pt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-600 text-sm">Total Transactions:</span>
+            <span className="font-semibold text-gray-900">{totalTransactions.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-600 text-sm">Showing:</span>
+            <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+              {Math.min((currentPage - 1) * (filters.limit || ITEMS_PER_PAGE) + 1, totalTransactions)}-{Math.min(currentPage * (filters.limit || ITEMS_PER_PAGE), totalTransactions)} of {totalTransactions}
+            </span>
+          </div>
+        </div>
+        
+        {/* Items per page selector */}
+        <div className="flex items-center space-x-2">
+          <span className="text-gray-600 text-sm">Show:</span>
+          <select
+            value={filters.limit || ITEMS_PER_PAGE}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="border border-gray-300 rounded px-2 sm:px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+          </select>
+          <span className="text-gray-600 text-sm">per page</span>
+        </div>
+      </div>
+
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 pb-4 border-b border-gray-200">
+        {/* Filter Dropdown */}
+        <div className="relative">
+          <select
+            value={selectedFilter}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="appearance-none bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2 pr-8 sm:pr-10 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+          >
+            {filterOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search Transactions"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm w-full sm:w-64"
+          />
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="min-h-[300px] sm:min-h-[500px] px-4 sm:px-0">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600 text-sm">Loading transactions...</span>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16 px-4">
+            <p className="text-red-600 mb-4">Failed to load transactions</p>
+            <button
+              onClick={() => refetch()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-gray-500">No transactions found</p>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="block sm:hidden space-y-4">
+              {transactions.map((transaction) => (
+                <div key={transaction.transactionId} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        ID: {transaction.transactionId}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {formatAdminDate(transaction.date)}
+                      </div>
+                    </div>
+                    <div className="ml-2 flex-shrink-0">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getAdminStatusColor(
+                          transaction.status
+                        )}`}
+                      >
+                        {getAdminStatusText(transaction.status)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">Customer:</span>
+                      <div className="text-right">
+                        <div className="text-xs font-medium text-gray-900">
+                          {transaction.customer?.fullName || "N/A"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {transaction.customer?.email || "No email"}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">Type:</span>
+                      <span
+                        className={`text-xs font-medium capitalize ${getAdminTypeColor(
+                          transaction.type
+                        )}`}
+                      >
+                        {transaction.type}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-500">Amount:</span>
+                      <span className="text-xs font-medium text-gray-900">
+                        {formatAdminCurrency(transaction.amount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Transaction ID
+                    </th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="text-left py-3 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {transactions.map((transaction) => (
+                    <tr key={transaction.transactionId} className="hover:bg-gray-50">
+                      <td className="py-4 px-6">
+                        <span className="font-mono text-sm text-gray-900">
+                          {transaction.transactionId}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {transaction.customer?.fullName || "N/A"}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {transaction.customer?.email || "No email"}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-900">
+                        {formatAdminDate(transaction.date)}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`text-sm font-medium capitalize ${getAdminTypeColor(
+                            transaction.type
+                          )}`}
+                        >
+                          {transaction.type}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-sm font-medium text-gray-900">
+                        {formatAdminCurrency(transaction.amount)}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getAdminStatusColor(
+                            transaction.status
+                          )}`}
+                        >
+                          {getAdminStatusText(transaction.status)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalTransactions > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="text-sm text-gray-500 text-center sm:text-left">
+            Showing {Math.min((currentPage - 1) * (filters.limit || ITEMS_PER_PAGE) + 1, totalTransactions)} to {Math.min(currentPage * (filters.limit || ITEMS_PER_PAGE), totalTransactions)} of {totalTransactions} results
+          </div>
+          
+          <div className="flex items-center justify-center sm:justify-end space-x-1 sm:space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            
+            <div className="flex space-x-1">
+              {/* Show first page */}
+              {currentPage > 3 && (
+                <>
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    1
+                  </button>
+                  {currentPage > 4 && <span className="px-1 sm:px-2 py-1 text-xs sm:text-sm">...</span>}
+                </>
+              )}
+              
+              {/* Show current page and surrounding pages */}
+              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(currentPage - 1 + i, totalPages - 2 + i + 1));
+                if (pageNum > totalPages) return null;
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-2 sm:px-3 py-1 text-xs sm:text-sm border rounded ${
+                      pageNum === currentPage
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              
+              {/* Show last page */}
+              {currentPage < totalPages - 2 && (
+                <>
+                  {currentPage < totalPages - 3 && <span className="px-1 sm:px-2 py-1 text-xs sm:text-sm">...</span>}
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+            
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminTransactionsTable;

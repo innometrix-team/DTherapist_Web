@@ -91,15 +91,15 @@ const StatChart: React.FC = () => {
   ) : 300000;
 
   const formatCurrency = (amount: number) => {
-    const currency = isAdmin ? 'USD' : 'NGN';
-    const symbol = isAdmin ? '$' : '₦';
+    const currency = isAdmin ? 'NGN' : 'NGN';
+    const symbol = isAdmin ? '₦' : '₦';
     
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount).replace(/[$₦]/, symbol);
+    }).format(amount).replace(/[₦]/, symbol);
   };
 
   const handleYearSelect = (year: number) => {
