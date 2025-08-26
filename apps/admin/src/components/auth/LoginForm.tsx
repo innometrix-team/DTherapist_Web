@@ -45,7 +45,7 @@ function LoginForm() {
       const { user, token } = result.data;
       setAuth({
         id: user.id,
-        role: user.role === "admin" ? "admin" : "admin",
+        role: user.role,
         token: token ?? null,
         email: user.email ?? null,
       });
