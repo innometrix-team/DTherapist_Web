@@ -55,6 +55,7 @@ function SignUpForm() {
         role: variables.role === "client" ? "user" : "counselor",
         token: responseData?.token,
         id: responseData?.id ,
+        email: variables.email
       });
       navigate(
         `/auth/verify-email?email=${encodeURIComponent(variables.email)}`
@@ -91,9 +92,6 @@ function SignUpForm() {
   return (
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Create free account</h2>
-      <p className="text-gray-500 text-sm">
-        Lorem ipsum dolor sit amet consectetur. Mauris purus vulpuLore
-      </p>
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <input
@@ -139,7 +137,7 @@ function SignUpForm() {
           >
             <option value="">Register as</option>
             <option value="client">Client</option>
-            <option value="therapist">Therapist</option>
+            <option value="therapist">Counselor</option>
           </select>
           {errors.role && (
             <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>

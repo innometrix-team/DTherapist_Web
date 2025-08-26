@@ -22,7 +22,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   const scheduleApiSessionType = sessionType === 'video' ? 'video' : 'physical';
   
   // Convert sessionType to API format for booking endpoint  
-  const bookingApiSessionType = sessionType === 'video' ? 'video' : 'physical';
+  const bookingApiSessionType = sessionType === 'video' ? 'video' : 'in-person';
 
   // Fetch therapist details
   const { 
@@ -92,7 +92,6 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   });
 
   const therapist = therapistResponse?.data?.therapist;
-  const schedules = scheduleResponse?.data?.schedules || [];
   const sessionCost = therapist ? getCostForSessionType(therapist.cost, sessionType) : 0;
 
   // Helper function to get all dates for a specific day of the week in a month
@@ -133,6 +132,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   const availableDatesMap = useMemo(() => {
     const map = new Map<string, ITimeSlot[]>();
     
+    // Move schedules initialization inside the useMemo
+    const schedules = scheduleResponse?.data?.schedules || [];
+    
     schedules.forEach(scheduleItem => {
       // Convert meetingType for comparison (in-person from API vs physical from component)
       const scheduleMeetingType = scheduleItem.meetingType === 'in-person' ? 'physical' : 'video';
@@ -155,7 +157,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     });
     
     return map;
-  }, [schedules, scheduleApiSessionType, currentMonth, getDatesForDayInCurrentMonth]);
+  }, [scheduleResponse?.data?.schedules, scheduleApiSessionType, currentMonth, getDatesForDayInCurrentMonth]);
 
   // Generate calendar days for the current month
   const generateCalendarDays = useCallback((): (number | null)[] => {
@@ -247,7 +249,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
     const bookingData: IBookingRequest = {
-      therapistId: therapist.userId,
+      therapistId: therapistId,
       sessionType: bookingApiSessionType,
       date: selectedDate,
       startTime: selectedTime,

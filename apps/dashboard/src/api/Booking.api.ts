@@ -3,7 +3,7 @@ import Api, { IAPIResult } from "./Api";
 
 export interface IBookingRequest {
   therapistId: string;
-  sessionType: "video" | "physical";
+  sessionType: "video" | "in-person";
   date: string; // YYYY-MM-DD format
   startTime: string; // HH:MM format
   endTime: string; // HH:MM format
@@ -31,7 +31,7 @@ export default async function createBookingApi(
 ): Promise<IAPIResult<IBookingResponse> | null> {
   try {
     const response = await Api.post<APIResponse<IBookingResponse>>(
-      '/api/user/counselor/booking',
+      '/api/user/booking',
       data,
       { ...config }
     );
@@ -82,7 +82,7 @@ export async function getBookingStatusApi(
 ): Promise<IAPIResult<{ status: string; booking: string }> | null> {
   try {
     const response = await Api.get<APIResponse<{ status: string; booking: string }>>(
-      `/api/user/bookings/${encodeURIComponent(bookingId)}`,
+      `/api/user/booking/${encodeURIComponent(bookingId)}`,
       { ...config }
     );
     return Promise.resolve({

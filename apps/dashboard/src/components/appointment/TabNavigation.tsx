@@ -35,7 +35,6 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
           <div className="absolute bottom-0 w-full h-0.5 bg-blue-600"></div>
         )}
       </button>
-      <div className="absolute left-1/2 h-10 w-px bg-gray-200 top-1/2 transform -translate-y-1/2"></div>
     </div>
   );
 };

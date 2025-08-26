@@ -33,10 +33,20 @@ export interface IReviewsListResponse {
   };
 }
 
+// FIXED: Updated interface to match your actual API response
 interface APIResponse<T> {
-  status: string;
+  status?: string;
   message: string;
-  data: T;
+  data?: T;
+  // Add direct properties for the flat response structure
+  reviews?: IReview[];
+  totalCount?: number;
+  averageRating?: number;
+  ratingDistribution?: {
+    [key: string]: number;
+  };
+  // For create review response
+  review?: IReview;
 }
 
 // Create a review
@@ -50,11 +60,32 @@ export default async function createReviewApi(
       data,
       { ...config }
     );
+    
+    // Handle both nested and flat response structures for create review
+    let reviewData: ICreateReviewResponse;
+    
+    if (response.data.data) {
+      // Nested structure
+      reviewData = response.data.data;
+    } else if (response.data.review) {
+      // Flat structure with review property
+      reviewData = {
+        review: response.data.review,
+        message: response.data.message
+      };
+    } else {
+      // Fallback - treat the entire response.data as the review
+      reviewData = {
+        review: response.data as unknown as IReview,
+        message: response.data.message
+      };
+    }
+    
     return Promise.resolve({
       code: response.status,
-      status: response.data.status,
+      status: response.data.status || "success",
       message: response.data.message ?? "success",
-      data: response.data.data
+      data: reviewData
     });
   } catch (e) {
     if (axios.isCancel(e)) {
@@ -75,7 +106,7 @@ export default async function createReviewApi(
   }
 }
 
-// Get reviews for a specific therapist
+// FIXED: Get reviews for a specific therapist
 export async function getTherapistReviewsApi(
   therapistId: string,
   config?: AxiosRequestConfig
@@ -85,13 +116,54 @@ export async function getTherapistReviewsApi(
       `/api/user/reviews/${encodeURIComponent(therapistId)}`,
       { ...config }
     );
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
+    
+    // DEBUG: Log the raw response to see what we're actually getting
+    console.log('Raw API Response:', {
+      status: response.status,
+      data: response.data,
+      headers: response.headers,
+      config: response.config.url
     });
+    
+    // FIXED: Handle both nested and flat response structures
+    let reviewsData: IReviewsListResponse;
+    
+    if (response.data.data) {
+      // Nested structure: { status: "success", message: "...", data: { reviews: [...] } }
+      console.log('Using nested structure');
+      reviewsData = response.data.data;
+    } else if (response.data.reviews) {
+      // Flat structure: { message: "...", reviews: [...] }
+      console.log('Using flat structure');
+      reviewsData = {
+        reviews: response.data.reviews,
+        totalCount: response.data.totalCount || response.data.reviews.length,
+        averageRating: response.data.averageRating || 0,
+        ratingDistribution: response.data.ratingDistribution || {}
+      };
+    } else {
+      // Fallback: empty reviews
+      console.log('No reviews found in response, using fallback');
+      reviewsData = {
+        reviews: [],
+        totalCount: 0,
+        averageRating: 0,
+        ratingDistribution: {}
+      };
+    }
+
+    const result = {
+      code: response.status,
+      status: response.data.status || "success",
+      message: response.data.message ?? "success",
+      data: reviewsData
+    };
+    
+    console.log('Final result:', result);
+    return Promise.resolve(result);
   } catch (e) {
+    console.error('Error in getTherapistReviewsApi:', e);
+    
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
@@ -110,7 +182,7 @@ export async function getTherapistReviewsApi(
   }
 }
 
-// Get all reviews (for admin or user's own reviews)
+// FIXED: Get all reviews (for admin or user's own reviews)
 export async function getAllReviewsApi(
   params?: { page?: number; limit?: number; userId?: string },
   config?: AxiosRequestConfig
@@ -127,83 +199,36 @@ export async function getAllReviewsApi(
     const response = await Api.get<APIResponse<IReviewsListResponse>>(url, {
       ...config,
     });
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
+    
+    // FIXED: Handle both nested and flat response structures
+    let reviewsData: IReviewsListResponse;
+    
+    if (response.data.data) {
+      // Nested structure
+      reviewsData = response.data.data;
+    } else if (response.data.reviews) {
+      // Flat structure
+      reviewsData = {
+        reviews: response.data.reviews,
+        totalCount: response.data.totalCount || response.data.reviews.length,
+        averageRating: response.data.averageRating || 0,
+        ratingDistribution: response.data.ratingDistribution || {}
+      };
+    } else {
+      // Fallback
+      reviewsData = {
+        reviews: [],
+        totalCount: 0,
+        averageRating: 0,
+        ratingDistribution: {}
+      };
     }
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Update a review (if allowed)
-export async function updateReviewApi(
-  reviewId: string,
-  data: Partial<IReviewRequest>,
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<ICreateReviewResponse> | null> {
-  try {
-    const response = await Api.put<APIResponse<ICreateReviewResponse>>(
-      `/api/user/reviews/${encodeURIComponent(reviewId)}`,
-      data,
-      { ...config }
-    );
     return Promise.resolve({
       code: response.status,
-      status: response.data.status,
+      status: response.data.status || "success",
       message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Delete a review (if allowed)
-export async function deleteReviewApi(
-  reviewId: string,
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<{ message: string }> | null> {
-  try {
-    const response = await Api.delete<APIResponse<{ message: string }>>(
-      `/api/user/reviews/${encodeURIComponent(reviewId)}`,
-      { ...config }
-    );
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
+      data: reviewsData
     });
   } catch (e) {
     if (axios.isCancel(e)) {
