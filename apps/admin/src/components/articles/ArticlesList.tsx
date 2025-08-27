@@ -213,7 +213,7 @@ const ArticlesList: React.FC = () => {
           {/* Create Article Button */}
           <button
             onClick={handleCreateArticle}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
           >
             Create Article
           </button>
@@ -223,19 +223,19 @@ const ArticlesList: React.FC = () => {
       {/* Bulk Actions */}
       {selectedArticles.length > 0 && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-          <span className="text-sm text-blue-700">
+          <span className="text-sm text-primary">
             {selectedArticles.length} article{selectedArticles.length === 1 ? '' : 's'} selected
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleSelectAll(false)}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-sm text-primary hover:text-blue-800"
             >
               Clear Selection
             </button>
             <button
               onClick={() => handleSelectAll(true)}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-sm text-primary hover:text-blue-800"
             >
               Select All
             </button>
@@ -266,7 +266,7 @@ const ArticlesList: React.FC = () => {
                   type="checkbox"
                   checked={selectedArticles.includes(article._id)}
                   onChange={(e) => handleArticleSelect(article._id, e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                 />
               </div>
 
@@ -310,7 +310,7 @@ const ArticlesList: React.FC = () => {
               {/* Open Button */}
               <button
                 onClick={() => handleOpenArticle(article._id)}
-                className="px-4 py-1 text-blue-600 hover:bg-blue-50 rounded text-sm transition-colors"
+                className="px-4 py-1 text-primary hover:bg-blue-50 rounded text-sm transition-colors"
               >
                 Open
               </button>
