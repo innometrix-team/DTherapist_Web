@@ -13,6 +13,7 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
       { to: "/", label: "Dashboard" },
       { to: "/user", label: "User" },
       { to: "/library", label: "Library" },
+      { to: "/bookings", label: "Bookings" },
       { to: "/transaction", label: "Transaction" },
     ],
     
