@@ -4,6 +4,7 @@ export type NavLabel =
   | "User"
   | "Transaction" 
   | "Library"
+  | "DAnonymous"
 ;
 
 export interface NavItem {
