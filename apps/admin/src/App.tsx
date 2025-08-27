@@ -19,7 +19,7 @@ function App() {
           <Route index element={<Dashboard />} />
           {/* Add other protected routes here */}
           <Route path="user" element={<User />} />
-          <Route path="library" element={<Library />} />
+          <Route path="library/*" element={<Library />} />
           <Route path="transaction" element={<Transaction />} />
         </Route>
 
