@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { MenuIcon, UserIcon } from "../../assets/icons";
 import Sidebar from "../sidebar/SideBar";
+import NotificationsDropdown from "../Notifications/NotificationsDropdown";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -25,6 +26,9 @@ const Layout: React.FC = () => {
           </button>
 
           <div className="flex items-center space-x-4 ml-auto">
+            {/* Notifications Dropdown */}
+            <NotificationsDropdown />
+            
             {/* Static Profile Icon */}
             <div className="h-8 w-8 rounded-full border bg-gray-100 text-gray-600 flex items-center justify-center">
               <UserIcon className="w-5 h-5" />
