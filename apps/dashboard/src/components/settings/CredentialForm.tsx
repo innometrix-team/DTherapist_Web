@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-hot-toast";
 import { useMutation } from "@tanstack/react-query";
-import { FaTrash, FaUpload, FaCheck } from "react-icons/fa";
+import { FaTrash, FaUpload, FaCheck, FaTimes } from "react-icons/fa";
 import { 
   uploadCVApi, 
   uploadCertificationApi, 
@@ -62,6 +62,63 @@ const isTherapistRole = (role: Role | null): role is "therapist" | "counselor" =
   return role === "therapist" || role === "counselor";
 };
 
+// Success Modal Component
+const SuccessModal: React.FC<{ 
+  isOpen: boolean; 
+  onClose: () => void; 
+}> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-100 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <div className="bg-green-100 rounded-full p-2 mr-3">
+                <FaCheck className="text-green-600 text-lg" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Credentials Submitted Successfully
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <FaTimes className="text-lg" />
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="mb-6">
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Thank you for submitting your credentials! Your account will be reviewed within 
+              <span className="font-medium text-gray-900"> 24-48 hours</span>.
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              Once your credentials are verified, clients will be able to view your profile 
+              and book therapy sessions with you. You will receive a notification via email 
+              once the verification process is complete.
+            </p>
+          </div>
+          
+          {/* Footer */}
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-primary hover:bg-blue-700 text-white font-medium px-6 py-2 rounded transition-colors duration-200"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CredentialForm: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<{
     resume: UploadedFile | null;
@@ -70,6 +127,8 @@ const CredentialForm: React.FC = () => {
     resume: null,
     certification: null,
   });
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -145,7 +204,6 @@ const CredentialForm: React.FC = () => {
       
       if (!url) {
         toast.error("Upload successful but URL not received. Please try again.");
-
         return;
       }
       
@@ -175,13 +233,16 @@ const CredentialForm: React.FC = () => {
     },
     onSuccess: (result) => {
       if (!result) return;
-      toast.success(result.message || "Credentials saved successfully!");
+      
       // Reset form and uploaded files after successful save
       reset();
       setUploadedFiles({
         resume: null,
         certification: null,
       });
+      
+      // Show success modal instead of toast
+      setShowSuccessModal(true);
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Failed to save credentials. Please try again.";
@@ -228,7 +289,6 @@ const CredentialForm: React.FC = () => {
     });
   }, [uploadedFiles, handleSaveCredentials]);
 
-  
   const handleRemoveFile = useCallback((type: "resume" | "certification") => {
     setUploadedFiles(prev => ({
       ...prev,
@@ -245,6 +305,10 @@ const CredentialForm: React.FC = () => {
     
     toast.success(`${type === "resume" ? "CV" : "Certification"} removed successfully!`);
   }, [setValue]);
+
+  const closeSuccessModal = useCallback(() => {
+    setShowSuccessModal(false);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -269,134 +333,142 @@ const CredentialForm: React.FC = () => {
   const isSubmitting = isUploadingCV || isUploadingCertification || isSaving;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 md:p-6 space-y-6 w-full">
-      <h2 className="text-xl font-semibold text-gray-800">Credential Upload</h2>
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 md:p-6 space-y-6 w-full">
+        <h2 className="text-xl font-semibold text-gray-800">Credential Upload</h2>
 
-      {/* Resume Upload Field */}
-      <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
-        <label className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
-          Upload Resume/CV
-        </label>
-        <div className="flex-1 max-w-full md:max-w-md">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                ref={resumeInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => handleFileChange(e, "resume")}
-                disabled={isSubmitting}
-                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
-              />
-              <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
-                errors.resume ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "opacity-50" : ""}`}>
-                <PdfIcon />
-                <span className="text-sm text-gray-600 flex-1">
-                  {uploadedFiles.resume?.uploaded 
-                    ? uploadedFiles.resume.name
-                    : "Choose resume/CV"}
-                </span>
-                {isUploadingCV && (
-                  <FaUpload className="text-blue-500 animate-spin" />
-                )}
-                {uploadedFiles.resume?.uploaded && (
-                  <FaCheck className="text-green-500" />
-                )}
+        {/* Resume Upload Field */}
+        <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+          <label className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
+            Upload Resume/CV
+          </label>
+          <div className="flex-1 max-w-full md:max-w-md">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  ref={resumeInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => handleFileChange(e, "resume")}
+                  disabled={isSubmitting}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
+                />
+                <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
+                  errors.resume ? "border-red-500" : "border-gray-300"
+                } ${isSubmitting ? "opacity-50" : ""}`}>
+                  <PdfIcon />
+                  <span className="text-sm text-gray-600 flex-1">
+                    {uploadedFiles.resume?.uploaded 
+                      ? uploadedFiles.resume.name
+                      : "Choose resume/CV"}
+                  </span>
+                  {isUploadingCV && (
+                    <FaUpload className="text-blue-500 animate-spin" />
+                  )}
+                  {uploadedFiles.resume?.uploaded && (
+                    <FaCheck className="text-green-500" />
+                  )}
+                </div>
               </div>
+              
+              {uploadedFiles.resume?.uploaded && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile("resume")}
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
+                  title="Remove CV"
+                >
+                  <FaTrash size={14} />
+                </button>
+              )}
             </div>
             
-            {uploadedFiles.resume?.uploaded && (
-              <button
-                type="button"
-                onClick={() => handleRemoveFile("resume")}
-                disabled={isSubmitting}
-                className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
-                title="Remove CV"
-              >
-                <FaTrash size={14} />
-              </button>
+            {errors.resume && (
+              <p className="text-red-500 text-xs mt-1">
+                {typeof errors.resume.message === 'string' 
+                  ? errors.resume.message 
+                  : 'Invalid file'}
+              </p>
             )}
           </div>
-          
-          {errors.resume && (
-            <p className="text-red-500 text-xs mt-1">
-              {typeof errors.resume.message === 'string' 
-                ? errors.resume.message 
-                : 'Invalid file'}
-            </p>
-          )}
         </div>
-      </div>
 
-      {/* Certification Upload Field */}
-      <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
-        <label className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
-          Upload Certification
-        </label>
-        <div className="flex-1 max-w-full md:max-w-md">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                ref={certificationInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => handleFileChange(e, "certification")}
-                disabled={isSubmitting}
-                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
-              />
-              <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
-                errors.certification ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "opacity-50" : ""}`}>
-                <PdfIcon />
-                <span className="text-sm text-gray-600 flex-1">
-                  {uploadedFiles.certification?.uploaded 
-                    ? uploadedFiles.certification.name
-                    : "Choose certification"}
-                </span>
-                {isUploadingCertification && (
-                  <FaUpload className="text-blue-500 animate-spin" />
-                )}
-                {uploadedFiles.certification?.uploaded && (
-                  <FaCheck className="text-green-500" />
-                )}
+        {/* Certification Upload Field */}
+        <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+          <label className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
+            Upload Certification
+          </label>
+          <div className="flex-1 max-w-full md:max-w-md">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  ref={certificationInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => handleFileChange(e, "certification")}
+                  disabled={isSubmitting}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
+                />
+                <div className={`flex items-center gap-2 bg-gray-100 border px-3 py-2 rounded-md ${
+                  errors.certification ? "border-red-500" : "border-gray-300"
+                } ${isSubmitting ? "opacity-50" : ""}`}>
+                  <PdfIcon />
+                  <span className="text-sm text-gray-600 flex-1">
+                    {uploadedFiles.certification?.uploaded 
+                      ? uploadedFiles.certification.name
+                      : "Choose certification"}
+                  </span>
+                  {isUploadingCertification && (
+                    <FaUpload className="text-blue-500 animate-spin" />
+                  )}
+                  {uploadedFiles.certification?.uploaded && (
+                    <FaCheck className="text-green-500" />
+                  )}
+                </div>
               </div>
+              
+              {uploadedFiles.certification?.uploaded && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile("certification")}
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
+                  title="Remove Certification"
+                >
+                  <FaTrash size={14} />
+                </button>
+              )}
             </div>
             
-            {uploadedFiles.certification?.uploaded && (
-              <button
-                type="button"
-                onClick={() => handleRemoveFile("certification")}
-                disabled={isSubmitting}
-                className="flex items-center justify-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50 rounded-md transition-colors duration-200"
-                title="Remove Certification"
-              >
-                <FaTrash size={14} />
-              </button>
+            {errors.certification && (
+              <p className="text-red-500 text-xs mt-1">
+                {typeof errors.certification.message === 'string' 
+                  ? errors.certification.message 
+                  : 'Invalid file'}
+              </p>
             )}
           </div>
-          
-          {errors.certification && (
-            <p className="text-red-500 text-xs mt-1">
-              {typeof errors.certification.message === 'string' 
-                ? errors.certification.message 
-                : 'Invalid file'}
-            </p>
-          )}
         </div>
-      </div>
 
-      {/* Submit Button */}
-      <div className="pt-4">
-        <button
-          type="submit"
-          disabled={isSubmitting || !uploadedFiles.resume?.uploaded || !uploadedFiles.certification?.uploaded}
-          className="bg-primary hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-        >
-          {isSaving ? "Saving..." : "Save Credentials"}
-        </button>
-      </div>
-    </form>
+        {/* Submit Button */}
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={isSubmitting || !uploadedFiles.resume?.uploaded || !uploadedFiles.certification?.uploaded}
+            className="bg-primary hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          >
+            {isSaving ? "Saving..." : "Save Credentials"}
+          </button>
+        </div>
+      </form>
+
+      {/* Success Modal */}
+      <SuccessModal 
+        isOpen={showSuccessModal} 
+        onClose={closeSuccessModal} 
+      />
+    </>
   );
 };
 

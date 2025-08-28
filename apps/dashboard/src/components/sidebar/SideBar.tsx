@@ -35,9 +35,16 @@ const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
   },
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+interface SidebarPropsWithUserType extends SidebarProps {
+  userType: "user" | "counselor";
+}
+
+const Sidebar: React.FC<SidebarPropsWithUserType> = ({ 
+  sidebarOpen, 
+  setSidebarOpen, 
+  userType 
+}) => {
   const { logout } = useAuthStore();
-  const role = useAuthStore((state) => state.role);
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
@@ -46,19 +53,14 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     navigate("/auth");
   }, [logout, navigate]);
 
-  const sections = useMemo(
-    () =>
-      !role
-        ? null
-        : [
-            NAV_ITEMS[role].primary,
-            NAV_ITEMS[role].secondary,
-            NAV_ITEMS[role].tertiary,
-          ],
-    [role]
-  );
-
-  if (!sections) return null;
+  const sections = useMemo(() => {
+    const navGroup = NAV_ITEMS[userType];
+    return [
+      navGroup.primary,
+      navGroup.secondary,
+      navGroup.tertiary,
+    ];
+  }, [userType]);
 
   return (
     <>

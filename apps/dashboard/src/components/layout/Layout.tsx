@@ -58,8 +58,6 @@ const Layout: React.FC = () => {
       return ""; // Will show loading state
     }
     
- 
-    
     if (profileData?.profilePicture) {
       return profileData.profilePicture;
     }
@@ -72,7 +70,11 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex h-dvh bg-white">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen}
+        userType={userType} // Pass userType instead of relying on role
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col ">
@@ -94,7 +96,6 @@ const Layout: React.FC = () => {
                     className="h-8 w-8 rounded-full border object-cover"
                     onLoad={() => console.log("Image loaded successfully:", profilePicture)}
                     onError={(e) => {
-                     
                       // Handle image load error by hiding the image
                       e.currentTarget.style.display = "none";
                       const fallback = e.currentTarget.nextElementSibling as HTMLElement;
