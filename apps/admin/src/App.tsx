@@ -8,6 +8,8 @@ import { Toaster } from "react-hot-toast";
 import User from "./pages/User/User";
 import Library from "./pages/Library/Library";
 import Transaction from "./pages/Transaction/Transaction";
+import DAnonymous from "./pages/DAnonymous/DAnonymous";
+
 
 function App() {
   
@@ -21,6 +23,7 @@ function App() {
           <Route path="user" element={<User />} />
           <Route path="library/*" element={<Library />} />
           <Route path="transaction" element={<Transaction />} />
+          <Route path="danonymous" element={<DAnonymous />} />
         </Route>
 
         {/* Public Routes */}
