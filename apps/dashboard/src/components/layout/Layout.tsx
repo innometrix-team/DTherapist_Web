@@ -5,6 +5,7 @@ import { MenuIcon, UserIcon } from "../../assets/icons";
 import Sidebar from "../sidebar/SideBar";
 import ProfileApi from "../../api/Profile.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import UserNotificationsDropdown from "../Notification/Notification";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -16,23 +17,20 @@ const Layout: React.FC = () => {
   const userType = role === "counselor" ? "counselor" : "user";
 
   // Query to fetch user profile
-  const {
-    data: profileData,
-    isLoading: profileLoading,
-  } = useQuery({
+  const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ["user-profile", userType],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
-      const response = await ProfileApi(userType, { 
-        signal: controller.signal 
+
+      const response = await ProfileApi(userType, {
+        signal: controller.signal,
       });
-      
+
       if (!response?.data) {
         throw new Error("No profile data received");
       }
-      
+
       return response.data;
     },
     retry: 2,
@@ -57,11 +55,11 @@ const Layout: React.FC = () => {
     if (profileLoading) {
       return ""; // Will show loading state
     }
-    
+
     if (profileData?.profilePicture) {
       return profileData.profilePicture;
     }
-    
+
     // No profile picture available
     return "";
   };
@@ -84,6 +82,9 @@ const Layout: React.FC = () => {
           </button>
 
           <div className="flex items-center space-x-4 ml-auto">
+            {/* User Notifications Dropdown */}
+            <UserNotificationsDropdown />
+
             {/* Profile Picture with Loading and Error States */}
             <div className="relative group">
               {profileLoading ? (
@@ -94,18 +95,21 @@ const Layout: React.FC = () => {
                     src={profilePicture}
                     alt={profileData?.fullName || "User avatar"}
                     className="h-8 w-8 rounded-full border object-cover"
-                    onLoad={() => console.log("Image loaded successfully:", profilePicture)}
+                    onLoad={() =>
+                      console.log("Image loaded successfully:", profilePicture)
+                    }
                     onError={(e) => {
                       // Handle image load error by hiding the image
                       e.currentTarget.style.display = "none";
-                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      const fallback = e.currentTarget
+                        .nextElementSibling as HTMLElement;
                       if (fallback) {
                         fallback.style.display = "flex";
                       }
                     }}
                   />
                   {/* Fallback user icon */}
-                  <div 
+                  <div
                     className="h-8 w-8 rounded-full border bg-gray-100 text-gray-600 items-center justify-center"
                     style={{ display: "none" }}
                   >
@@ -118,7 +122,7 @@ const Layout: React.FC = () => {
                   <UserIcon className="w-5 h-5" />
                 </div>
               )}
-              
+
               {/* Optional: Show user name on hover */}
               {profileData?.fullName && (
                 <div className="absolute right-0 top-full mt-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
