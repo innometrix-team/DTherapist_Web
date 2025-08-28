@@ -5,7 +5,6 @@ import { AuthState } from "../store/auth/types";
 
 export interface IProfileUpdateData {
   fullName: string;
-  email: string;
   bio: string;
   specialization?: string;
   experience?: number;
@@ -17,7 +16,7 @@ export interface IProfileUpdateData {
 interface IResponseData {
   id: string;
   fullName: string;
-  email: string;
+  email: string; // Keep in response for auth purposes
   bio: string;
   specialization?: string;
   experience?: number;
@@ -59,8 +58,8 @@ function validateProfilePicture(file: File): void {
 }
 
 function validateRequiredFields(data: IProfileUpdateData): void {
-  if (!data.fullName?.trim() || !data.email?.trim() || !data.country?.trim()) {
-    throw new Error('Required fields (fullName, email, country) are missing or empty');
+  if (!data.fullName?.trim() || !data.country?.trim()) {
+    throw new Error('Required fields (fullName, country) are missing or empty');
   }
 }
 
@@ -68,7 +67,6 @@ function createProfileFormData(data: IProfileUpdateData, isTherapist: boolean): 
   const formData = new FormData();
 
   formData.append('fullName', data.fullName.trim());
-  formData.append('email', data.email.trim());
   formData.append('bio', data.bio || '');
   formData.append('country', data.country.trim());
 
@@ -140,8 +138,6 @@ export default async function ProfileUpdateApi(
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
-
-    
 
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =

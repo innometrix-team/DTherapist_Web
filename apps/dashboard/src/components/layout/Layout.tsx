@@ -68,7 +68,11 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex h-dvh bg-white">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen}
+        userType={userType} // Pass userType instead of relying on role
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col ">

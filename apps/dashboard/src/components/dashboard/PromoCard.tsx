@@ -31,20 +31,11 @@ const PromoCard: React.FC<PromoConfig> = ({ title, subtitle, ctaLabel }) => {
       </div>
       <div className="h-38 lg:h-full aspect-[140/154] relative">
         <img
-          src="/images/promo-illustration.png"
+          src="/images/promo-illustration1.png"
           alt=""
           className=" h-full object-fit-cover absolute left-7 top-0 opacity-100 hidden lg:block"
         />
-        <img
-          src="/images/promo-illustration.png"
-          alt=""
-          className=" h-full object-fit-cover opacity-100 lg:opacity-50"
-        />
-        <img
-          src="/images/promo-illustration.png"
-          alt=""
-          className=" h-full object-fit-cover absolute right-7 top-0 opacity-25 hidden lg:block"
-        />
+       
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ import ProfileUpdateApi, {
 import ProfileApi from "../../api/Profile.api"; // Import the profile fetching API
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
-// Base schema for common fields
+// Base schema for common fields (removed email)
 const baseSchema = z.object({
   fullName: z
     .string()
@@ -22,7 +22,6 @@ const baseSchema = z.object({
     .refine((val) => val.trim().split(/\s+/).length >= 2, {
       message: "Please enter your full name",
     }),
-  email: z.string().email("Invalid email address"),
   country: z.string().min(2, "Country is required"),
 });
 
@@ -63,7 +62,6 @@ const ProfileForm: React.FC = () => {
     defaultValues: isCounselor
       ? {
           fullName: "",
-          email: "",
           bio: "",
           specialization: "",
           experience: 0,
@@ -72,7 +70,6 @@ const ProfileForm: React.FC = () => {
         }
       : {
           fullName: "",
-          email: "",
           bio: "",
           country: "",
         },
@@ -96,9 +93,8 @@ const ProfileForm: React.FC = () => {
     if (profileData?.data) {
       const profile = profileData.data;
       
-      // Set form values
+      // Set form values (removed email)
       setValue("fullName", profile.fullName || "");
-      setValue("email", profile.email || "");
       setValue("bio", profile.bio || "");
       setValue("country", profile.country || "");
 
@@ -142,10 +138,9 @@ const ProfileForm: React.FC = () => {
         return;
       }
 
-      // Safely destructure data with fallbacks
+      // Safely destructure data with fallbacks (removed email)
       const {
         fullName,
-        email,
         bio,
         country,
         specialization,
@@ -157,7 +152,6 @@ const ProfileForm: React.FC = () => {
 
       // Update form with returned data
       setValue("fullName", fullName);
-      setValue("email", email);
       setValue("bio", bio);
       setValue("country", country);
 
@@ -184,7 +178,7 @@ const ProfileForm: React.FC = () => {
           role: auth?.role || "user",
           token: token,
           id: result.data.id,
-          email: result.data.email,
+          email: result.data.email, // Keep this if it's still needed for auth
         });
       }
 
@@ -266,10 +260,9 @@ const ProfileForm: React.FC = () => {
         return;
       }
 
-      // Prepare update data - now simplified since both endpoints handle images
+      // Prepare update data - removed email
       const updateData: IProfileUpdateData = {
         fullName: data.fullName,
-        email: data.email,
         bio: data.bio,
         country: data.country,
         profilePicture: profileImage || undefined,
@@ -392,26 +385,6 @@ const ProfileForm: React.FC = () => {
             <p className="text-red-600 text-sm mt-1">
               {errors.fullName.message}
             </p>
-          )}
-        </div>
-      </div>
-
-      {/* Email */}
-      <div className={formGroupStyle}>
-        <label htmlFor="email" className={labelStyle}>
-          Email
-        </label>
-        <div className="flex flex-col w-full max-w-full md:max-w-md">
-          <input
-            id="email"
-            type="email"
-            placeholder="Enter email"
-            {...register("email")}
-            disabled={isPending || isSubmitting}
-            className={inputStyle}
-          />
-          {errors.email && (
-            <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
           )}
         </div>
       </div>
