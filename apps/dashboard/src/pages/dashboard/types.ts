@@ -28,7 +28,7 @@ export const DUMMY_DASHBOARD_CONFIG: Record<Role, DashboardConfig> = {
     balance: { amount: "₦00,000", actions: ["topUp", "withdraw"] },
     promo: {
       title: "Trust the Healing Process",
-      subtitle: " Your mental health matters. Here’s how we can help you.",
+      subtitle: " Your mental health matters. ",
       ctaLabel: "Get Therapy",
     },
     stats: [

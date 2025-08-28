@@ -72,7 +72,7 @@ const Sidebar: React.FC<SidebarPropsWithUserType> = ({
       >
         <div className=" p-4 border-b-divider border-b h-16">
           <Link to="/" className="h-full">
-            <img src="/images/logo.png" className="h-full" />
+            <img src="/images/logo.png" className="h-12 md:h-14 w-auto object-contain" />
           </Link>
         </div>
 
