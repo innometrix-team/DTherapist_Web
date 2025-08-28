@@ -4,6 +4,7 @@ export type NavLabel =
   | "User"
   | "Transaction" 
   | "Library"
+  | "Bookings"
   | "DAnonymous"
 ;
 

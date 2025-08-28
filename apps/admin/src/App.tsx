@@ -8,6 +8,7 @@ import { Toaster } from "react-hot-toast";
 import User from "./pages/User/User";
 import Library from "./pages/Library/Library";
 import Transaction from "./pages/Transaction/Transaction";
+import Book from "./pages/Bookings/Bookings";
 import DAnonymous from "./pages/DAnonymous/DAnonymous";
 
 
@@ -22,6 +23,7 @@ function App() {
           {/* Add other protected routes here */}
           <Route path="user" element={<User />} />
           <Route path="library/*" element={<Library />} />
+          <Route path="bookings" element={<Book />} />
           <Route path="transaction" element={<Transaction />} />
           <Route path="danonymous" element={<DAnonymous />} />
         </Route>
