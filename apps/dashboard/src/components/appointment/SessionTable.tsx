@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getCounselorAppointments, getUserAppointments, Appointment, UserDashboardData } from '../../api/Appointments.api';
+import { getCounselorAppointments, getUserAppointments, downloadInvoice, Appointment, UserDashboardData } from '../../api/Appointments.api';
 import DashboardApi from '../../api/Dashboard.api';
 import { ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon, WithdrawIcon } from '../../assets/icons';
 import { useAuthStore } from '../../store/auth/useAuthStore';
@@ -29,6 +29,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
   const navigate = useNavigate();
   const abortControllerRef = useRef<AbortController | null>(null);
   
@@ -192,7 +193,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
     setActiveDropdown(activeDropdown === appointmentId ? null : appointmentId);
   };
 
-  const handleActionClick = (action: string, appointment: Appointment) => {
+  // Updated handleActionClick with new invoice download logic
+  const handleActionClick = async (action: string, appointment: Appointment) => {
     setActiveDropdown(null);
     
     switch(action) {
@@ -214,12 +216,24 @@ const SessionTable: React.FC<SessionTableProps> = ({
         onReschedule?.(appointment.bookingId);
         break;
       case 'downloadInvoice':
-        if (appointment.action?.invoiceDownloadLink) {
-          window.open(appointment.action.invoiceDownloadLink, '_blank');
-        } else if (onDownloadInvoice) {
-          onDownloadInvoice(appointment.bookingId);
-        } else {
-          toast.error('Invoice not available');
+        try {
+          setDownloadingInvoice(appointment.bookingId);
+          
+          // Use the new API endpoint instead of the link
+          await downloadInvoice(appointment.bookingId);
+          
+          toast.success('Invoice downloaded successfully');
+          
+          // Call the optional callback if provided
+          if (onDownloadInvoice) {
+            onDownloadInvoice(appointment.bookingId);
+          }
+        } catch (error: unknown) {
+          console.error('Invoice download error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to download invoice';
+          toast.error(errorMessage);
+        } finally {
+          setDownloadingInvoice(null);
         }
         break;
     }
@@ -417,11 +431,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             </>
                           ) : (
                             <button 
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => handleActionClick('downloadInvoice', appointment)}
+                              disabled={downloadingInvoice === appointment.bookingId}
                             >
                               <WithdrawIcon className="w-4 h-4 mr-2" />
-                              <span>Download Invoice</span>
+                              <span>
+                                {downloadingInvoice === appointment.bookingId ? 'Downloading...' : 'Download Invoice'}
+                              </span>
                             </button>
                           )}
                         </div>
@@ -474,9 +491,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-3">
+            <div className="border-t border-gray-100 pt-3 z-30">
               {type === 'upcoming' ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 z-40">
                   <button 
                     className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
                     onClick={() => handleActionClick('startMeeting', appointment)}
@@ -501,11 +518,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 </div>
               ) : (
                 <button 
-                  className="flex items-center justify-center w-full px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors"
+                  className="flex items-center justify-center w-full px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => handleActionClick('downloadInvoice', appointment)}
+                  disabled={downloadingInvoice === appointment.bookingId}
                 >
                   <WithdrawIcon className="w-4 h-4 mr-2" />
-                  Download Invoice
+                  {downloadingInvoice === appointment.bookingId ? 'Downloading...' : 'Download Invoice'}
                 </button>
               )}
             </div>

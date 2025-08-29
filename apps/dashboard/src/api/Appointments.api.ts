@@ -247,3 +247,47 @@ export async function getAppointmentsWithUser(
     });
   }
 }
+
+// NEW: Download invoice PDF function
+export async function downloadInvoice(
+  bookingId: string,
+  config?: AxiosRequestConfig
+): Promise<void> {
+  try {
+    const response = await Api.get(`/api/invoice/${bookingId}/invoice/`, {
+      ...config,
+      responseType: 'blob', // Important: Set response type to blob for PDF
+    });
+
+    // Create blob from response data
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    
+    // Create download URL
+    const downloadUrl = window.URL.createObjectURL(blob);
+    
+    // Create temporary download link
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `invoice-${bookingId}.pdf`;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (e) {
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    
+    throw {
+      code: statusCode,
+      status: "error",
+      message: errorMessage || "Failed to download invoice",
+      data: undefined,
+    };
+  }
+}
