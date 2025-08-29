@@ -240,10 +240,10 @@ const Appointments: React.FC = () => {
             <div className="md:hidden mb-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-primary">
                     {activeTab === "upcoming" ? upcomingCount : passedCount}
                   </div>
-                  <div className="text-xs text-blue-600/70 uppercase tracking-wider">
+                  <div className="text-xs text-primary/70 uppercase tracking-wider">
                     {activeTab === "upcoming" ? "Upcoming" : "Completed"}
                   </div>
                 </div>
