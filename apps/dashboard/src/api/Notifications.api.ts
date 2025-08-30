@@ -21,8 +21,6 @@ interface APIResponse {
   data: IUserNotification[];
 }
 
-
-
 interface APIErrorResponse {
   code: number;
   status: string;
@@ -68,9 +66,6 @@ export async function getUserNotificationsApi(
     });
   }
 }
-
-// Mark User/Counselor Notification as Read
-
 
 // Helper function to format notification date
 export function formatNotificationDate(dateString: string): string {

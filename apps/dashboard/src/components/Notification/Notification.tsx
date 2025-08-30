@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BellIcon,} from "lucide-react";
+import { BellIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import {
@@ -23,7 +23,8 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const { role } = useAuthStore();
+  const { role, id } = useAuthStore();
+  const currentUserId = id;
   const isUser = role === "user";
   const isCounselor = role === "counselor";
   const userType = isCounselor ? "counselor" : "user";
@@ -35,7 +36,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["user-notifications", userType],
+    queryKey: ["user-notifications", userType, currentUserId],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -44,12 +45,18 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     staleTime: 1000 * 60, // Cache for 1 minute
     refetchInterval: 1000 * 60 * 2, // Refetch every 2 minutes
     retry: 2,
-    enabled: isUser || isCounselor,
+    enabled: (isUser || isCounselor) && !!currentUserId,
   });
 
+  // Filter notifications for current user only
   const notifications = useMemo(() => {
-    return notificationsResponse?.data || [];
-  }, [notificationsResponse?.data]);
+    const allNotifications = notificationsResponse?.data || [];
+    
+    // Filter notifications by current user ID
+    return allNotifications.filter((notification: IUserNotification) => 
+      notification.userId === currentUserId
+    );
+  }, [notificationsResponse?.data, currentUserId]);
   
   const unreadCount = useMemo(() => {
     return notifications.filter((n: IUserNotification) => !n.seen).length;
@@ -84,8 +91,8 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     }
   }, [error]);
 
-  // Don't render if not user or counselor
-  if (!isUser && !isCounselor) {
+  // Don't render if not user or counselor or no user ID
+  if ((!isUser && !isCounselor) || !currentUserId) {
     return null;
   }
 
@@ -117,15 +124,13 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                 </span>
               )}
             </div>
-            
-            
           </div>
 
           {/* Content */}
           <div className="max-h-80 overflow-y-auto">
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 <span className="ml-2 text-sm text-gray-600">Loading...</span>
               </div>
             ) : error ? (
@@ -133,7 +138,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                 <p className="text-red-600 text-sm mb-2">Failed to load notifications</p>
                 <button
                   onClick={() => refetch()}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="text-primary hover:text-blue-800 text-sm font-medium"
                 >
                   Try Again
                 </button>
@@ -151,7 +156,6 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                     className={`p-4 hover:bg-gray-50 cursor-pointer ${
                       !notification.seen ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                     }`}
-                   
                   >
                     <div className="flex items-start space-x-3">
                       {/* Icon */}
@@ -184,8 +188,6 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                               </span>
                             </div>
                           </div>
-
-                         
                         </div>
                       </div>
                     </div>
@@ -211,7 +213,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                   setIsOpen(false);
                   // You can add navigation to a full notifications page here
                 }}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="w-full text-center text-sm text-primary hover:text-blue-800 font-medium"
               >
                 View All Notifications
               </button>
