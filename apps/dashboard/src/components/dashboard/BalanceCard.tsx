@@ -163,7 +163,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                 <span>{isFunding ? "Processing..." : "Top-up"}</span>
               </button>
             )}
-            {actions.includes("withdraw") && (
+            {/* Only show withdraw button for counselors */}
+            {actions.includes("withdraw") && role === "counselor" && (
               <button 
                 onClick={handleWithdrawClick}
                 disabled={isLoadingBalance}
