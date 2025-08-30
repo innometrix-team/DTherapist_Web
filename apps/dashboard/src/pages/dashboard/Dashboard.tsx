@@ -6,6 +6,7 @@ import PromoCard from "../../components/dashboard/PromoCard";
 import StatsGrid from "../../components/dashboard/StatsGrid";
 import SessionTable from "../../components/appointment/SessionTable";
 import RescheduleSession from "../../components/appointment/RescheduleSession";
+import FeliciaChatbot from "../../components/AIChatBot/FeliciaChatbot";
 import { DashboardConfig, DUMMY_DASHBOARD_CONFIG } from "./types";
 
 const Dashboard: React.FC = () => {
@@ -80,6 +81,9 @@ const Dashboard: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Felicia AI Chatbot */}
+      <FeliciaChatbot />
     </>
   );
 };
