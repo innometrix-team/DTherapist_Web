@@ -16,9 +16,10 @@ function EmailVerification() {
   const fullName = searchParams.get("fullName") || "";
   const isPasswordReset = !!resetToken;
   const isTherapistSignup = role === "therapist" && !isPasswordReset;
+  const isClientSignup = role === "client" && !isPasswordReset;
   
   const [otp, setOtp] = useState("");
-  const [showCounselorModal, setShowCounselorModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
   const authToken = useAuthStore((state) => state.token);
@@ -38,9 +39,9 @@ function EmailVerification() {
       }
       setToken(responseData.token);
       
-      // Show modal for therapist signup, otherwise navigate to home
-      if (isTherapistSignup) {
-        setShowCounselorModal(true);
+      // Show modal for both therapist and client signup, otherwise navigate to home
+      if (isTherapistSignup || isClientSignup) {
+        setShowWelcomeModal(true);
       } else {
         navigate("/");
       }
@@ -120,12 +121,12 @@ function EmailVerification() {
 
   // Handle modal actions
   const handleModalContinue = useCallback(() => {
-    setShowCounselorModal(false);
+    setShowWelcomeModal(false);
     navigate("/settings"); // Navigate to settings for profile completion
   }, [navigate]);
 
   const handleModalClose = useCallback(() => {
-    setShowCounselorModal(false);
+    setShowWelcomeModal(false);
     navigate("/"); // Navigate to home
   }, [navigate]);
 
@@ -207,12 +208,13 @@ function EmailVerification() {
         </p>
       </div>
 
-      {/* Counselor Welcome Modal - shown after email verification */}
+      {/* Welcome Modal - shown after email verification for both therapists and clients */}
       <CounselorWelcomeModal
-        isOpen={showCounselorModal}
+        isOpen={showWelcomeModal}
         onClose={handleModalClose}
         onContinue={handleModalContinue}
-        counselorName={fullName}
+        userName={fullName}
+        userRole={role}
       />
     </>
   );

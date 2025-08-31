@@ -1,20 +1,87 @@
 import React from "react";
 import { X } from "lucide-react";
 
-interface CounselorWelcomeModalProps {
+interface WelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onContinue: () => void;
-  counselorName?: string;
+  userName?: string;
+  userRole?: string;
 }
 
-const CounselorWelcomeModal: React.FC<CounselorWelcomeModalProps> = ({
+const CounselorWelcomeModal: React.FC<WelcomeModalProps> = ({
   isOpen,
   onClose,
   onContinue,
-  counselorName,
+  userName,
+  userRole,
 }) => {
   if (!isOpen) return null;
+
+  const isTherapist = userRole === "therapist";
+  const isClient = userRole === "client";
+
+  // Content based on user role
+  const getContent = () => {
+    if (isTherapist) {
+      return {
+        title: "Welcome to DTherapist!",
+        subtitle: `Thank you for joining us, ${userName}`,
+        mainMessage: "Thank you for joining DTherapist as a counselor.",
+        secondaryMessage: "The next step is to complete your profile and credentials details for you to be verified as a counselor.",
+        nextSteps: {
+          title: "Next Steps:",
+          items: [
+            "Complete your professional profile",
+            "Upload your credentials and certifications", 
+            "Verify your professional information",
+            "Start helping clients once approved"
+          ]
+        },
+        continueButtonText: "Continue to Profile Setup",
+        laterButtonText: "I'll do this later"
+      };
+    } else if (isClient) {
+      return {
+        title: "Welcome to DTherapist!",
+        subtitle: `Welcome, ${userName}`,
+        mainMessage: "Thank you for joining DTherapist.",
+        secondaryMessage: "To enjoy all the functions and get the best experience on DTherapist, please complete your profile setup.",
+        nextSteps: {
+          title: "Complete Your Profile To:",
+          items: [
+            "Get personalized therapy recommendations",
+            "Book sessions with verified counselors",
+            "Access your therapy history and progress",
+            "Receive tailored mental health resources"
+          ]
+        },
+        continueButtonText: "Complete Profile Setup",
+        laterButtonText: "I'll do this later"
+      };
+    } else {
+      // Fallback for unknown role
+      return {
+        title: "Welcome to DTherapist!",
+        subtitle: userName ? `Welcome, ${userName}` : "Welcome!",
+        mainMessage: "Thank you for joining DTherapist.",
+        secondaryMessage: "Please complete your profile setup to get the most out of your DTherapist experience.",
+        nextSteps: {
+          title: "Next Steps:",
+          items: [
+            "Complete your profile information",
+            "Set your preferences",
+            "Explore available features",
+            "Start your journey with DTherapist"
+          ]
+        },
+        continueButtonText: "Continue Setup",
+        laterButtonText: "I'll do this later"
+      };
+    }
+  };
+
+  const content = getContent();
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -50,35 +117,33 @@ const CounselorWelcomeModal: React.FC<CounselorWelcomeModalProps> = ({
 
           {/* Title */}
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
-            Welcome to DTherapist!
+            {content.title}
           </h2>
 
           {/* Subtitle with name if available */}
-          {counselorName && (
+          {userName && (
             <p className="text-center text-gray-600 mb-4">
-              Thank you for joining us, <span className="font-semibold">{counselorName}</span>
+              {content.subtitle}
             </p>
           )}
 
           {/* Main message */}
           <div className="text-center space-y-3 mb-6">
             <p className="text-gray-700">
-              Thank you for joining DTherapist as a counselor. 
+              {content.mainMessage}
             </p>
             <p className="text-gray-700">
-              The next step is to complete your profile and credentials details 
-              for you to be verified as a counselor.
+              {content.secondaryMessage}
             </p>
           </div>
 
           {/* Next steps info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-primary mb-2">Next Steps:</h3>
+          <div className={`${isClient ? 'bg-purple-50 border-purple-200' : 'bg-blue-50 border-blue-200'} border rounded-lg p-4 mb-6`}>
+            <h3 className="font-semibold text-primary mb-2">{content.nextSteps.title}</h3>
             <ul className="text-sm text-primary space-y-1">
-              <li>• Complete your professional profile</li>
-              <li>• Upload your credentials and certifications</li>
-              <li>• Verify your professional information</li>
-              <li>• Start helping clients once approved</li>
+              {content.nextSteps.items.map((item, index) => (
+                <li key={index}>• {item}</li>
+              ))}
             </ul>
           </div>
 
@@ -88,13 +153,13 @@ const CounselorWelcomeModal: React.FC<CounselorWelcomeModalProps> = ({
               onClick={onContinue}
               className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium hover:bg-primary/90 transition-colors"
             >
-              Continue to Profile Setup
+              {content.continueButtonText}
             </button>
             <button
               onClick={onClose}
               className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded font-medium hover:bg-gray-300 transition-colors"
             >
-              I'll do this later
+              {content.laterButtonText}
             </button>
           </div>
         </div>
