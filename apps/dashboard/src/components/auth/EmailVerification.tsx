@@ -6,13 +6,19 @@ import ResendOtpApi, { OTPRequestData } from "../../api/ResendOTP.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import CounselorWelcomeModal from "./CounselorWelcomeModal";
 
 function EmailVerification() {
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email") || "";
   const resetToken = searchParams.get("token") || "";
+  const role = searchParams.get("role") || "";
+  const fullName = searchParams.get("fullName") || "";
   const isPasswordReset = !!resetToken;
+  const isTherapistSignup = role === "therapist" && !isPasswordReset;
+  
   const [otp, setOtp] = useState("");
+  const [showCounselorModal, setShowCounselorModal] = useState(false);
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
   const authToken = useAuthStore((state) => state.token);
@@ -31,7 +37,13 @@ function EmailVerification() {
         return;
       }
       setToken(responseData.token);
-      navigate("/");
+      
+      // Show modal for therapist signup, otherwise navigate to home
+      if (isTherapistSignup) {
+        setShowCounselorModal(true);
+      } else {
+        navigate("/");
+      }
     },
     onError: (error) => {
       toast.error(error.message);
@@ -106,6 +118,17 @@ function EmailVerification() {
     }
   }, [handleVerifyOTP, handleVerifyOTPReset, isPending, isPendingReset, otp, authToken, resetToken, isPasswordReset]);
 
+  // Handle modal actions
+  const handleModalContinue = useCallback(() => {
+    setShowCounselorModal(false);
+    navigate("/settings"); // Navigate to settings for profile completion
+  }, [navigate]);
+
+  const handleModalClose = useCallback(() => {
+    setShowCounselorModal(false);
+    navigate("/"); // Navigate to home
+  }, [navigate]);
+
   useEffect(() => {
     // Redirect if email is missing
     if (!email) {
@@ -137,51 +160,61 @@ function EmailVerification() {
   const currentIsPending = isPasswordReset ? isPendingReset : isPending;
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-4">
-      <h2 className="text-3xl font-bold">
-        {isPasswordReset ? "Verify Reset Code" : "Verify Your Email"}
-      </h2>
-      <p className="text-gray-500 text-sm">
-        We've sent an OTP to your email:{" "}
-        <span className="font-medium">{email}</span>
-        {isPasswordReset && (
-          <span className="block mt-1">
-            Enter the verification code to reset your password.
-          </span>
-        )}
-      </p>
-      <input
-        type="text"
-        inputMode="numeric"
-        maxLength={6}
-        placeholder="000000"
-        value={otp}
-        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-        className="w-full border border-gray-300 rounded px-4 py-2 text-center text-lg tracking-widest"
-      />
-      <button
-        onClick={handleSubmit}
-        disabled={!otp || otp.length !== 6 || currentIsPending}
-        className="w-full bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
-      >
-        {currentIsPending 
-          ? "Verifying..." 
-          : isPasswordReset 
-            ? "Verify Code" 
-            : "Verify Email"
-        }
-      </button>
-      <p className="text-gray-500 text-sm text-center">
-        Didn't receive the OTP?{" "}
+    <>
+      <div className="max-w-md w-full mx-auto space-y-4">
+        <h2 className="text-3xl font-bold">
+          {isPasswordReset ? "Verify Reset Code" : "Verify Your Email"}
+        </h2>
+        <p className="text-gray-500 text-sm">
+          We've sent an OTP to your email:{" "}
+          <span className="font-medium">{email}</span>
+          {isPasswordReset && (
+            <span className="block mt-1">
+              Enter the verification code to reset your password.
+            </span>
+          )}
+        </p>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder="000000"
+          value={otp}
+          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+          className="w-full border border-gray-300 rounded px-4 py-2 text-center text-lg tracking-widest"
+        />
         <button
-          onClick={() => handleResendOTP({ email })}
-          disabled={isResending}
-          className="text-primary font-medium disabled:opacity-50 hover:underline"
+          onClick={handleSubmit}
+          disabled={!otp || otp.length !== 6 || currentIsPending}
+          className="w-full bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
         >
-          {isResending ? "Resending..." : "Resend OTP"}
+          {currentIsPending 
+            ? "Verifying..." 
+            : isPasswordReset 
+              ? "Verify Code" 
+              : "Verify Email"
+          }
         </button>
-      </p>
-    </div>
+        <p className="text-gray-500 text-sm text-center">
+          Didn't receive the OTP?{" "}
+          <button
+            onClick={() => handleResendOTP({ email })}
+            disabled={isResending}
+            className="text-primary font-medium disabled:opacity-50 hover:underline"
+          >
+            {isResending ? "Resending..." : "Resend OTP"}
+          </button>
+        </p>
+      </div>
+
+      {/* Counselor Welcome Modal - shown after email verification */}
+      <CounselorWelcomeModal
+        isOpen={showCounselorModal}
+        onClose={handleModalClose}
+        onContinue={handleModalContinue}
+        counselorName={fullName}
+      />
+    </>
   );
 }
 
