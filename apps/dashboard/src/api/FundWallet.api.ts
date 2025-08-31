@@ -70,9 +70,17 @@ export default async function FundWalletApi(
     }
 
     const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    let errorMessage = (e as AxiosError<IAPIResult>).response?.data.message || (e as Error).message;
+    
+    // Enhanced error message for funding issues
+    if (statusCode === 400) {
+      errorMessage = "Invalid payment details. Please check your information and try again.";
+    } else if (statusCode === 401) {
+      errorMessage = "Authentication failed. Please login again.";
+    } else if (statusCode >= 500) {
+      errorMessage = "Payment service is temporarily unavailable. Please try again later.";
+    }
+    
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
     return Promise.reject({
@@ -105,9 +113,15 @@ export async function getBanksApi(
     }
 
     const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    let errorMessage = (e as AxiosError<IAPIResult>).response?.data.message || (e as Error).message;
+    
+    // Enhanced error message for banks fetching
+    if (statusCode >= 500) {
+      errorMessage = "Unable to load banks list. Please try again later.";
+    } else if (statusCode === 401) {
+      errorMessage = "Authentication failed. Please login again.";
+    }
+    
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
     return Promise.reject({
@@ -119,7 +133,7 @@ export async function getBanksApi(
   }
 }
 
-// Withdraw API
+// Enhanced Withdraw API with better error handling
 export async function withdrawFundsApi(
   data: IWithdrawRequest,
   config?: AxiosRequestConfig
@@ -141,9 +155,32 @@ export async function withdrawFundsApi(
     }
 
     const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    let errorMessage = (e as AxiosError<IAPIResult>).response?.data.message || (e as Error).message;
+    
+    // Enhanced error messages for withdrawal issues
+    if (statusCode === 400) {
+      // Check for specific error patterns in the response
+      const errorData = (e as AxiosError<{ data?: { error?: string }; error?: string }>).response?.data;
+      const originalError = errorData?.data?.error || errorData?.error || "";
+      
+      if (originalError.includes("400") || 
+          errorMessage.toLowerCase().includes("invalid") ||
+          errorMessage.toLowerCase().includes("account") ||
+          errorMessage.toLowerCase().includes("bank")) {
+        errorMessage = "Invalid account number or bank details. Please verify your account information and try again.";
+      } else {
+        errorMessage = "Invalid withdrawal request. Please check your details.";
+      }
+    } else if (statusCode === 401) {
+      errorMessage = "Authentication failed. Please login again.";
+    } else if (statusCode === 403) {
+      errorMessage = "You don't have permission to withdraw funds.";
+    } else if (statusCode === 422) {
+      errorMessage = "Invalid withdrawal details. Please check your account number and selected bank.";
+    } else if (statusCode >= 500) {
+      errorMessage = "Invalid account number or bank details. Please verify your account information and try again..";
+    }
+    
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
     return Promise.reject({
