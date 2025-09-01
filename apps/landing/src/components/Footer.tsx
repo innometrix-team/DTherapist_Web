@@ -29,7 +29,6 @@ const Footer = () => {
           <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
           <p className="text-sm mb-2">Email: support@dtherapist.com</p>
           <p className="text-sm mb-2">Phone: +234 803 308 7303</p>
-          <p className="text-sm">Location: Abuja, Nigeria</p>
         </div>
 
         {/* Social Media */}
