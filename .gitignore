@@ -1,3 +1,4 @@
 node_modules/
 **/node_modules/
 apps/Dashboard/.env
+config.bat
