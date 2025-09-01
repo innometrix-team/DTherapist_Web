@@ -23,7 +23,7 @@ const Index: React.FC = () => {
         title="Committed to Mental Health, Committed to You."
         description="At DTherapist, we believe in the power of technology to make mental health support more accessible than ever before. Our secure, user-friendly platform allows you to connect with highly qualified therapists from the comfort of your own space. We offer flexible scheduling, video sessions, and a range of interactive tools to enhance your therapeutic journey.
 "
-        buttonText={true}
+        buttonText={false}
       />
       <Welcome />
       <Steps />

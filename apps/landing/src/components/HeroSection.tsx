@@ -20,12 +20,22 @@ const HeroSection = () => {
           live your best mental health life.
         </p>
         <div className="flex gap-4 justify-center">
-          <button className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-md">
+          <a 
+            href="https://d-therapist.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-md inline-block transition-colors duration-200"
+          >
             Get Started
-          </button>
-          <button className="bg-white text-black hover:bg-blue-100 px-6 py-2 rounded-md">
+          </a>
+          <a 
+            href="https://d-therapist.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="bg-white text-black hover:bg-blue-100 px-6 py-2 rounded-md inline-block transition-colors duration-200"
+          >
             Consult Us
-          </button>
+          </a>
         </div>
       </div>
     </section>
