@@ -9,7 +9,7 @@ const HeroSection = () => {
     >
       <div className="absolute inset-0 bg-black/70  rounded-2xl "></div>
       <div className="relative z-10 text-center px-4">
-        <p className="text-xs tracking-widest uppercase mb-2">
+        <p className="text-xs tracking-widest  mb-2">
           Welcome to DTherapist
         </p>
         <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4 max-w-2xl mx-auto">
