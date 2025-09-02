@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     navigate("/auth");
   }, [logout, navigate]);
 
+
   const sections = useMemo(() => {
     if (!role) return null;
 
@@ -40,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
     return [roleConfig.primary];
   }, [role]);
+
 
   if (!sections) return null;
 
