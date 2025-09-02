@@ -25,12 +25,12 @@ const Navbar: React.FC = () => {
             </a>
           </li>
           <li>
-            <a href="#therapists" className="hover:text-primary">
-              Counselors
+            <a href="https://d-therapist.vercel.app/appointments" className="hover:text-primary">
+              Appointments
             </a>
           </li>
           <li>
-            <a href="#DAnonymous" className="hover:text-primary">
+            <a href="https://d-therapist.vercel.app/anonymous" className="hover:text-primary">
               DAnonymous
             </a>
           </li>
@@ -44,10 +44,14 @@ const Navbar: React.FC = () => {
         {/* Buttons (Always Visible) */}
         <div className="hidden md:flex gap-4">
           <button className="text-sm border border-primary text-primary px-4 py-1 rounded hover:bg-primary hover:text-white transition-all">
-            Login
+            <a href="https://d-therapist.vercel.app/auth/login" className="hover:text-white ">
+              Login
+            </a>
           </button>
-          <button className="text-sm bg-primary text-white px-4 py-1 rounded hover:bg-primary transition-all">
-            Register
+          <button className="text-sm bg-primary text-white px-4 py-1 rounded hover:bg-primary transition-all">            
+            <a href="https://d-therapist.vercel.app/auth/signup" >
+              Register
+            </a>
           </button>
         </div>
 
@@ -73,14 +77,14 @@ const Navbar: React.FC = () => {
               Home
             </a>
             <a
-              href="#therapists"
+              href="https://d-therapist.vercel.app/appointments"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
-              Counselors
+              Appointments
             </a>
             <a
-              href="#reviews"
+              href="https://d-therapist.vercel.app/anonymous"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
@@ -93,10 +97,14 @@ const Navbar: React.FC = () => {
             <hr />
 
             <button className="border border-primary text-primary px-4 py-2 rounded hover:bg-primary hover:text-white transition-all">
-              Login
+
+            <a href="https://d-therapist.vercel.app/auth/login" className="hover:text-white ">  Login</a>
             </button>
             <button className="bg-primary text-white px-4 py-2 rounded hover:bg-primary transition-all">
+              <a href="https://d-therapist.vercel.app/auth/signup" >
+
               Register
+              </a>
             </button>
           </div>
         </div>

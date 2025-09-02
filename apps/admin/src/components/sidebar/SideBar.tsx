@@ -31,10 +31,17 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     navigate("/auth");
   }, [logout, navigate]);
 
-  const sections = useMemo(
-    () => (!role ? null : [NAV_ITEMS[role].primary]),
-    [role]
-  );
+
+  const sections = useMemo(() => {
+    if (!role) return null;
+
+    // Check if the role exists in NAV_ITEMS, fallback to admin if not
+    const roleConfig =
+      NAV_ITEMS[role as keyof typeof NAV_ITEMS] || NAV_ITEMS.admin;
+
+    return [roleConfig.primary];
+  }, [role]);
+
 
   if (!sections) return null;
 

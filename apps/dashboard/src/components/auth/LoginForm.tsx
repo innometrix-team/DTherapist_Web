@@ -21,7 +21,7 @@ function LoginForm() {
   const setAuth = useAuthStore((state) => state.setAuth);
   
   // Get the return URL from location state, or default to dashboard
-  const from = location.state?.from?.pathname || "/";
+  const from =  "/";
   
   const {
     register,

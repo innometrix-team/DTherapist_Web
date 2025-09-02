@@ -21,9 +21,9 @@ export const services: Service[] = [
     description: 'Request personalized therapy sessions at your location.'
   },
   {
-    title: 'Group Therapy',
-    imageUrl: 'https://ik.imagekit.io/rqi1dzw2h/homepage/home2.png?updatedAt=1746018227014',
-    description: 'Join community sessions for shared healing and growth.'
+    title: 'DAnonymous Therapy',
+    imageUrl: 'https://ik.imagekit.io/rqi1dzw2h/homepage/anon2.png?updatedAt=1756728634587',
+    description: 'Join anonymous community sessions for support and growth.'
   }
 ];
 

@@ -101,7 +101,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     },
   });
 
-  // Mutation for withdrawal
+  // Enhanced mutation for withdrawal with better error handling
   const { mutateAsync: handleWithdraw, isPending: isWithdrawing } = useMutation({
     mutationFn: (data: IWithdrawRequest) => {
       const controller = new AbortController();
@@ -117,8 +117,31 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       setBankSearchTerm("");
       refetchBalance(); // Refresh balance
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to process withdrawal");
+    onError: (error: { code?: number; message?: string; status?: string }) => {
+      // Enhanced error handling for better user experience
+      let errorMessage = "Failed to process withdrawal";
+      
+      // Check if it's a 400 status code (bad request)
+      if (error.code === 400) {
+        errorMessage = "Invalid account number or bank details. Please verify your account information and try again.";
+      } 
+      // Check for specific error messages that indicate account/bank issues
+      else if (error.message) {
+        const message = error.message.toLowerCase();
+        if (message.includes("account") || message.includes("bank") || 
+            message.includes("invalid") || message.includes("400") ||
+            message.includes("failed with status code 400")) {
+          errorMessage = "Invalid account number or bank details. Please check your account information.";
+        } else if (message.includes("insufficient")) {
+          errorMessage = "Insufficient funds for withdrawal.";
+        } else if (message.includes("network") || message.includes("timeout")) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     },
   });
 
@@ -156,12 +179,18 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     }
 
     if (!accountNumber || accountNumber.length < 10) {
-      toast.error("Please enter a valid account number");
+      toast.error("Please enter a valid account number (minimum 10 digits)");
       return;
     }
 
     if (!selectedBank) {
       toast.error("Please select a bank");
+      return;
+    }
+
+    // Additional validation for account number format
+    if (!/^\d{10}$/.test(accountNumber)) {
+      toast.error("Account number must be exactly 10 digits");
       return;
     }
 
@@ -363,11 +392,20 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                 <input
                   type="text"
                   value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Enter account number"
+                  onChange={(e) => {
+                    // Only allow digits and limit to 10 characters
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setAccountNumber(value);
+                  }}
+                  placeholder="Enter 10-digit account number"
                   className="w-full border border-gray-300 rounded px-4 py-2"
                   maxLength={10}
                 />
+                {accountNumber && accountNumber.length < 10 && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Account number must be 10 digits ({accountNumber.length}/10)
+                  </p>
+                )}
               </div>
 
               {/* Bank Selection */}
@@ -440,7 +478,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                     !withdrawAmount || 
                     !accountNumber || 
                     !selectedBank ||
-                    accountNumber.length < 10
+                    accountNumber.length !== 10 ||
+                    !/^\d{10}$/.test(accountNumber)
                   }
                   className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
                 >

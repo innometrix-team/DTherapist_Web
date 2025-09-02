@@ -5,10 +5,10 @@ export interface IAdminDashboardData {
   withdrawableBalance: number;
   activeUsers: number;
   activeTherapists: number;
-  deposits: number;
+  totalCommission: number; // Changed from deposits
   withdrawals: number;
   trends: {
-    deposits: number[];
+    commissions: number[]; // Changed from deposits
     withdrawals: number[];
   };
 }
@@ -18,10 +18,10 @@ interface AdminAPIResponse {
   withdrawableBalance: number;
   activeUsers: number;
   activeTherapists: number;
-  deposits: number;
+  totalCommission: number; // Changed from deposits
   withdrawals: number;
   trends: {
-    deposits: number[];
+    commissions: number[]; // Changed from deposits
     withdrawals: number[];
   };
 }
@@ -47,7 +47,7 @@ export default async function AdminDashboardApi(
       withdrawableBalance: response.data.data.withdrawableBalance,
       activeUsers: response.data.data.activeUsers,
       activeTherapists: response.data.data.activeTherapists,
-      deposits: response.data.data.deposits,
+      totalCommission: response.data.data.totalCommission, // Changed from deposits
       withdrawals: response.data.data.withdrawals,
       trends: response.data.data.trends,
     };

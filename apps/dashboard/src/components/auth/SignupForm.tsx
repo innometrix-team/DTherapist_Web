@@ -5,10 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { SubmitHandler } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import RegisterApi, { IRequestData } from "../../api/Register.api";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/auth/useAuthStore";
-import CounselorWelcomeModal from "./CounselorWelcomeModal"; // Import the modal
 
 const signupSchema = z.object({
   fullName: z
@@ -41,14 +40,6 @@ function SignUpForm() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  // Modal state
-  const [showCounselorModal, setShowCounselorModal] = useState(false);
-  const [signupData, setSignupData] = useState<{
-    email: string;
-    fullName: string;
-    role: "client" | "therapist";
-  } | null>(null);
-
   const { mutateAsync: handleSignup, isPending } = useMutation({
     mutationFn: (data: IRequestData) => {
       const controller = new AbortController();
@@ -67,21 +58,18 @@ function SignUpForm() {
         email: variables.email
       });
 
-      // Store signup data for modal
-      setSignupData({
+      // Always navigate to email verification, regardless of role
+      // Pass role and fullName as URL params for use after verification
+      const searchParams = new URLSearchParams({
         email: variables.email,
-        fullName: variables.fullName,
-        role: variables.role
       });
-
-      // Show modal for therapist/counselor, otherwise navigate directly
+      
       if (variables.role === "therapist") {
-        setShowCounselorModal(true);
-      } else {
-        navigate(
-          `/auth/verify-email?email=${encodeURIComponent(variables.email)}`
-        );
+        searchParams.set("role", "therapist");
+        searchParams.set("fullName", variables.fullName);
       }
+      
+      navigate(`/auth/verify-email?${searchParams.toString()}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -105,27 +93,6 @@ function SignUpForm() {
     [handleSignup, isPending, isSubmitting]
   );
 
-  // Handle modal actions
-  const handleModalContinue = useCallback(() => {
-    setShowCounselorModal(false);
-    if (signupData) {
-      // Navigate to email verification first, then to settings for profile completion
-      navigate(
-        `/auth/verify-email?email=${encodeURIComponent(signupData.email)}&next=settings`
-      );
-    }
-  }, [navigate, signupData]);
-
-  const handleModalClose = useCallback(() => {
-    setShowCounselorModal(false);
-    if (signupData) {
-      // Just navigate to email verification
-      navigate(
-        `/auth/verify-email?email=${encodeURIComponent(signupData.email)}`
-      );
-    }
-  }, [navigate, signupData]);
-
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
@@ -133,97 +100,87 @@ function SignUpForm() {
   }, []);
 
   return (
-    <>
-      <div className="max-w-md w-full mx-auto space-y-4">
-        <h2 className="text-3xl font-bold">Create free account</h2>
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <input
-              type="text"
-              placeholder="Full Name"
-              {...register("fullName")}
-              className="w-full border border-gray-300 rounded px-4 py-2"
-            />
-            {errors.fullName && (
-              <p className="text-red-600 text-sm mt-1">
-                {errors.fullName.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <input
-              type="email"
-              placeholder="Email Address"
-              {...register("email")}
-              className="w-full border border-gray-300 rounded px-4 py-2"
-            />
-            {errors.email && (
-              <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
-            )}
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              {...register("password")}
-              className="w-full border border-gray-300 rounded px-4 py-2"
-            />
-            {errors.password && (
-              <p className="text-red-600 text-sm mt-1">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <select
-              {...register("role")}
-              className="w-full border border-gray-300 rounded px-4 py-2"
-            >
-              <option value="">Register as</option>
-              <option value="client">Client</option>
-              <option value="therapist">Counselor</option>
-            </select>
-            {errors.role && (
-              <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
-            )}
-          </div>
-          <div className="flex items-start gap-2">
-            <input type="checkbox" {...register("agreeTerms")} className="mt-1" />
-            <p className="text-sm">
-              I agree to the{" "}
-              <Link to="/terms-and-conditions" className="text-blue-700 font-semibold">
-                Terms & Conditions
-              </Link>{" "}
-              of Dtherapist.
+    <div className="max-w-md w-full mx-auto space-y-4">
+      <h2 className="text-3xl font-bold">Create free account</h2>
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <div>
+          <input
+            type="text"
+            placeholder="Full Name"
+            {...register("fullName")}
+            className="w-full border border-gray-300 rounded px-4 py-2"
+          />
+          {errors.fullName && (
+            <p className="text-red-600 text-sm mt-1">
+              {errors.fullName.message}
             </p>
-          </div>
-          {errors.agreeTerms && (
-            <p className="text-red-600 text-sm">{errors.agreeTerms.message}</p>
           )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-fit bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+        </div>
+        <div>
+          <input
+            type="email"
+            placeholder="Email Address"
+            {...register("email")}
+            className="w-full border border-gray-300 rounded px-4 py-2"
+          />
+          {errors.email && (
+            <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+        <div>
+          <input
+            type="password"
+            placeholder="Password"
+            {...register("password")}
+            className="w-full border border-gray-300 rounded px-4 py-2"
+          />
+          {errors.password && (
+            <p className="text-red-600 text-sm mt-1">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
+        <div>
+          <select
+            {...register("role")}
+            className="w-full border border-gray-300 rounded px-4 py-2"
           >
-            {isSubmitting || isPending ? "Creating..." : "Create Account"}
-          </button>
-        </form>
-        <p className="text-sm text-gray-600 text-center">
-          I already have an account?{" "}
-          <Link to="/auth/login" className="text-blue-700 font-semibold">
-            Login
-          </Link>
-        </p>
-      </div>
-
-      {/* Counselor Welcome Modal */}
-      <CounselorWelcomeModal
-        isOpen={showCounselorModal}
-        onClose={handleModalClose}
-        onContinue={handleModalContinue}
-        counselorName={signupData?.fullName}
-      />
-    </>
+            <option value="">Register as</option>
+            <option value="client">Client</option>
+            <option value="therapist">Counselor</option>
+          </select>
+          {errors.role && (
+            <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
+          )}
+        </div>
+        <div className="flex items-start gap-2">
+          <input type="checkbox" {...register("agreeTerms")} className="mt-1" />
+          <p className="text-sm">
+            I agree to the{" "}
+            <Link to="/terms-and-conditions" className="text-blue-700 font-semibold">
+              Terms & Conditions
+            </Link>{" "}
+            of Dtherapist.
+          </p>
+        </div>
+        {errors.agreeTerms && (
+          <p className="text-red-600 text-sm">{errors.agreeTerms.message}</p>
+        )}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-fit bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+        >
+          {isSubmitting || isPending ? "Creating..." : "Create Account"}
+        </button>
+      </form>
+      <p className="text-sm text-gray-600 text-center">
+        I already have an account?{" "}
+        <Link to="/auth/login" className="text-blue-700 font-semibold">
+          Login
+        </Link>
+      </p>
+    </div>
   );
 }
 

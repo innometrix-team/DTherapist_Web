@@ -49,36 +49,87 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
     };
   }, []);
 
+  // Helper function to calculate trend from array data
+  const calculateTrend = (dataArray: number[]) => {
+    if (!Array.isArray(dataArray) || dataArray.length < 2) {
+      return { trend: "No data", trendUp: true };
+    }
+
+    // Get current month (latest non-zero value or last value)
+    const currentMonth = dataArray[dataArray.length - 1];
+    
+    // Get previous month (second to last value)
+    const previousMonth = dataArray[dataArray.length - 2];
+    
+    // Calculate percentage change
+    if (previousMonth === 0 && currentMonth === 0) {
+      return { trend: "No change", trendUp: true };
+    }
+    
+    if (previousMonth === 0 && currentMonth > 0) {
+      return { trend: "New activity", trendUp: true };
+    }
+    
+    if (previousMonth > 0 && currentMonth === 0) {
+      return { trend: "-100%", trendUp: false };
+    }
+    
+    const percentChange = ((currentMonth - previousMonth) / previousMonth) * 100;
+    const isPositive = percentChange >= 0;
+    const formattedPercent = Math.abs(percentChange).toFixed(1);
+    
+    return {
+      trend: `${isPositive ? '+' : '-'}${formattedPercent}% from last month`,
+      trendUp: isPositive
+    };
+  };
+
   // Transform admin dashboard data to stats format
   const getAdminStatsFromData = () => {
-    if (!adminDashboardData) return [];
+    // Add proper null checks for all nested properties
+    if (!adminDashboardData || 
+        typeof adminDashboardData.activeUsers !== 'number' ||
+        typeof adminDashboardData.activeTherapists !== 'number' ||
+        typeof adminDashboardData.totalCommission !== 'number' ||
+        typeof adminDashboardData.withdrawals !== 'number') {
+      return [];
+    }
+
+    // Calculate trends from the trends data if available
+    const commissionTrend = adminDashboardData.trends?.commissions 
+      ? calculateTrend(adminDashboardData.trends.commissions)
+      : { trend: "No trend data", trendUp: true };
+      
+    const withdrawalTrend = adminDashboardData.trends?.withdrawals 
+      ? calculateTrend(adminDashboardData.trends.withdrawals)
+      : { trend: "No trend data", trendUp: true };
 
     console.log(adminDashboardData);
 
     const adminStats: StatCardConfig[] = [
       {
         label: "Active Users",
-        value: (adminDashboardData.activeUsers ?? 0).toLocaleString(),
-        trend: "+30% This Month",
+        value: adminDashboardData.activeUsers.toLocaleString(),
+        trend: "Current active", // No trend data available for users
         trendUp: true,
       },
       {
         label: "Active Therapists",
-        value: (adminDashboardData.activeTherapists ?? 0).toLocaleString(),
-        trend: "+30% This Month",
+        value: adminDashboardData.activeTherapists.toLocaleString(),
+        trend: "Current active", // No trend data available for therapists
         trendUp: true,
       },
       {
-        label: "Deposits",
-        value: `₦${(adminDashboardData.deposits ?? 0).toLocaleString()}`,
-        trend: "+30% This Month",
-        trendUp: true,
+        label: "Total Commission",
+        value: `₦${adminDashboardData.totalCommission.toLocaleString()}`,
+        trend: commissionTrend.trend,
+        trendUp: commissionTrend.trendUp,
       },
       {
         label: "Withdrawals",
-        value: `₦${(adminDashboardData.withdrawals ?? 0).toLocaleString()}`,
-        trend: "30% This Month",
-        trendUp: false, // Red/down trend as shown in the image
+        value: `₦${adminDashboardData.withdrawals.toLocaleString()}`,
+        trend: withdrawalTrend.trend,
+        trendUp: withdrawalTrend.trendUp,
       },
     ];
 

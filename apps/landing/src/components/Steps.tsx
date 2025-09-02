@@ -17,9 +17,10 @@ const Steps = () => {
             matched with the right mental health professional.
           </p>
           <div className="flex justify-center md:justify-start">
-            <button className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black transition">
+
+            <a href="https://d-therapist.vercel.app/" className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black  ml-4 transition">
               Get Started
-            </button>
+            </a>  
           </div>
         </div>
 

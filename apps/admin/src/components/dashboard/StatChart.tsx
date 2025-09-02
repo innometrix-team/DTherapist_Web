@@ -4,9 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
 import { useAuthStore } from "../../Store/auth/useAuthStore";
 
-// Mock API function for non-admin users - replace with your actual API
-
-
 interface ChartData {
   month: string;
   deposits: number;
@@ -52,6 +49,15 @@ const StatChart: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       if (isAdmin && adminDashboardData) {
+        // Add proper null checks for nested properties
+        if (!adminDashboardData.trends || 
+            !Array.isArray(adminDashboardData.trends.commissions) ||
+            !Array.isArray(adminDashboardData.trends.withdrawals)) {
+          console.warn('Invalid trends data structure');
+          setLoading(false);
+          return;
+        }
+
         // Transform admin data to chart format
         const monthNames = [
           'January', 'February', 'March', 'April', 'May', 'June',
@@ -60,7 +66,7 @@ const StatChart: React.FC = () => {
 
         const chartData: ChartData[] = monthNames.map((month, index) => ({
           month,
-          deposits: adminDashboardData.trends.deposits[index] || 0,
+          deposits: adminDashboardData.trends.commissions[index] || 0, // Using commissions as deposits
           withdrawals: adminDashboardData.trends.withdrawals[index] || 0,
         }));
 
@@ -68,6 +74,9 @@ const StatChart: React.FC = () => {
           year: selectedYear,
           data: chartData
         });
+        setLoading(false);
+      } else if (!isAdmin) {
+        // For non-admin users, you might want to show mock data or handle differently
         setLoading(false);
       }
     };
@@ -107,6 +116,18 @@ const StatChart: React.FC = () => {
     setIsYearDropdownOpen(false);
   };
 
+  // Show access denied for non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+          <p className="text-yellow-600 text-sm">Access Denied</p>
+          <p className="text-yellow-500 text-xs mt-1">Admin access required to view chart data</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg p-6 shadow-sm border">
@@ -121,6 +142,18 @@ const StatChart: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no data is available
+  if (!statisticsData) {
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <p className="text-red-600 text-sm">Failed to load chart data</p>
+          <p className="text-red-500 text-xs mt-1">Please refresh the page</p>
         </div>
       </div>
     );
