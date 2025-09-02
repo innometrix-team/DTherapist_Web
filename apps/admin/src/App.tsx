@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import './App.css'
+import "./App.css";
 import Auth from "./pages/Auth/Auth";
 import LoginForm from "./components/auth/LoginForm";
 import Dashboard from "./pages/Dashboard/Dashboard";
@@ -10,10 +10,9 @@ import Library from "./pages/Library/Library";
 import Transaction from "./pages/Transaction/Transaction";
 import Book from "./pages/Bookings/Bookings";
 import DAnonymous from "./pages/DAnonymous/DAnonymous";
-
+import UserDetail from "./pages/UserDetail/UserDetail";
 
 function App() {
-  
   return (
     <>
       <Routes>
@@ -21,7 +20,11 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           {/* Add other protected routes here */}
-          <Route path="user" element={<User />} />
+
+          <Route path="user">
+            <Route index element={<User />} />
+            <Route path=":userId" element={<UserDetail />} />
+          </Route>
           <Route path="library/*" element={<Library />} />
           <Route path="bookings" element={<Book />} />
           <Route path="transaction" element={<Transaction />} />
@@ -39,7 +42,7 @@ function App() {
       </Routes>
       <Toaster position="top-center" reverseOrder={false} />
     </>
-  )
+  );
 }
 
-export default App
+export default App;

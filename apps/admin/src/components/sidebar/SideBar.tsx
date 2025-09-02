@@ -17,9 +17,7 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
       { to: "/danonymous", label: "DAnonymous" },
       { to: "/transaction", label: "Transaction" },
     ],
-    
   },
-
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
@@ -34,12 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   }, [logout, navigate]);
 
   const sections = useMemo(
-    () =>
-      !role
-        ? null
-        : [
-            NAV_ITEMS[role].primary,
-          ],
+    () => (!role ? null : [NAV_ITEMS[role].primary]),
     [role]
   );
 

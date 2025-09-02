@@ -242,3 +242,75 @@ export function getAdminTabColor(tab: IAdminBooking['tab']): string {
       return 'text-gray-600';
   }
 }
+
+export async function CancelBookingApi(
+      bookingId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult | null> {
+  try {
+    
+    const response = await Api.patch( `/api/admin/bookings/${bookingId}/cancel`, {
+      ...config,
+    });
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+export async function RescheduleBookingApi(data: 
+  { bookingId: string,
+    payload: { date: string; startTime: string; endTime: string },
+  },   
+  config?: AxiosRequestConfig
+): Promise<IAPIResult | null> {
+  try {
+    
+    const response = await Api.patch( `/api/admin/bookings/${data.bookingId}/reschedule`, data.payload, {
+      ...config,
+    });
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}

@@ -10,19 +10,21 @@ import { useAuthStore } from "../../store/auth/useAuthStore";
 import type { SubmitHandler } from "react-hook-form";
 
 // Zod schema for password validation
-const passwordSchema = z.object({
-  newPassword: z
-    .string()
-    .min(8, "Password must be at least 8 characters long")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const passwordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      ),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
@@ -30,8 +32,8 @@ const PasswordForm: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const abortControllerRef = useRef<AbortController>(null);
-  
-   const setAuth = useAuthStore((state) => state.setAuth);
+
+  const setAuth = useAuthStore((state) => state.setAuth);
   const auth = useAuthStore((state) => state);
 
   const {
@@ -51,57 +53,66 @@ const PasswordForm: React.FC = () => {
   const newPassword = watch("newPassword");
 
   // Use mutation for password change with proper authentication
-  const { mutateAsync: handlePasswordChange, isPending: isSubmitting } = useMutation({
-    mutationFn: (data: IPasswordChangeData) => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      
-      
-      
-      return PasswordChangeApi(data, { signal: controller.signal }, auth?.role ?? undefined);
-    },
-    onSuccess: (result) => {
-      // Handle case where result is null (cancelled request)
-      if (!result) {
-        return;
-      }
+  const { mutateAsync: handlePasswordChange, isPending: isSubmitting } =
+    useMutation({
+      mutationFn: (data: IPasswordChangeData) => {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
-      // Handle case where result.data doesn't exist or is null
-      if (!result.data) {
+        return PasswordChangeApi(
+          data,
+          { signal: controller.signal },
+          auth?.role ?? undefined
+        );
+      },
+      onSuccess: (result) => {
+        // Handle case where result is null (cancelled request)
+        if (!result) {
+          return;
+        }
+
+        // Handle case where result.data doesn't exist or is null
+        if (!result.data) {
+          toast.success(result.message || "Password updated successfully!");
+          reset();
+          return;
+        }
+
+        // Safely destructure user and token with fallbacks
+        const { user, token } = result.data;
+
+        // Only update auth if we have valid user data
+        if (user && user.role) {
+          // Handle role mapping - keep consistent with backend response
+          const mappedRole =
+            user.role === "client"
+              ? "user"
+              : user.role === "therapist"
+              ? "counselor"
+              : user.role; // Keep as is if already mapped
+
+          setAuth({
+            role: mappedRole,
+            token: token ?? null,
+            id: user.id ?? null,
+            email: user.email,
+          });
+        }
+
         toast.success(result.message || "Password updated successfully!");
         reset();
-        return;
-      }
-
-      // Safely destructure user and token with fallbacks
-      const { user, token } = result.data;
-      
-      // Only update auth if we have valid user data
-      if (user && user.role) {
-        // Handle role mapping - keep consistent with backend response
-        const mappedRole = user.role === "client" ? "user" : 
-                          user.role === "therapist" ? "counselor" : 
-                          user.role; // Keep as is if already mapped
-        
-        setAuth({
-          role: mappedRole,
-          token: token ?? null,
-          id: user.id ?? null,
-        });
-      }
-      
-      toast.success(result.message || "Password updated successfully!");
-      reset();
-    },
-    onError: (error) => {
-      // Handle different types of errors
-      if (error && typeof error === 'object' && 'message' in error) {
-        toast.error(error.message || "Failed to update password. Please try again.");
-      } else {
-        toast.error("Failed to update password. Please try again.");
-      }
-    },
-  });
+      },
+      onError: (error) => {
+        // Handle different types of errors
+        if (error && typeof error === "object" && "message" in error) {
+          toast.error(
+            error.message || "Failed to update password. Please try again."
+          );
+        } else {
+          toast.error("Failed to update password. Please try again.");
+        }
+      },
+    });
 
   const onSubmit: SubmitHandler<PasswordFormData> = useCallback(
     (data) => {
@@ -120,12 +131,18 @@ const PasswordForm: React.FC = () => {
   }, []);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 md:p-6 space-y-6 w-full">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="bg-white p-4 md:p-6 space-y-6 w-full"
+    >
       <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
 
       {/* New Password Field */}
       <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
-        <label htmlFor="newPassword" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
+        <label
+          htmlFor="newPassword"
+          className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2"
+        >
           New Password
         </label>
         <div className="flex-1 max-w-full md:max-w-md">
@@ -148,12 +165,16 @@ const PasswordForm: React.FC = () => {
             </span>
           </div>
           {errors.newPassword && (
-            <p className="text-red-500 text-xs mt-1">{errors.newPassword.message}</p>
+            <p className="text-red-500 text-xs mt-1">
+              {errors.newPassword.message}
+            </p>
           )}
           {/* Password strength indicator */}
           {newPassword && (
             <div className="mt-2">
-              <div className="text-xs text-gray-600 mb-1">Password strength:</div>
+              <div className="text-xs text-gray-600 mb-1">
+                Password strength:
+              </div>
               <div className="flex space-x-1">
                 {Array.from({ length: 4 }).map((_, i) => {
                   const strength = getPasswordStrength(newPassword);
@@ -182,7 +203,10 @@ const PasswordForm: React.FC = () => {
 
       {/* Confirm Password Field */}
       <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
-        <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2">
+        <label
+          htmlFor="confirmPassword"
+          className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2"
+        >
           Confirm Password
         </label>
         <div className="flex-1 max-w-full md:max-w-md">
@@ -205,7 +229,9 @@ const PasswordForm: React.FC = () => {
             </span>
           </div>
           {errors.confirmPassword && (
-            <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
+            <p className="text-red-500 text-xs mt-1">
+              {errors.confirmPassword.message}
+            </p>
           )}
         </div>
       </div>
@@ -227,12 +253,12 @@ const PasswordForm: React.FC = () => {
 // Helper function to calculate password strength
 const getPasswordStrength = (password: string): number => {
   let strength = 0;
-  
+
   if (password.length >= 8) strength++;
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
   if (/\d/.test(password)) strength++;
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
-  
+
   return strength;
 };
 

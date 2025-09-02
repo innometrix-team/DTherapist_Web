@@ -26,15 +26,15 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
-      const response = await AdminDashboardApi({ 
-        signal: controller.signal 
+
+      const response = await AdminDashboardApi({
+        signal: controller.signal,
       });
-      
+
       if (!response?.data) {
         throw new Error("No admin dashboard data received");
       }
-      
+
       return response.data;
     },
     retry: 3,
@@ -53,28 +53,30 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
   const getAdminStatsFromData = () => {
     if (!adminDashboardData) return [];
 
+    console.log(adminDashboardData);
+
     const adminStats: StatCardConfig[] = [
       {
         label: "Active Users",
-        value: adminDashboardData.activeUsers.toLocaleString(),
+        value: (adminDashboardData.activeUsers ?? 0).toLocaleString(),
         trend: "+30% This Month",
         trendUp: true,
       },
       {
         label: "Active Therapists",
-        value: adminDashboardData.activeTherapists.toLocaleString(),
+        value: (adminDashboardData.activeTherapists ?? 0).toLocaleString(),
         trend: "+30% This Month",
         trendUp: true,
       },
       {
         label: "Deposits",
-        value: `₦${adminDashboardData.deposits.toLocaleString()}`,
+        value: `₦${(adminDashboardData.deposits ?? 0).toLocaleString()}`,
         trend: "+30% This Month",
         trendUp: true,
       },
       {
         label: "Withdrawals",
-        value: `₦${adminDashboardData.withdrawals.toLocaleString()}`,
+        value: `₦${(adminDashboardData.withdrawals ?? 0).toLocaleString()}`,
         trend: "30% This Month",
         trendUp: false, // Red/down trend as shown in the image
       },
@@ -84,7 +86,9 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
   };
 
   // Get stats to display - use API data if available, otherwise fallback to props
-  const statsToDisplay = adminDashboardData ? getAdminStatsFromData() : (propStats || []);
+  const statsToDisplay = adminDashboardData
+    ? getAdminStatsFromData()
+    : propStats || [];
 
   // If not admin, show unauthorized message
   if (!isAdmin) {
@@ -92,7 +96,9 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
       <div className="max-w-[calc(100vw-48px)]">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
           <p className="text-yellow-600 text-sm">Access Denied</p>
-          <p className="text-yellow-500 text-xs mt-1">Admin access required to view these stats</p>
+          <p className="text-yellow-500 text-xs mt-1">
+            Admin access required to view these stats
+          </p>
         </div>
       </div>
     );
@@ -102,12 +108,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
     return (
       <div className="max-w-[calc(100vw-48px)]">
         <div className="gap-4 overflow-x-auto overflow-y-hidden flex flex-nowrap">
-          {Array(4).fill(0).map((_, index) => (
-            <div
-              key={index}
-              className="bg-gray-200 animate-pulse p-6 lg:p-4 rounded-lg grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(25%-12px)] shadow-[0px_4px_10px_0px_#00000008] h-24"
-            />
-          ))}
+          {Array(4)
+            .fill(0)
+            .map((_, index) => (
+              <div
+                key={index}
+                className="bg-gray-200 animate-pulse p-6 lg:p-4 rounded-lg grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(25%-12px)] shadow-[0px_4px_10px_0px_#00000008] h-24"
+              />
+            ))}
         </div>
       </div>
     );
@@ -146,14 +154,18 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
               <div className="text-lg text-[#B3B3B3]">{stat.label}</div>
               <div className="text-2xl font-bold my-3">{stat.value}</div>
               <div className="text-xs">
-                <UptrendIcon 
+                <UptrendIcon
                   className={`inline w-4 ${
-                    stat.trendUp === false 
-                      ? 'text-red-500 transform rotate-180' 
-                      : 'text-[#014CB1]'
-                  }`} 
-                /> 
-                <span className={stat.trendUp === false ? 'text-red-500' : 'text-inherit'}>
+                    stat.trendUp === false
+                      ? "text-red-500 transform rotate-180"
+                      : "text-[#014CB1]"
+                  }`}
+                />
+                <span
+                  className={
+                    stat.trendUp === false ? "text-red-500" : "text-inherit"
+                  }
+                >
                   {stat.trend}
                 </span>
               </div>
