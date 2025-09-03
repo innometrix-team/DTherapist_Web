@@ -3,13 +3,28 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { BalanceConfig } from "../../pages/Dashboard/types";
 import { TopUpIcon, WithdrawIcon, TimerIcon } from "../../assets/icons";
-import FundWalletApi, { IFundWalletRequest } from "../../api/FundWallet.api";
+import FundWalletApi, { 
+  IFundWalletRequest, 
+  getBanksApi, 
+  adminWithdrawFundsApi, 
+  IBank, 
+  IWithdrawRequest 
+} from "../../api/FundWallet.api";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
 import { useAuthStore } from "../../Store/auth/useAuthStore";
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  
+  // Withdrawal state
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [selectedBankCode, setSelectedBankCode] = useState("");
+  const [searchBank, setSearchBank] = useState("");
+  const [showBanksList, setShowBanksList] = useState(false);
+  
   const abortControllerRef = useRef<AbortController | null>(null);
   const { role, email } = useAuthStore();
 
@@ -61,6 +76,33 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     enabled: userType === "admin", // Only run for admin users
   });
 
+  // Query to fetch banks list
+  const {
+    data: banksData,
+    isLoading: isLoadingBanks,
+    refetch: refetchBanks,
+  } = useQuery({
+    queryKey: ["banks"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      
+      const response = await getBanksApi({ 
+        signal: controller.signal 
+      });
+      
+      if (!response?.data) {
+        throw new Error("No banks data received");
+      }
+      
+      return response.data;
+    },
+    retry: 3,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: false, // Only fetch when needed
+  });
+
   // Mutation for funding wallet
   const { mutateAsync: handleFundWallet, isPending: isFunding } = useMutation({
     mutationFn: (data: IFundWalletRequest) => {
@@ -81,6 +123,33 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     },
     onError: (error) => {
       toast.error(error.message || "Failed to fund wallet");
+    },
+  });
+
+  // Mutation for admin withdrawal
+  const { mutateAsync: handleWithdraw, isPending: isWithdrawing } = useMutation({
+    mutationFn: (data: IWithdrawRequest) => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return adminWithdrawFundsApi(data, { signal: controller.signal });
+    },
+    onSuccess: (response) => {
+      const withdrawalData = response?.data;
+      const reference = withdrawalData?.reference;
+      
+      // Show success message with reference if available
+      const successMessage = reference 
+        ? `Withdrawal request submitted successfully! Reference: ${reference}`
+        : "Withdrawal request submitted successfully!";
+      
+      toast.success(successMessage);
+      setShowWithdrawModal(false);
+      resetWithdrawForm();
+      // Refetch admin balance
+      refetchAdminBalance();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to process withdrawal");
     },
   });
 
@@ -111,6 +180,51 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     }
   }, [topUpAmount, email, isFunding, handleFundWallet]);
 
+  const handleWithdrawSubmit = useCallback(async () => {
+    if (!withdrawAmount || isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) {
+      toast.error("Please enter a valid withdrawal amount");
+      return;
+    }
+
+    if (!accountNumber || accountNumber.length < 10) {
+      toast.error("Please enter a valid account number (minimum 10 digits)");
+      return;
+    }
+
+    if (!selectedBankCode) {
+      toast.error("Please select a bank");
+      return;
+    }
+
+    // Check if withdrawal amount exceeds available balance
+    if (adminDashboardData && Number(withdrawAmount) > adminDashboardData.withdrawableBalance) {
+      toast.error("Withdrawal amount exceeds available balance");
+      return;
+    }
+
+    if (isWithdrawing) {
+      return;
+    }
+
+    try {
+      await handleWithdraw({
+        amount: Number(withdrawAmount),
+        accountNumber: accountNumber.trim(),
+        bankCode: selectedBankCode,
+      });
+    } catch {
+      // Error is handled in onError callback
+    }
+  }, [withdrawAmount, accountNumber, selectedBankCode, isWithdrawing, adminDashboardData, handleWithdraw]);
+
+  const resetWithdrawForm = useCallback(() => {
+    setWithdrawAmount("");
+    setAccountNumber("");
+    setSelectedBankCode("");
+    setSearchBank("");
+    setShowBanksList(false);
+  }, []);
+
   const handleTopUpClick = useCallback(() => {
     if (actions.includes("topUp")) {
       // Check if user email is available from auth store
@@ -123,16 +237,30 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   }, [actions, email]);
 
   const handleWithdrawClick = useCallback(() => {
-    if (actions.includes("withdraw")) {
-      // Implement withdraw functionality
-      toast.success("Withdraw functionality coming soon");
+    if (actions.includes("withdraw") && userType === "admin") {
+      setShowWithdrawModal(true);
+      // Fetch banks when opening withdraw modal
+      refetchBanks();
     }
-  }, [actions]);
+  }, [actions, userType, refetchBanks]);
 
-  const closeModal = useCallback(() => {
+  const closeTopUpModal = useCallback(() => {
     setShowTopUpModal(false);
     setTopUpAmount("");
   }, []);
+
+  const closeWithdrawModal = useCallback(() => {
+    setShowWithdrawModal(false);
+    resetWithdrawForm();
+  }, [resetWithdrawForm]);
+
+  // Filter banks based on search
+  const filteredBanks = banksData?.filter((bank: IBank) => 
+    bank.name.toLowerCase().includes(searchBank.toLowerCase())
+  ) || [];
+
+  // Get selected bank name
+  const selectedBank = banksData?.find((bank: IBank) => bank.code === selectedBankCode);
 
   // Check for payment success and refetch balance
   useEffect(() => {
@@ -195,7 +323,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
             {actions.includes("withdraw") && (
               <button 
                 onClick={handleWithdrawClick}
-                disabled={isLoading}
+                disabled={isLoading || (userType === "admin" && (!adminDashboardData || adminDashboardData.withdrawableBalance <= 0))}
                 className="border border-white px-5 py-2 rounded-lg text-xs inline-flex items-center space-x-2 font-bold disabled:opacity-50"
               >
                 <WithdrawIcon />
@@ -247,8 +375,153 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                   {isFunding ? "Processing..." : "Proceed to Payment"}
                 </button>
                 <button
-                  onClick={closeModal}
+                  onClick={closeTopUpModal}
                   disabled={isFunding}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Withdrawal Modal */}
+      {showWithdrawModal && userType === "admin" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-80">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Withdraw Funds</h3>
+            <div className="space-y-4">
+              {/* Available Balance Display */}
+              <div className="bg-blue-50 p-3 rounded">
+                <div className="text-sm text-gray-600">Available Balance</div>
+                <div className="text-lg font-semibold text-blue-600">
+                  ₦{adminDashboardData?.withdrawableBalance.toLocaleString() || "0"}
+                </div>
+              </div>
+
+              {/* Withdrawal Amount */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Withdrawal Amount (₦)
+                </label>
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder="Enter amount to withdraw"
+                  className="w-full border border-gray-300 rounded px-4 py-2"
+                  min="1"
+                  max={adminDashboardData?.withdrawableBalance || 0}
+                />
+              </div>
+
+              {/* Account Number */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Account Number
+                </label>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter account number"
+                  className="w-full border border-gray-300 rounded px-4 py-2"
+                  maxLength={10}
+                />
+              </div>
+
+              {/* Bank Selection */}
+              <div className="relative">
+                <label className="block text-sm font-medium mb-2">
+                  Select Bank
+                </label>
+                
+                {/* Bank Selection Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isLoadingBanks) {
+                      setShowBanksList(!showBanksList);
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded px-4 py-2 text-left bg-white hover:bg-gray-50 flex justify-between items-center"
+                >
+                  <span className={selectedBank ? "text-gray-900" : "text-gray-500"}>
+                    {selectedBank ? selectedBank.name : "Select your bank"}
+                  </span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform text-gray-400 ${showBanksList ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Search Input (only shown when dropdown is open) */}
+                {showBanksList && (
+                  <input
+                    type="text"
+                    value={searchBank}
+                    onChange={(e) => setSearchBank(e.target.value)}
+                    placeholder="Search banks..."
+                    className="w-full border-l border-r border-gray-300 px-4 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                )}
+
+                {/* Banks Dropdown List */}
+                {showBanksList && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-48 overflow-y-auto">
+                    {isLoadingBanks ? (
+                      <div className="p-4 text-center text-gray-500">Loading banks...</div>
+                    ) : filteredBanks.length > 0 ? (
+                      filteredBanks.map((bank: IBank) => (
+                        <button
+                          key={bank.code}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBankCode(bank.code);
+                            setSearchBank("");
+                            setShowBanksList(false);
+                          }}
+                          className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                            selectedBankCode === bank.code ? 'bg-blue-50 text-blue-700' : ''
+                          }`}
+                        >
+                          <div className="font-medium">{bank.name}</div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        {searchBank ? "No banks found" : "No banks available"}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleWithdrawSubmit}
+                  disabled={
+                    isWithdrawing || 
+                    !withdrawAmount || 
+                    !accountNumber || 
+                    !selectedBankCode ||
+                    accountNumber.length < 10
+                  }
+                  className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isWithdrawing ? "Processing..." : "Withdraw Funds"}
+                </button>
+                <button
+                  onClick={closeWithdrawModal}
+                  disabled={isWithdrawing}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded font-medium disabled:opacity-50"
                 >
                   Cancel
