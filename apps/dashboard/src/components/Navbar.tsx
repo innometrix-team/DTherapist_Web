@@ -13,7 +13,7 @@ const Navbar: React.FC = () => {
     <>
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
         <div className="text-xl font-bold text-primary">
-          <Link to="/"><img
+          <Link to="https://dtherapist.com/"><img
                     src="https://ik.imagekit.io/rqi1dzw2h/DT_Logo.png?updatedAt=1746132133582"
                     alt="DTherapist Logo"
                     className="h-12 md:h-14 w-auto object-contain"
