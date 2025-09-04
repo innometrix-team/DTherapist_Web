@@ -8,7 +8,9 @@ const ServiceFeature: React.FC<WelcomeFeature> = ({ icon, title, description }) 
       <div>
         <h4 className="text-md font-semibold text-gray-800">{title}</h4>
         <p className="text-sm text-gray-600">{description}</p>
+        <a href="https://dashboard.dtherapist.com/library" className='text-sm text-primary'> read more</a>
       </div>
+      
     </div>
   );
 };
