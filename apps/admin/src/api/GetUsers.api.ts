@@ -30,7 +30,7 @@ export interface ICertificate {
   updatedAt: string;
   cvUrl: string;
   cvStatus: string;
-  note: string;
+  cvNote?: string;
   certificationUrl: string;
   certificationStatus: string;
   certificationNote?: string;

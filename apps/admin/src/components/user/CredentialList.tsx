@@ -3,21 +3,22 @@ import { Check, FileText, Loader2, ShieldAlert, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ICertificate } from "../../api/GetUsers.api";
 import { ReviewCertificationApi, ReviewCVApi } from "../../api/Profile.api";
+import { Worker, Viewer } from "@react-pdf-viewer/core";
+import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 
 export type UserDocumentStatus = "pending" | "approved" | "rejected";
 
 export type CredentialsData = ICertificate;
 
 export type CredentialListProps = {
-  /** the data returned from GetUserCertificationsApi(userId) */
   credentialsData?: CredentialsData | null;
   isLoading?: boolean;
   role: "counselor" | "client";
-  /** Needed by the review endpoint */
   userId?: string;
 };
 
-/** A tiny pill to show status */
 function StatusPill({ status }: { status?: UserDocumentStatus }) {
   if (!status) return null;
   const map: Record<UserDocumentStatus, string> = {
@@ -165,17 +166,16 @@ function DocRow({
 export default function CredentialList({
   credentialsData,
   isLoading,
-  role,
   userId,
 }: CredentialListProps) {
   const qc = useQueryClient();
   const [rejectOpen, setRejectOpen] = useState<null | { kind: "cv" | "cert" }>(
     null
   );
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const hasCounselorRole = role === "counselor";
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
-  // Separate mutations for Certification and CV
   const { mutate: reviewCertification, isPending: approvingCert } = useMutation(
     {
       mutationFn: async (vars: {
@@ -227,22 +227,18 @@ export default function CredentialList({
         title: "CV/Resume",
         doc: credentialsData?.cvUrl,
         status: credentialsData?.cvStatus ?? "pending",
-        note: credentialsData?.note,
+        note: credentialsData?.cvNote,
       },
-      // Only show certification row for counselors/therapists
-      ...(hasCounselorRole
-        ? [
-            {
-              key: "cert" as const,
-              title: "Certification (PDF or JPG)",
-              doc: credentialsData?.certificationUrl,
-              status: credentialsData?.certificationStatus ?? "pending",
-              note: credentialsData?.certificationNote,
-            },
-          ]
-        : []),
+
+      {
+        key: "cert" as const,
+        title: "Certification (PDF or JPG)",
+        doc: credentialsData?.certificationUrl,
+        status: credentialsData?.certificationStatus ?? "pending",
+        note: credentialsData?.certificationNote,
+      },
     ],
-    [credentialsData, hasCounselorRole]
+    [credentialsData]
   );
 
   if (isLoading) {
@@ -264,8 +260,7 @@ export default function CredentialList({
           busy={approving}
           onView={() => {
             if (!row.doc) return;
-            // Open in a new tab to view PDF/image inline (browser viewer will handle PDFs without forcing download)
-            window.open(row.doc, "_blank", "noopener,noreferrer");
+            setPreviewUrl(row.doc);
           }}
           onApprove={() => approveDoc(row.key)}
           onReject={() => setRejectOpen({ kind: row.key })}
@@ -282,9 +277,63 @@ export default function CredentialList({
         }}
       />
 
+      {/* Document Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-[1000]" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setPreviewUrl(null)}
+          />
+          <div className="absolute inset-4 sm:inset-10 bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b px-4 py-2">
+              <h3 className="text-sm sm:text-base font-semibold truncate">
+                Document preview
+              </h3>
+              <button
+                onClick={() => setPreviewUrl(null)}
+                className="p-2 rounded hover:bg-gray-100"
+                aria-label="Close preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {/\.(png|jpe?g|gif|webp|svg)$/i.test(previewUrl) ? (
+                <div className="w-full h-full overflow-auto flex items-center justify-center bg-gray-50">
+                  <img
+                    src={previewUrl}
+                    alt="Document"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="h-full">
+                  <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+                    <Viewer
+                      fileUrl={previewUrl}
+                      plugins={[defaultLayoutPluginInstance]}
+                    />
+                  </Worker>
+                </div>
+              )}
+            </div>
+            <div className="border-t p-2 sm:p-3 text-right">
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+              >
+                Open in new tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-gray-500 mt-2">
-        Tip: click the file name to preview it in your browser. PDFs open in a
-        built‑in viewer.
+        Tip: click the file name to preview it in-app. If a file can’t be
+        displayed (host blocks embedding or CORS), use “Open in new tab”.
       </p>
     </div>
   );
