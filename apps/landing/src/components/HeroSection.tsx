@@ -22,16 +22,14 @@ const HeroSection = () => {
         <div className="flex gap-4 justify-center">
           <a 
             href="https://dashboard.dtherapist.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
+            
             className="bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-md inline-block transition-colors duration-200"
           >
             Get Started
           </a>
           <a 
             href="https://dashboard.dtherapist.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
+            
             className="bg-white text-black hover:bg-blue-100 px-6 py-2 rounded-md inline-block transition-colors duration-200"
           >
             Consult Us
