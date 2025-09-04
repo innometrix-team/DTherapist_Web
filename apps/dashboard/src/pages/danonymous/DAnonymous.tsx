@@ -1,7 +1,7 @@
 import { ArrowLeft, MessageCircle, Users } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
-import { PeopleIcon } from "../../assets/icons";
+// import { PeopleIcon } from "../../assets/icons";
 import DAnonymousGroups from "../../components/anonymous/DAnonymousGroups";
 import { useGroups } from "../../hooks/useGroups";
 
@@ -76,8 +76,9 @@ const DAnonymous = () => {
         {!selectedGroup ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center max-w-md mx-auto p-8">
-              <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <PeopleIcon className="w-12 h-12 text-gray-400" />
+              <div className="w-24 h-24 bg-darkerb rounded-full mx-auto mb-6 flex items-center justify-center">
+                {/* <PeopleIcon className="w-12 h-12 text-gray-400" /> */}
+                <img src="/d-logo.png" alt="" className="rounded-full "/>
               </div>
               <h2 className="text-2xl font-semibold text-gray-700 mb-3">
                 Welcome to DAnonymous
