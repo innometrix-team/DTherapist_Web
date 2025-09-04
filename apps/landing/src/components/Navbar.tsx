@@ -20,17 +20,17 @@ const Navbar: React.FC = () => {
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
           <li>
-            <a href="#home" className="hover:text-primary">
+            <a href="/" className="hover:text-primary">
               Home
             </a>
           </li>
           <li>
-            <a href="https://d-therapist.vercel.app/appointments" className="hover:text-primary">
+            <a href="https://dashboard.dtherapist.com/appointments" className="hover:text-primary">
               Appointments
             </a>
           </li>
           <li>
-            <a href="https://d-therapist.vercel.app/anonymous" className="hover:text-primary">
+            <a href="https://dashboard.dtherapist.com/anonymous" className="hover:text-primary">
               DAnonymous
             </a>
           </li>
@@ -44,12 +44,12 @@ const Navbar: React.FC = () => {
         {/* Buttons (Always Visible) */}
         <div className="hidden md:flex gap-4">
           <button className="text-sm border border-primary text-primary px-4 py-1 rounded hover:bg-primary hover:text-white transition-all">
-            <a href="https://d-therapist.vercel.app/auth/login" className="hover:text-white ">
+            <a href="https://dashboard.dtherapist.com/auth/login" className="hover:text-white ">
               Login
             </a>
           </button>
           <button className="text-sm bg-primary text-white px-4 py-1 rounded hover:bg-primary transition-all">            
-            <a href="https://d-therapist.vercel.app/auth/signup" >
+            <a href="https://dashboard.dtherapist.com/auth/signup" >
               Register
             </a>
           </button>
@@ -73,18 +73,18 @@ const Navbar: React.FC = () => {
           }`}
         >
           <div className="flex flex-col p-6 gap-6 text-sm font-medium">
-            <a href="#home" className="hover:text-primary" onClick={toggleMenu}>
+            <a href="/" className="hover:text-primary" onClick={toggleMenu}>
               Home
             </a>
             <a
-              href="https://d-therapist.vercel.app/appointments"
+              href="https://dashboard.dtherapist.com/appointments"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
               Appointments
             </a>
             <a
-              href="https://d-therapist.vercel.app/anonymous"
+              href="https://dashboard.dtherapist.com/anonymous"
               className="hover:text-primary"
               onClick={toggleMenu}
             >
@@ -98,10 +98,10 @@ const Navbar: React.FC = () => {
 
             <button className="border border-primary text-primary px-4 py-2 rounded hover:bg-primary hover:text-white transition-all">
 
-            <a href="https://d-therapist.vercel.app/auth/login" className="hover:text-white ">  Login</a>
+            <a href="https://dashboard.dtherapist.com/auth/login" className="hover:text-white ">  Login</a>
             </button>
             <button className="bg-primary text-white px-4 py-2 rounded hover:bg-primary transition-all">
-              <a href="https://d-therapist.vercel.app/auth/signup" >
+              <a href="https://dashboard.dtherapist.com/auth/signup" >
 
               Register
               </a>

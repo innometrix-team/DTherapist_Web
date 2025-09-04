@@ -18,7 +18,7 @@ const Steps = () => {
           </p>
           <div className="flex justify-center md:justify-start">
 
-            <a href="https://d-therapist.vercel.app/" className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black  ml-4 transition">
+            <a href="https://dashboard.dtherapist.com/" className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-100 hover:text-black  ml-4 transition">
               Get Started
             </a>  
           </div>
