@@ -74,6 +74,7 @@ const PrivacyPolicy: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
+
         <Navbar />
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-green-500 text-white">
