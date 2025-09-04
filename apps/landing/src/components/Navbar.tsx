@@ -11,11 +11,13 @@ const Navbar: React.FC = () => {
   return (
     <>
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center relative z-50">
+        <a href="https://dtherapist.com/" >
         <img
           src="https://ik.imagekit.io/rqi1dzw2h/DT_Logo.png?updatedAt=1746132133582"
           alt="DTherapist Logo"
           className="h-10 md:h-12 w-auto object-contain"
         />
+        </a>
 
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
