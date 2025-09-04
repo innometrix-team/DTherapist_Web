@@ -94,14 +94,14 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
         />
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white max-w-4xl px-4">
+          <div className="text-center text-white max-w-6xl px-4">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">{displayArticle.title}</h1>
             <p className="text-xl opacity-90">{displayArticle.date}</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Back Button */}
         <button
           onClick={onBack}
