@@ -8,10 +8,12 @@ import Steps from "../components/Steps";
 import Testimonials from "../components/Testimonials";
 import FAQ from "../components/FAQ";
 import Footer from "../components/Footer";
+import { Analytics } from "@vercel/analytics/next"
 
 const Index: React.FC = () => {
   return (
     <>
+      <Analytics />
       <Navbar />
       <div id="home">
         <HeroSection />

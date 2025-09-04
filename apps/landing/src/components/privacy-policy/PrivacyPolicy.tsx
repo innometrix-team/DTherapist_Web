@@ -3,6 +3,7 @@ import { Shield, Users, UserCheck, Calendar, ChevronDown, ChevronUp } from 'luci
 import { PRIVACY_POLICY_DATA, PrivacySection } from './constants';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
+import { Analytics } from "@vercel/analytics/next"
 
 interface CollapsibleSectionProps {
   section: PrivacySection;
@@ -74,6 +75,7 @@ const PrivacyPolicy: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <Analytics />
         <Navbar />
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-green-500 text-white">
