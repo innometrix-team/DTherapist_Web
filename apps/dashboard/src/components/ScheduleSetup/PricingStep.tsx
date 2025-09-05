@@ -182,8 +182,8 @@ const PricingStep: React.FC<Props> = ({
               Are you sure you want to save your schedule and pricing settings?
             </p>
             <div className="mb-4 text-sm text-gray-600">
-              <p><strong>Video Session:</strong> ${pricing.video}/hr</p>
-              <p><strong>In-Person:</strong> ${pricing.inPerson}/hr</p>
+              <p><strong>Video Session:</strong> ₦{pricing.video}/hr</p>
+              <p><strong>In-Person:</strong> ₦{pricing.inPerson}/hr</p>
             </div>
             <div className="flex justify-end gap-4">
               <button
