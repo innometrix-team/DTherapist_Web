@@ -1,4 +1,4 @@
-import { Service, WelcomeFeature, Step, Therapist, Testimonial, Faqs } from '../types';
+import { Service, WelcomeFeature, Step, Therapist, Testimonial, Faqs, ServiceDetailsMap } from '../types';
 import {
   FaUserMd,
   FaHeart,
@@ -197,4 +197,143 @@ export const faqs: Faqs[] = [
   },
 ];
 
+
+
+
+
+// utils/serviceDetails.ts
+
+export const serviceDetails: ServiceDetailsMap = {
+  'Grief and Loss Therapy': {
+    overview: 'Our grief and loss therapy provides compassionate support for individuals navigating the complex emotions of bereavement and trauma. We understand that everyone grieves differently and at their own pace.',
+    whatWeOffer: [
+      'Individual grief counseling sessions',
+      'Support for various types of loss (death, divorce, job loss, etc.)',
+      'Trauma-informed care approaches',
+      'Coping strategies and emotional regulation techniques',
+      'Memorial and remembrance therapy'
+    ],
+    whoCanBenefit: [
+      'Individuals who have lost a loved one',
+      'Those experiencing complicated grief',
+      'People dealing with traumatic loss',
+      'Individuals struggling with anticipatory grief',
+      'Anyone needing support through major life transitions'
+    ],
+    approaches: [
+      'Cognitive Behavioral Therapy (CBT)',
+      'Acceptance and Commitment Therapy (ACT)',
+      'Narrative therapy',
+      'Mindfulness-based interventions',
+      'EMDR for traumatic grief'
+    ]
+  },
+  'Child and Adolescent Mental Health Therapy': {
+    overview: 'We specialize in supporting young minds through their developmental challenges, providing age-appropriate therapeutic interventions that empower children and teens to overcome emotional struggles.',
+    whatWeOffer: [
+      'Individual therapy for children (ages 6-12)',
+      'Adolescent counseling (ages 13-18)',
+      'Behavioral intervention strategies',
+      'Social skills development',
+      'Academic performance support',
+      'Family involvement in treatment'
+    ],
+    whoCanBenefit: [
+      'Children with anxiety or depression',
+      'Teens struggling with identity issues',
+      'Students with academic difficulties',
+      'Young people with behavioral challenges',
+      'Children experiencing bullying or peer pressure'
+    ],
+    approaches: [
+      'Play therapy for younger children',
+      'Cognitive Behavioral Therapy adapted for youth',
+      'Art and music therapy',
+      'Solution-focused brief therapy',
+      'Dialectical Behavior Therapy skills for teens'
+    ]
+  },
+  'Educational Therapy': {
+    overview: 'Our educational therapy bridges the gap between learning challenges and academic success, providing specialized support for students with various learning differences and difficulties.',
+    whatWeOffer: [
+      'Learning disability assessments',
+      'Individualized education planning',
+      'Study skills and organization training',
+      'Reading and writing support',
+      'Math and science tutoring with therapeutic approach',
+      'Executive functioning skill development'
+    ],
+    whoCanBenefit: [
+      'Students with dyslexia or other learning disabilities',
+      'Children with ADHD affecting academic performance',
+      'Students struggling with executive functioning',
+      'Learners needing study skills development',
+      'Anyone experiencing academic anxiety'
+    ],
+    approaches: [
+      'Multi-sensory learning techniques',
+      'Orton-Gillingham method for reading',
+      'Cognitive training programs',
+      'Assistive technology integration',
+      'Metacognitive strategy instruction'
+    ]
+  },
+  'Family, Couple/Marriage Therapy': {
+    overview: 'We help families and couples build stronger, healthier relationships through improved communication, conflict resolution, and deeper understanding of each other\'s needs and perspectives.',
+    whatWeOffer: [
+      'Couples counseling and marriage therapy',
+      'Family therapy sessions',
+      'Pre-marital counseling',
+      'Divorce mediation and co-parenting support',
+      'Blended family integration support',
+      'Communication skills workshops'
+    ],
+    whoCanBenefit: [
+      'Couples experiencing relationship difficulties',
+      'Families dealing with conflict or communication issues',
+      'Partners preparing for marriage',
+      'Divorced parents needing co-parenting support',
+      'Blended families adjusting to new dynamics'
+    ],
+    approaches: [
+      'Emotionally Focused Therapy (EFT)',
+      'Gottman Method Couples Therapy',
+      'Structural Family Therapy',
+      'Solution-Focused Family Therapy',
+      'Narrative therapy for families'
+    ]
+  },
+  'Synergy Circle': {
+overview: `A Revolutionary Therapy Model that Fosters Supportive Groups and Unlocks Individual Potential
+
+In a world often fixated on individual achievement, it's easy to lose sight of the power of collective support. We strive for personal goals, sometimes forgetting that shared aspirations and mutual encouragement can propel us further than isolated efforts. This is where the concept of what we might call "Synergy Circles" comes into play, a therapeutic approach inspired by Dubbie’s philosophy of "no man left behind."
+
+Forget the traditional image of solitary therapy sessions. Synergy Circles fosters a supportive network within existing relationships—families, friend groups, and sports teams. The core idea is simple: Members commit to holding each other accountable, not through judgment or pressure, but through collaborative support and shared responsibility.`,
+    HowItWorks: [
+      'No man Left Behind Principle: Synergy Circless cornerstone. It means that the group is committed to supporting every member, regardless of their progress or setbacks. The goal is ensuring everyone feels valued, supported, and empowered to achieve their aspirations.',
+      'Shared Goals and Aspirations: The circle begins with a collective discussion about individual and shared goals. This could range from fitness and wellness to career advancement, personal development, shared projects or even team sports',
+      'Mutual Support and Encouragement: Members commit to providing consistent support and encouragement. This can involve regular check-ins, celebrating small victories, and offering constructive feedback',
+      'Constructive Feedback and Problem-Solving: When someone encounters a setback or struggles to meet their goals, the circle acts as a sounding board. Members offer constructive feedback, brainstorm solutions, and help identify potential roadblocks.',
+      'Shared Responsibility: The circle fosters a sense of shared responsibility for each members success. This means actively looking out for each other, offering assistance when needed, and ensuring that no one feels isolated or abandoned',
+      'Regular Check-ins: Structured check-ins are crucial. These can be daily, weekly, or monthly, depending on the groups needs. The purpose is to track progress, address challenges, and reaffirm commitments'
+    ],
+    whoCanBenefit: [
+      'Enhanced Motivation: Knowing that others are invested in your success can significantly boost motivation.',
+      'Increased Support: The circle provides a reliable source of emotional and practical support. Even in moments of grief and low self-esteem.',
+      'Improved Communication: Regular check-ins and open discussions foster better communication and deeper connections.',
+      'Greater Sense of Belonging: The circle creates a sense of belonging and community, reducing feelings of isolation.',
+      'Accelerated Growth: The combined energy and support of the group can accelerate personal and collective growth.',
+      'Reduced feelings of shame: By normalising struggles, and working as a team, individuals feel less shame about not achieving goals immediately'
+    ],
+    approaches: [
+      'Families will intentionally orientate siblings and close relations into a commitment to each other’s welfare and well-being.',
+      'Identify Your Circle: Choose individuals who are genuinely interested in your well-being and success',
+      'Establish Clear Goals: Define individual and shared goals that are specific, measurable, achievable, relevant, and time-bound (SMART).',
+      'Set Ground Rules: Establish clear guidelines for communication, feedback, and support',
+      'Celebrate Successes: Acknowledge and celebrate milestones, both big and small',
+      'Schedule Regular Check-ins: Determine the frequency and format of check-ins',
+      'Be Patient and Supportive: Remember that progress is not always linear. Be patient, supportive, and understanding.',
+    ]
+  }
+};
 

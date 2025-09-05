@@ -1,3 +1,35 @@
+// types/serviceTypes.ts
+export interface ServiceDetail {
+  overview: string;
+  whatWeOffer?: string[];
+  whoCanBenefit?: string[];
+  approaches?: string[];
+  HowItWorks?: string[];
+
+}
+
+export interface ServiceDetailsMap {
+  [key: string]: ServiceDetail;
+}
+
+export interface ServiceModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  service: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+  } | null;
+}
+
+export interface ServiceFeatureProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+
+
 
 export interface Service {
     title: string;
