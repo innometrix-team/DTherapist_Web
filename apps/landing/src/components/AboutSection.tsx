@@ -15,11 +15,11 @@ const AboutSection: React.FC<AboutSectionProps> = ({
   return (
     <section className="py-16 px-6 md:px-24 bg-white">
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-        <div>
+        <div className=" p-2 rounded-2xl shadow-lg">
           <img
             src={imageUrl}
             alt={title}
-            className="w-full h-[300px] md:h-[500px] rounded-2xl  object-contain"
+            className="w-full h-[300px] md:h-[500px] rounded-2xl  object-contain "
           />
         </div>
         <div>
