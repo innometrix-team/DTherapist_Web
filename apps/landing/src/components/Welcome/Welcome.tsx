@@ -1,13 +1,15 @@
+// components/Welcome.tsx
+import React from 'react';
 import ServiceFeature from './ServiceFeature';
 import { welcomeFeatures } from '../../utils/constants';
 import { WelcomeFeature } from '../../types';
 
-const Welcome = () => {
+const Welcome: React.FC = () => {
   return (
     <section className="py-12 px-4 sm:px-8 md:px-16 bg-gray-50">
       {/* Header */}
       <div className="text-center mb-10">
-        <h5 className="text-sm font-bold text-primary ">Welcome to DTherapist</h5>
+        <h5 className="text-sm font-bold text-primary">Welcome to DTherapist</h5>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-black max-w-2xl mx-auto mt-2">
           Caring Today For A Healthier Mind
         </h1>
@@ -45,4 +47,3 @@ const Welcome = () => {
 };
 
 export default Welcome;
-
