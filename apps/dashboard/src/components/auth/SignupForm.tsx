@@ -62,12 +62,9 @@ function SignUpForm() {
       // Pass role and fullName as URL params for use after verification
       const searchParams = new URLSearchParams({
         email: variables.email,
+        role: variables.role, // Always pass the role
+        fullName: variables.fullName, // Always pass the full name
       });
-      
-      if (variables.role === "therapist") {
-        searchParams.set("role", "therapist");
-        searchParams.set("fullName", variables.fullName);
-      }
       
       navigate(`/auth/verify-email?${searchParams.toString()}`);
     },
