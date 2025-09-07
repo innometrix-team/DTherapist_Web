@@ -229,7 +229,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
             onDownloadInvoice(appointment.bookingId);
           }
         } catch (error: unknown) {
-          console.error('Invoice download error:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to download invoice';
           toast.error(errorMessage);
         } finally {
@@ -260,13 +259,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
       <div className="text-center py-8 px-4 text-gray-500">
         <div className="text-sm sm:text-base">
           Loading {type} appointments...
-        </div>
-        <div className="text-xs text-gray-400 mt-2">
-          Debug: Role={role}, DataSource={dataSource}, Endpoint={
-            dataSource === 'dashboard' 
-              ? (isCounselor ? '/api/service-provider/dashboard' : '/api/user/dashboard')
-              : (isCounselor ? '/api/service-provider/appointments' : '/api/user/appointments')
-          }
         </div>
       </div>
     );
@@ -312,24 +304,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   // Empty state with more debugging info
   if (appointments.length === 0) {
-    const debugInfo = dataSource === 'dashboard' 
-      ? (dashboardData?.data ? dashboardData.data.upcomingAppointments.length : 'No data')
-      : (isCounselor 
-          ? (counselorData?.data ? Array.isArray(counselorData.data) ? counselorData.data.length : 'Not array' : 'No data')
-          : (userData?.data ? Array.isArray(userData.data) ? userData.data.length : 'Not array' : 'No data')
-        );
 
     return (
       <div className="text-center py-8 px-4 text-gray-500">
         <div className="text-sm sm:text-base mb-2">
           No {type} appointments to display.
-        </div>
-        <div className="text-xs text-gray-400 space-y-1">
-          <div>Debug: Role={role}, IsCounselor={isCounselor}</div>
-          <div>DataSource: {dataSource}</div>
-          <div>Raw data length: {debugInfo}</div>
-          <div>Filter type: {type}</div>
-        </div>
+        </div>        
       </div>
     );
   }
