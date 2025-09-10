@@ -1,11 +1,20 @@
-import React, { useState, useCallback, useMemo, JSX } from 'react';
-import { SessionType } from './types';
-import { CreditCard, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { getTherapistDetailsApi} from '../../api/Therapist.api';
-import createBookingApi, { IBookingRequest } from '../../api/Booking.api';
-import { getTherapistScheduleApi, ITimeSlot } from '../../api/TherapistSchedule.api';
-import toast from 'react-hot-toast';
+import React, { useState, useCallback, useMemo, JSX } from "react";
+import { SessionType } from "./types";
+import {
+  CreditCard,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getTherapistDetailsApi } from "../../api/Therapist.api";
+import createBookingApi, { IBookingRequest } from "../../api/Booking.api";
+import {
+  getTherapistScheduleApi,
+  ITimeSlot,
+} from "../../api/TherapistSchedule.api";
+import toast from "react-hot-toast";
 
 interface BookingSessionProps {
   therapistId: string;
@@ -13,54 +22,64 @@ interface BookingSessionProps {
   onBack: () => void;
 }
 
-const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionType, onBack }) => {
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
+const BookingSession: React.FC<BookingSessionProps> = ({
+  therapistId,
+  sessionType,
+  onBack,
+}) => {
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Convert sessionType to API format for schedule endpoint
-  const scheduleApiSessionType = sessionType === 'video' ? 'video' : 'physical';
-  
-  // Convert sessionType to API format for booking endpoint  
-  const bookingApiSessionType = sessionType === 'video' ? 'video' : 'in-person';
+  const scheduleApiSessionType = sessionType === "video" ? "video" : "physical";
+
+  // Convert sessionType to API format for booking endpoint
+  const bookingApiSessionType = sessionType === "video" ? "video" : "in-person";
 
   // Fetch therapist details
-  const { 
-    data: therapistResponse, 
-    isLoading: therapistLoading, 
-    error: therapistError 
+  const {
+    data: therapistResponse,
+    isLoading: therapistLoading,
+    error: therapistError,
   } = useQuery({
-    queryKey: ['therapist', therapistId],
+    queryKey: ["therapist", therapistId],
     queryFn: async () => {
       const result = await getTherapistDetailsApi(therapistId);
-      if (!result) throw new Error('Request cancelled');
+      if (!result) throw new Error("Request cancelled");
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch therapist schedule
-  const { 
-    data: scheduleResponse, 
-    isLoading: scheduleLoading, 
-    error: scheduleError 
+  const {
+    data: scheduleResponse,
+    isLoading: scheduleLoading,
+    error: scheduleError,
   } = useQuery({
-    queryKey: ['therapist-schedule', therapistId, scheduleApiSessionType],
+    queryKey: ["therapist-schedule", therapistId, scheduleApiSessionType],
     queryFn: async () => {
-      const result = await getTherapistScheduleApi(therapistId, scheduleApiSessionType);
-      if (!result) throw new Error('Request cancelled');
+      const result = await getTherapistScheduleApi(
+        therapistId,
+        scheduleApiSessionType
+      );
+      if (!result) throw new Error("Request cancelled");
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Helper function to get cost based on session type
-  const getCostForSessionType = (cost: { video: number; inPerson: number } | number | null, sessionType: SessionType): number => {
-    if (typeof cost === 'number') {
+  const getCostForSessionType = (
+    cost: { video: number; inPerson: number } | number | null,
+    sessionType: SessionType
+  ): number => {
+    if (typeof cost === "number") {
       return cost;
     }
-    if (typeof cost === 'object' && cost !== null) {
-      return sessionType === 'video' ? (cost.video || 0) : (cost.inPerson || 0);
+    if (typeof cost === "object" && cost !== null) {
+      return sessionType === "video" ? cost.video || 0 : cost.inPerson || 0;
     }
     return 0;
   };
@@ -69,12 +88,12 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   const bookingMutation = useMutation({
     mutationFn: async (bookingData: IBookingRequest) => {
       const result = await createBookingApi(bookingData);
-      if (!result) throw new Error('Request cancelled');
+      if (!result) throw new Error("Request cancelled");
       return result;
     },
     onSuccess: (data) => {
-      toast.success(data.message || 'Booking created successfully');
-      
+      toast.success(data.message || "Booking created successfully");
+
       // If there's a payment URL, redirect to it
       if (data.data?.paymentUrl) {
         window.location.href = data.data.paymentUrl;
@@ -86,66 +105,80 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
       }
     },
     onError: (error) => {
-      const errorMessage = error?.message || 'Failed to create booking';
+      const errorMessage = error?.message || "Failed to create booking";
       toast.error(errorMessage);
-    }
+    },
   });
 
   const therapist = therapistResponse?.data?.therapist;
-  const sessionCost = therapist ? getCostForSessionType(therapist.cost, sessionType) : 0;
+  const sessionCost = therapist
+    ? getCostForSessionType(therapist.cost, sessionType)
+    : 0;
 
   // Helper function to get all dates for a specific day of the week in a month
-  const getDatesForDayInCurrentMonth = useCallback((dayName: string, month: Date): Date[] => {
-    const dates: Date[] = [];
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-    
-    // Map day names to numbers (0 = Sunday, 1 = Monday, etc.)
-    const dayMap: { [key: string]: number } = {
-      'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
-      'Thursday': 4, 'Friday': 5, 'Saturday': 6
-    };
-    
-    const targetDay = dayMap[dayName];
-    if (targetDay === undefined) return dates;
-    
-    // Get first day of the month
-    const firstDay = new Date(year, monthIndex, 1);
-    const lastDay = new Date(year, monthIndex + 1, 0);
-    
-    // Find first occurrence of the target day
-    const date = new Date(firstDay);
-    while (date.getDay() !== targetDay) {
-      date.setDate(date.getDate() + 1);
-    }
-    
-    // Add all occurrences of this day in the month
-    while (date <= lastDay) {
-      dates.push(new Date(date));
-      date.setDate(date.getDate() + 7); // Next week
-    }
-    
-    return dates;
-  }, []);
+  const getDatesForDayInCurrentMonth = useCallback(
+    (dayName: string, month: Date): Date[] => {
+      const dates: Date[] = [];
+      const year = month.getFullYear();
+      const monthIndex = month.getMonth();
+
+      // Map day names to numbers (0 = Sunday, 1 = Monday, etc.)
+      const dayMap: { [key: string]: number } = {
+        Sunday: 0,
+        Monday: 1,
+        Tuesday: 2,
+        Wednesday: 3,
+        Thursday: 4,
+        Friday: 5,
+        Saturday: 6,
+      };
+
+      const targetDay = dayMap[dayName];
+      if (targetDay === undefined) return dates;
+
+      // Get first day of the month
+      const firstDay = new Date(year, monthIndex, 1);
+      const lastDay = new Date(year, monthIndex + 1, 0);
+
+      // Find first occurrence of the target day
+      const date = new Date(firstDay);
+      while (date.getDay() !== targetDay) {
+        date.setDate(date.getDate() + 1);
+      }
+
+      // Add all occurrences of this day in the month
+      while (date <= lastDay) {
+        dates.push(new Date(date));
+        date.setDate(date.getDate() + 7); // Next week
+      }
+
+      return dates;
+    },
+    []
+  );
 
   // Create a map of available dates for quick lookup
   const availableDatesMap = useMemo(() => {
     const map = new Map<string, ITimeSlot[]>();
-    
+
     // Move schedules initialization inside the useMemo
     const schedules = scheduleResponse?.data?.schedules || [];
-    
-    schedules.forEach(scheduleItem => {
+
+    schedules.forEach((scheduleItem) => {
       // Convert meetingType for comparison (in-person from API vs physical from component)
-      const scheduleMeetingType = scheduleItem.meetingType === 'in-person' ? 'physical' : 'video';
-      
-      if (scheduleItem.isAvailable && scheduleMeetingType === scheduleApiSessionType) {
+      const scheduleMeetingType =
+        scheduleItem.meetingType === "in-person" ? "physical" : "video";
+
+      if (
+        scheduleItem.isAvailable &&
+        scheduleMeetingType === scheduleApiSessionType
+      ) {
         // Get all dates for this day of the week in the current month
         const dayName = scheduleItem.day;
         const dates = getDatesForDayInCurrentMonth(dayName, currentMonth);
-        
-        dates.forEach(date => {
-          const dateStr = date.toISOString().split('T')[0];
+
+        dates.forEach((date) => {
+          const dateStr = date.toISOString().split("T")[0];
           // Only add future dates
           const today = new Date();
           today.setHours(0, 0, 0, 0);
@@ -155,44 +188,62 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
         });
       }
     });
-    
+
     return map;
-  }, [scheduleResponse?.data?.schedules, scheduleApiSessionType, currentMonth, getDatesForDayInCurrentMonth]);
+  }, [
+    scheduleResponse?.data?.schedules,
+    scheduleApiSessionType,
+    currentMonth,
+    getDatesForDayInCurrentMonth,
+  ]);
 
   // Generate calendar days for the current month
   const generateCalendarDays = useCallback((): (number | null)[] => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
     const daysInMonth = lastDayOfMonth.getDate();
-    
+
     // Get the day of week (0 = Sunday, 1 = Monday, etc.)
     // Convert to Monday = 0, Sunday = 6
     const startDay = (firstDayOfMonth.getDay() + 6) % 7;
-    
+
     const days: (number | null)[] = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startDay; i++) {
       days.push(null);
     }
-    
+
     // Add all days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
     }
-    
+
     return days;
   }, [currentMonth]);
 
   const calendarDays = generateCalendarDays();
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const formatDateToString = useCallback((date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(date.getDate()).padStart(2, "0")}`;
+  }, []);
 
   // Check if a date is available
   const isDateAvailable = (day: number): boolean => {
-    const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
+    const dateStr = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    )
+      .toISOString()
+      .split("T")[0];
     return availableDatesMap.has(dateStr);
   };
 
@@ -200,25 +251,25 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const selectedDateObj = new Date(year, month, day);
-    
+
     // Don't allow selecting past dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (selectedDateObj < today) {
-      toast.error('Cannot select past dates');
+      toast.error("Cannot select past dates");
       return;
     }
 
     // Check if date is available
-    const formattedDate = selectedDateObj.toISOString().split('T')[0];
+    const formattedDate = formatDateToString(selectedDateObj);
     if (!availableDatesMap.has(formattedDate)) {
-      toast.error('This date is not available');
+      toast.error("This date is not available");
       return;
     }
-    
+
     setSelectedDate(formattedDate);
-    setSelectedTime(''); // Reset time selection when date changes
+    setSelectedTime(""); // Reset time selection when date changes
   };
 
   const handleTimeSelect = (time: string): void => {
@@ -226,27 +277,33 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   };
 
   const handlePrevMonth = (): void => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
-    setSelectedDate('');
-    setSelectedTime('');
+    setCurrentMonth(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1)
+    );
+    setSelectedDate("");
+    setSelectedTime("");
   };
 
   const handleNextMonth = (): void => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
-    setSelectedDate('');
-    setSelectedTime('');
+    setCurrentMonth(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1)
+    );
+    setSelectedDate("");
+    setSelectedTime("");
   };
 
   const handlePayment = async (): Promise<void> => {
     if (!therapist || !selectedDate || !selectedTime) {
-      toast.error('Please select both date and time');
+      toast.error("Please select both date and time");
       return;
     }
 
     // Calculate end time (assuming 1-hour sessions)
-    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const [hours, minutes] = selectedTime.split(":").map(Number);
     const endHours = hours + 1;
-    const endTime = `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    const endTime = `${endHours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
 
     const bookingData: IBookingRequest = {
       therapistId: therapistId,
@@ -254,7 +311,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
       date: selectedDate,
       startTime: selectedTime,
       endTime,
-      price: sessionCost
+      price: sessionCost,
     };
 
     bookingMutation.mutate(bookingData);
@@ -265,7 +322,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     return Array.from({ length: 5 }, (_, i) => (
       <span
         key={i}
-        className={`text-sm ${i < validRating ? 'text-yellow-400' : 'text-gray-300'}`}
+        className={`text-sm ${
+          i < validRating ? "text-yellow-400" : "text-gray-300"
+        }`}
       >
         ★
       </span>
@@ -277,7 +336,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
     if (!selectedDate || !availableDatesMap.has(selectedDate)) {
       return [];
     }
-    
+
     const timeSlots = availableDatesMap.get(selectedDate);
     return timeSlots || [];
   };
@@ -285,8 +344,18 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
   const availableTimes = getAvailableTimesForDate();
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   // Loading state
@@ -296,7 +365,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <span className="text-gray-600">
-            {therapistLoading ? 'Loading therapist details...' : 'Loading availability...'}
+            {therapistLoading
+              ? "Loading therapist details..."
+              : "Loading availability..."}
           </span>
         </div>
       </div>
@@ -309,9 +380,11 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            {therapistError ? 'Failed to load therapist' : 
-             scheduleError ? 'Failed to load availability' : 
-             'Therapist not found'}
+            {therapistError
+              ? "Failed to load therapist"
+              : scheduleError
+              ? "Failed to load availability"
+              : "Therapist not found"}
           </h2>
           <button
             onClick={onBack}
@@ -326,19 +399,28 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
 
   const isToday = (day: number): boolean => {
     const today = new Date();
-    const dayDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const dayDate = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    );
     return dayDate.toDateString() === today.toDateString();
   };
 
   const isPastDate = (day: number): boolean => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dayDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const dayDate = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      day
+    );
     return dayDate < today;
   };
 
   // Get review count (handle both count and totalReviews)
-  const reviewCount = therapist.reviews.totalReviews || therapist.reviews.count || 0;
+  const reviewCount =
+    therapist.reviews.totalReviews || therapist.reviews.count || 0;
 
   return (
     <div className="min-h-screen bg-white">
@@ -347,7 +429,8 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
           {/* Header */}
           <div className="flex items-center justify-between m-6 sm:mb-8 pb-6 border-b border-gray-200">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Book {sessionType === 'video' ? 'Video Call' : 'Physical Meeting'} Session
+              Book {sessionType === "video" ? "Video Call" : "Physical Meeting"}{" "}
+              Session
             </h1>
             <button
               onClick={onBack}
@@ -363,26 +446,39 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
               {/* Therapist Card */}
               <div className="flex items-start space-x-4">
                 <img
-                  src={therapist.profilePicture || 'https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User'}
+                  src={
+                    therapist.profilePicture ||
+                    "https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User"
+                  }
                   alt={therapist.name}
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover"
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
-                    if (img.src !== 'https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User') {
-                      img.src = 'https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User';
+                    if (
+                      img.src !==
+                      "https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User"
+                    ) {
+                      img.src =
+                        "https://via.placeholder.com/96x96/e5e7eb/9ca3af?text=User";
                     }
                   }}
                 />
                 <div className="flex-1">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{therapist.name}</h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+                    {therapist.name}
+                  </h2>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="text-gray-600">({reviewCount} Reviews)</span>
+                    <span className="text-gray-600">
+                      ({reviewCount} Reviews)
+                    </span>
                     <div className="flex">
                       {renderStars(therapist.reviews.averageRating)}
                     </div>
                   </div>
                   <p className="text-gray-700 mb-1">{therapist.category}</p>
-                  <p className="text-gray-700 mb-2">{therapist.experience} years experience</p>
+                  <p className="text-gray-700 mb-2">
+                    {therapist.experience} years experience
+                  </p>
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     ₦{sessionCost}.00/hr
                   </p>
@@ -391,45 +487,53 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
 
               {/* About Section */}
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">About Counselor</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+                  About Counselor
+                </h3>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
                   <p>
-                    {therapist.about || 
-                    `${therapist.name} is a licensed professional counselor specializing in ${therapist.category}. 
+                    {therapist.about ||
+                      `${therapist.name} is a licensed professional counselor specializing in ${therapist.category}. 
                     With ${therapist.experience} years of experience, they provide comprehensive support and guidance 
                     to help clients achieve their mental health goals.`}
                   </p>
-                  {therapist.specializations && therapist.specializations.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Specializations:</h4>
-                      <ul className="list-disc list-inside space-y-1">
-                        {therapist.specializations.map((spec, index) => (
-                          <li key={index}>{spec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {therapist.specializations &&
+                    therapist.specializations.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">
+                          Specializations:
+                        </h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {therapist.specializations.map((spec, index) => (
+                            <li key={index}>{spec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
 
             {/* Right Column - Date & Time Selection */}
             <div className="space-y-6">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Select Date & Time</h3>
-              
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                Select Date & Time
+              </h3>
+
               {/* Calendar */}
               <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <button 
+                  <button
                     onClick={handlePrevMonth}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5 text-gray-600" />
                   </button>
                   <h4 className="text-lg sm:text-xl font-bold text-gray-900">
-                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                    {monthNames[currentMonth.getMonth()]}{" "}
+                    {currentMonth.getFullYear()}
                   </h4>
-                  <button 
+                  <button
                     onClick={handleNextMonth}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   >
@@ -440,7 +544,10 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
                 {/* Week Days Header */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                   {weekDays.map((day) => (
-                    <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-700 py-2">
+                    <div
+                      key={day}
+                      className="text-center text-xs sm:text-sm font-semibold text-gray-700 py-2"
+                    >
                       {day}
                     </div>
                   ))}
@@ -456,12 +563,19 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
                           disabled={isPastDate(day) || !isDateAvailable(day)}
                           className={`w-full h-full flex items-center justify-center text-sm font-medium rounded-lg transition-colors ${
                             isPastDate(day) || !isDateAvailable(day)
-                              ? 'text-gray-300 cursor-not-allowed'
+                              ? "text-gray-300 cursor-not-allowed"
                               : isToday(day)
-                              ? 'bg-success text-white' 
-                              : selectedDate === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0]
-                              ? 'bg-primary text-white'
-                              : 'hover:bg-gray-100 text-gray-700'
+                              ? "bg-success text-white"
+                              : selectedDate ===
+                                formatDateToString(
+                                  new Date(
+                                    currentMonth.getFullYear(),
+                                    currentMonth.getMonth(),
+                                    day
+                                  )
+                                )
+                              ? "bg-primary text-white"
+                              : "hover:bg-gray-100 text-gray-700"
                           }`}
                         >
                           {day}
@@ -492,7 +606,8 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
               {selectedDate && (
                 <div>
                   <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
-                    Available Times for {new Date(selectedDate).toLocaleDateString()}
+                    Available Times for{" "}
+                    {new Date(selectedDate).toLocaleDateString()}
                   </h4>
                   {availableTimes.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -502,8 +617,8 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
                           onClick={() => handleTimeSelect(timeSlot.startTime)}
                           className={`p-2 sm:p-3 text-sm font-medium border rounded-lg transition-colors ${
                             selectedTime === timeSlot.startTime
-                              ? 'bg-primary text-white border-primary'
-                              : 'border-gray-300 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
+                              ? "bg-primary text-white border-primary"
+                              : "border-gray-300 hover:border-blue-300 hover:bg-blue-50 text-gray-700"
                           }`}
                         >
                           {timeSlot.startTime} - {timeSlot.endTime}
@@ -526,7 +641,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
                 </div>
                 <button
                   onClick={handlePayment}
-                  disabled={!selectedDate || !selectedTime || bookingMutation.isPending}
+                  disabled={
+                    !selectedDate || !selectedTime || bookingMutation.isPending
+                  }
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-3 sm:py-4 rounded-lg hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {bookingMutation.isPending ? (
@@ -546,13 +663,19 @@ const BookingSession: React.FC<BookingSessionProps> = ({ therapistId, sessionTyp
               {/* Total and Payment - Desktop */}
               <div className="hidden lg:block pt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-6">
-                  <span className="text-2xl font-bold text-gray-900">Total:</span>
-                  <span className="text-2xl font-bold text-gray-900">₦{sessionCost}.00</span>
+                  <span className="text-2xl font-bold text-gray-900">
+                    Total:
+                  </span>
+                  <span className="text-2xl font-bold text-gray-900">
+                    ₦{sessionCost}.00
+                  </span>
                 </div>
 
                 <button
                   onClick={handlePayment}
-                  disabled={!selectedDate || !selectedTime || bookingMutation.isPending}
+                  disabled={
+                    !selectedDate || !selectedTime || bookingMutation.isPending
+                  }
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {bookingMutation.isPending ? (
