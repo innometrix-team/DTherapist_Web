@@ -642,7 +642,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                             <div className="flex items-center gap-2">
                               <div className="w-24 h-2 bg-gray-300 rounded-full overflow-hidden">
                                 <div 
-                                  className="h-full bg-gray-600 rounded-full transition-all duration-300"
+                                  className="h-full bg-green-600 rounded-full transition-all duration-300"
                                   style={{ 
                                     width: `${((currentReviewIndex + 1) / recentReviews.length) * 100}%` 
                                   }}
