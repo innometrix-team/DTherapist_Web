@@ -184,21 +184,18 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
       .slice(0, 5);
   }, [allReviews]);
 
-  // Carousel navigation
-  const reviewsPerPage = 2;
-  const totalPages = Math.ceil(recentReviews.length / reviewsPerPage);
+  // Carousel navigation - Single review display
+  const reviewsPerPage = 1;
 
   const nextReviews = () => {
     setCurrentReviewIndex((prev) =>
-      prev + reviewsPerPage >= recentReviews.length ? 0 : prev + reviewsPerPage
+      prev + 1 >= recentReviews.length ? 0 : prev + 1
     );
   };
 
   const prevReviews = () => {
     setCurrentReviewIndex((prev) =>
-      prev === 0
-        ? Math.max(0, recentReviews.length - reviewsPerPage)
-        : Math.max(0, prev - reviewsPerPage)
+      prev === 0 ? recentReviews.length - 1 : prev - 1
     );
   };
 
@@ -582,99 +579,82 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   <>
                     {recentReviews.length > 0 ? (
                       <div className="relative">
-                        {/* Reviews Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                          {getCurrentReviews().map((review) => (
-                            <div
-                              key={review._id || review.userId}
-                              className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm"
-                            >
-                              {/* Review Header */}
-                              <div className="flex items-start justify-between mb-4">
+                        {/* Single Review Display - Testimonial Style */}
+                        <div className="bg-gray-100 rounded-2xl p-8 mb-6 min-h-[200px] flex flex-col justify-between">
+                          {getCurrentReviews().length > 0 && (
+                            <>
+                              {/* Quote */}
+                              <div className="mb-6">
+                                <p className="text-gray-700 text-lg leading-relaxed italic">
+                                  "{getCurrentReviews()[0].comment}"
+                                </p>
+                              </div>
+
+                              {/* Author and Rating */}
+                              <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                    <User className="w-5 h-5 text-gray-600" />
+                                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                                    <User className="w-6 h-6 text-gray-600" />
                                   </div>
                                   <div>
-                                    <div className="font-medium text-gray-900">
-                                      {review.userName || "Anonymous User"}
+                                    <div className="font-semibold text-gray-900 text-lg">
+                                      {getCurrentReviews()[0].userName || "Anonymous User"}
                                     </div>
-                                    <div className="flex">
-                                      {renderStars(review.rating)}
+                                    <div className="text-gray-600 text-sm">
+                                      Patient • {formatDate(getCurrentReviews()[0].createdAt)}
                                     </div>
                                   </div>
                                 </div>
-                                <span className="text-sm text-gray-500">
-                                  {formatDate(review.createdAt)}
-                                </span>
+                                
+                                {/* Rating Stars */}
+                                <div className="flex">
+                                  {renderStars(getCurrentReviews()[0].rating)}
+                                </div>
                               </div>
-
-                              {/* Review Comment */}
-                              <p className="text-gray-600 leading-relaxed">
-                                {review.comment}
-                              </p>
-                            </div>
-                          ))}
+                            </>
+                          )}
                         </div>
 
                         {/* Carousel Navigation */}
-                        {recentReviews.length > reviewsPerPage && (
-                          <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
+                          {/* Navigation Buttons */}
+                          <div className="flex gap-3">
                             <button
                               onClick={prevReviews}
                               disabled={currentReviewIndex === 0}
-                              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-12 h-12 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors"
                             >
-                              <ChevronLeft className="w-4 h-4" />
-                              <span>Previous</span>
+                              <ChevronLeft className="w-5 h-5" />
                             </button>
-
-                            {/* Page Indicators */}
-                            <div className="flex space-x-2">
-                              {Array.from({ length: totalPages }, (_, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() =>
-                                    setCurrentReviewIndex(i * reviewsPerPage)
-                                  }
-                                  className={`w-3 h-3 rounded-full transition-colors ${
-                                    Math.floor(
-                                      currentReviewIndex / reviewsPerPage
-                                    ) === i
-                                      ? "bg-primary"
-                                      : "bg-gray-300 hover:bg-gray-400"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-
+                            
                             <button
                               onClick={nextReviews}
-                              disabled={
-                                currentReviewIndex + reviewsPerPage >=
-                                recentReviews.length
-                              }
-                              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={currentReviewIndex + 1 >= recentReviews.length}
+                              className="w-12 h-12 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors"
                             >
-                              <span>Next</span>
-                              <ChevronRight className="w-4 h-4" />
+                              <ChevronRight className="w-5 h-5" />
                             </button>
                           </div>
-                        )}
 
-                        {/* Reviews Counter */}
-                        <div className="text-center mt-4 text-sm text-gray-600">
-                          Showing{" "}
-                          {Math.min(
-                            currentReviewIndex + reviewsPerPage,
-                            recentReviews.length
-                          )}{" "}
-                          of {recentReviews.length} recent reviews
-                          {allReviews.length > 5 && (
-                            <span className="ml-1">
-                              ({allReviews.length} total reviews)
+                          {/* Progress Bar and Counter */}
+                          <div className="flex items-center gap-4">
+                            {/* Progress Bar */}
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 h-2 bg-gray-300 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-600 rounded-full transition-all duration-300"
+                                  style={{ 
+                                    width: `${((currentReviewIndex + 1) / recentReviews.length) * 100}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Counter */}
+                            <span className="text-gray-600 text-sm font-medium">
+                              {currentReviewIndex + 1}/{recentReviews.length}
                             </span>
-                          )}
+                          </div>
                         </div>
                       </div>
                     ) : (
