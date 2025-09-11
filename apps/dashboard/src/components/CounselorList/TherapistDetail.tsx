@@ -36,6 +36,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
   onBookSession,
 }) => {
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const [newReview, setNewReview] = useState({
     rating: 0,
     comment: "",
@@ -128,14 +129,36 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
 
   const therapist = therapistResponse?.data?.therapist;
 
-  // FIXED: Wrap allReviews in useMemo to prevent unnecessary re-renders
+  // Wrap allReviews in useMemo to prevent unnecessary re-renders
   const allReviews = useMemo(() => {
     return reviewsResponse?.data?.reviews || [];
   }, [reviewsResponse?.data?.reviews]);
 
   const reviewStats = reviewsResponse?.data;
 
-  // Debug logs for troubleshooting - FIXED: Now allReviews is memoized
+  // Check if about text needs truncation
+  const aboutText = therapist?.about || 
+    "DTherapist is a platform that connects you with professional counselors and therapists to help you through your mental health journey.";
+  
+  // Split text into lines and check if it exceeds 4 lines
+  const aboutLines = aboutText.split('\n');
+  const needsTruncation = aboutLines.length > 4 || aboutText.length > 300; // Rough estimate for 4 lines
+  
+  const getTruncatedAbout = () => {
+    if (!needsTruncation) return aboutText;
+    
+    // If we have actual line breaks, use first 4 lines
+    if (aboutLines.length > 4) {
+      return aboutLines.slice(0, 4).join('\n');
+    }
+    
+    // Otherwise, truncate by character count (approximately 4 lines worth)
+    return aboutText.substring(0, 300) + '...';
+  };
+
+  const displayAbout = isAboutExpanded ? aboutText : getTruncatedAbout();
+
+  // Debug logs for troubleshooting - Now allReviews is memoized
   useEffect(() => {
     console.log("Debug info:", {
       therapistId,
@@ -148,7 +171,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     });
   }, [therapistId, therapist, reviewsResponse, allReviews, reviewStats]);
 
-  // Get the 5 most recent reviews and sort them by creation date - FIXED: Now memoized
+  // Get the 5 most recent reviews and sort them by creation date - Now memoized
   const recentReviews = useMemo(() => {
     if (!allReviews || allReviews.length === 0) return [];
 
@@ -327,7 +350,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 />
               </div>
 
-              {/* Action Buttons - FIXED: Use correct therapistId */}
+              {/* Action Buttons */}
               <div className="space-y-4">
                 <button
                   onClick={handleVideoBooking}
@@ -377,20 +400,24 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 </p>
               </div>
 
-              {/* About Section */}
+              {/* About Section with Expand/Collapse */}
               <div className="mb-10">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   About Counselor
                 </h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
-                  {therapist.about ? (
-                    <p>{therapist.about}</p>
-                  ) : (
-                    <p>
-                      DTherapist is a platform that connects you with
-                      professional counselors and therapists to help you through
-                      your mental health journey.
-                    </p>
+                  <div className="whitespace-pre-line">
+                    {displayAbout}
+                  </div>
+                  
+                  {/* Read More/Read Less Button */}
+                  {needsTruncation && (
+                    <button
+                      onClick={() => setIsAboutExpanded(!isAboutExpanded)}
+                      className="text-primary hover:text-blue-800 font-medium text-sm transition-colors focus:outline-none"
+                    >
+                      {isAboutExpanded ? "Read less" : "Read more"}
+                    </button>
                   )}
                 </div>
 
