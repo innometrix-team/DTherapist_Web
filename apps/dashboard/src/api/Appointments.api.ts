@@ -4,6 +4,12 @@ import Api, { IAPIResult } from "./Api";
 // Types for API responses
 export interface AppointmentAction {
   joinMeetingLink?: string;
+  agoraChannel?: string;
+  agoraToken?: {
+    token: string;
+    expiresAt: string;
+    uid: number
+  }
   invoiceDownloadLink?: string;
 }
 

@@ -21,10 +21,10 @@ function LoginForm() {
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Get the return URL from location state, or default to dashboard
   const from = "/";
-  
+
   const {
     register,
     handleSubmit,
@@ -42,7 +42,7 @@ function LoginForm() {
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
     const savedPassword = localStorage.getItem("rememberedPassword");
-    
+
     if (savedEmail && savedPassword) {
       setValue("email", savedEmail);
       setValue("password", savedPassword);
@@ -64,10 +64,11 @@ function LoginForm() {
       setAuth({
         id: user.id,
         role: user.role === "client" ? "user" : "counselor",
+        name: user.name,
         token: token ?? null,
         email: user.email ?? null,
       });
-      
+
       // Handle remember me functionality
       const formData = variables as IRequestData & { rememberMe?: boolean };
       if (formData.rememberMe) {
@@ -77,10 +78,10 @@ function LoginForm() {
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
       }
-      
+
       // Show success message
       toast.success(`Welcome back, ${user.name}!`);
-      
+
       // Navigate to the intended page or dashboard
       // Use replace: true to prevent going back to login page
       navigate(from, { replace: true });
@@ -92,10 +93,10 @@ function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginFormData> = useCallback(
     (data) => {
-      handleLogin({ 
-        email: data.email, 
+      handleLogin({
+        email: data.email,
         password: data.password,
-        rememberMe: data.rememberMe 
+        rememberMe: data.rememberMe,
       } as IRequestData & { rememberMe?: boolean });
     },
     [handleLogin]
@@ -114,7 +115,7 @@ function LoginForm() {
   return (
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Login to account</h2>
-    
+
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div>
           <input
@@ -181,7 +182,9 @@ function LoginForm() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
+            <p className="text-red-600 text-sm mt-1">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
@@ -207,8 +210,8 @@ function LoginForm() {
 
         <p className="text-sm text-gray-600 text-center">
           Don't have an account?{" "}
-          <Link 
-            to="/auth/signup" 
+          <Link
+            to="/auth/signup"
             state={{ from: location.state?.from }} // Pass along the return URL to signup
             className="text-blue-700 font-semibold"
           >

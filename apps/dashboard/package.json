@@ -17,6 +17,7 @@
     "@mui/material": "^7.1.0",
     "@tailwindcss/vite": "^4.1.4",
     "@tanstack/react-query": "^5.79.0",
+    "agora-rtc-sdk-ng": "^4.24.0",
     "axios": "^1.9.0",
     "lucide-react": "^0.511.0",
     "react": "^19.0.0",
