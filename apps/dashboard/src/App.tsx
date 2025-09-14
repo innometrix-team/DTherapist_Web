@@ -21,21 +21,28 @@ import Settings from "./pages/settings/Settings";
 import TermsAndConditions from "./pages/Terms&Condition/Terms&Condition";
 import ChatWrapper from "./pages/ChatWrapper/ChatWrapper";
 import { Toaster } from "react-hot-toast";
+import VideoCallPage from "./pages/video-call/VideoCall";
 
 function App() {
   return (
     <>
       <Routes>
         {/* Protected Routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Dashboard />} />
           <Route path="counselor" element={<Counselor />} />
           <Route path="appointments" element={<Appointments />} />
-          <Route path="appointments/client-details/:clientId" element={<ClientDetail/>}/>
+          <Route
+            path="appointments/client-details/:clientId"
+            element={<ClientDetail />}
+          />
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
           <Route path="my-schedule" element={<MySchedule />} />
@@ -46,8 +53,9 @@ function App() {
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="chat/:chatId" element={<ChatWrapper />} />
           <Route path="appointments/chat/:chatId" element={<ChatWrapper />} />
+          <Route path="/video/:bookingId" element={<VideoCallPage />} />
         </Route>
-        
+
         {/* Public Routes */}
         <Route path="terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="auth" element={<Auth />}>

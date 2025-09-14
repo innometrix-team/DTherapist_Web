@@ -9,11 +9,12 @@ export const useAuthStore = create<AuthState>()(
       id: null,
       role: "counselor", 
       token: null,
+      name: null,
       email: null, 
       setRole: (role) => set({ role }),
       setToken: (token) => set({ token }),
       setEmail: (email) => set({ email }), 
-      setAuth: ({ role, token, id, email }) => set({ role, token, id, email }), 
+      setAuth: ({ role, token, id, email, name }) => set({ role, token, id, email, name }), 
       logout: () => set({ role: null, token: null, id: null, email: null }), 
     }),
     {

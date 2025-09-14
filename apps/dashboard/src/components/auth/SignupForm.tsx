@@ -54,8 +54,9 @@ function SignUpForm() {
       setAuth({
         role: variables.role === "client" ? "user" : "counselor",
         token: responseData?.token,
+        name: variables.fullName,
         id: responseData?.id,
-        email: variables.email
+        email: variables.email,
       });
 
       // Always navigate to email verification, regardless of role
@@ -65,7 +66,7 @@ function SignUpForm() {
         role: variables.role, // Always pass the role
         fullName: variables.fullName, // Always pass the full name
       });
-      
+
       navigate(`/auth/verify-email?${searchParams.toString()}`);
     },
     onError: (error) => {
@@ -154,7 +155,10 @@ function SignUpForm() {
           <input type="checkbox" {...register("agreeTerms")} className="mt-1" />
           <p className="text-sm">
             I agree to the{" "}
-            <Link to="/terms-and-conditions" className="text-blue-700 font-semibold">
+            <Link
+              to="/terms-and-conditions"
+              className="text-blue-700 font-semibold"
+            >
               Terms & Conditions
             </Link>{" "}
             of Dtherapist.
