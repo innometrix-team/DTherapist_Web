@@ -160,9 +160,9 @@ const VideoCallPage: React.FC = () => {
   const [remoteUser, setRemoteUser] = useState<RemoteUserState | null>(null);
   const [isSwapped, setIsSwapped] = useState(false);
 
-  // Containers
-  const localVideoMountRef = useRef<HTMLDivElement | null>(null);
-  const remoteVideoMountRef = useRef<HTMLDivElement | null>(null);
+  // Fixed containers - these never swap
+  const mainVideoContainerRef = useRef<HTMLDivElement | null>(null);
+  const pipVideoContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     function fetchIfNeeded() {
@@ -179,6 +179,63 @@ const VideoCallPage: React.FC = () => {
     fetchIfNeeded();
   }, [appId, channel, token, state]);
 
+  const renderVideoInContainer = useCallback(
+    (
+      track: ICameraVideoTrack | IRemoteVideoTrack | null,
+      container: HTMLDivElement,
+      isEnabled: boolean
+    ) => {
+      container.innerHTML = "";
+      if (track && isEnabled) {
+        const videoDiv = document.createElement("div");
+        videoDiv.className = "w-full h-full";
+        container.appendChild(videoDiv);
+        track.play(videoDiv);
+      }
+    },
+    []
+  );
+
+  // Effect to handle video rendering based on swap state
+  useEffect(() => {
+    if (!isJoined) return;
+
+    const mainContainer = mainVideoContainerRef.current;
+    const pipContainer = pipVideoContainerRef.current;
+
+    if (!mainContainer || !pipContainer) return;
+
+    if (isSwapped) {
+      if (remoteUser?.hasVideo && remoteUser.user.videoTrack) {
+        renderVideoInContainer(
+          remoteUser.user.videoTrack as IRemoteVideoTrack,
+          mainContainer,
+          true
+        );
+      } else {
+        mainContainer.innerHTML = "";
+      }
+
+      if (localVideoRef.current) {
+        renderVideoInContainer(localVideoRef.current, pipContainer, isCamOn);
+      }
+    } else {
+      if (localVideoRef.current) {
+        renderVideoInContainer(localVideoRef.current, mainContainer, isCamOn);
+      }
+
+      if (remoteUser?.hasVideo && remoteUser.user.videoTrack) {
+        renderVideoInContainer(
+          remoteUser.user.videoTrack as IRemoteVideoTrack,
+          pipContainer,
+          true
+        );
+      } else if (pipContainer) {
+        pipContainer.innerHTML = "";
+      }
+    }
+  }, [isSwapped, remoteUser, isCamOn, isJoined, renderVideoInContainer]);
+
   useEffect(() => {
     if (!clientRef.current) {
       clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -194,18 +251,6 @@ const VideoCallPage: React.FC = () => {
     ) => {
       try {
         await client.subscribe(user, mediaType);
-
-        if (
-          mediaType === "video" &&
-          user.videoTrack &&
-          remoteVideoMountRef.current
-        ) {
-          remoteVideoMountRef.current.innerHTML = "";
-          const videoDiv = document.createElement("div");
-          videoDiv.className = "w-full h-full";
-          remoteVideoMountRef.current.appendChild(videoDiv);
-          (user.videoTrack as IRemoteVideoTrack).play(videoDiv);
-        }
 
         if (mediaType === "audio" && user.audioTrack) {
           (user.audioTrack as IRemoteAudioTrack).play();
@@ -227,10 +272,6 @@ const VideoCallPage: React.FC = () => {
       user: IAgoraRTCRemoteUser,
       mediaType: "audio" | "video"
     ) => {
-      if (mediaType === "video" && remoteVideoMountRef.current) {
-        remoteVideoMountRef.current.innerHTML = "";
-      }
-
       setRemoteUser((prev) => {
         if (!prev || prev.user.uid !== user.uid) return prev;
         return {
@@ -242,8 +283,11 @@ const VideoCallPage: React.FC = () => {
     };
 
     const handleUserLeft = () => {
-      if (remoteVideoMountRef.current) {
-        remoteVideoMountRef.current.innerHTML = "";
+      if (mainVideoContainerRef.current) {
+        mainVideoContainerRef.current.innerHTML = "";
+      }
+      if (pipVideoContainerRef.current) {
+        pipVideoContainerRef.current.innerHTML = "";
       }
       setRemoteUser(null);
     };
@@ -271,20 +315,18 @@ const VideoCallPage: React.FC = () => {
       }
       if (localVideoRef.current) {
         await localVideoRef.current.setEnabled(isCamOn);
-        if (localVideoMountRef.current) {
-          localVideoMountRef.current.innerHTML = "";
-          const tile = document.createElement("div");
-          tile.className = "w-full h-full";
-          localVideoMountRef.current.appendChild(tile);
-          if (isCamOn) {
-            localVideoRef.current.play(tile);
-          }
+        if (!isJoined && mainVideoContainerRef.current) {
+          renderVideoInContainer(
+            localVideoRef.current,
+            mainVideoContainerRef.current,
+            isCamOn
+          );
         }
       }
     } catch (e) {
       console.error("preview error", e);
     }
-  }, [isMicOn, isCamOn]);
+  }, [isMicOn, isCamOn, isJoined, renderVideoInContainer]);
 
   useEffect(() => {
     createPreviewTracks();
@@ -314,16 +356,6 @@ const VideoCallPage: React.FC = () => {
       ];
       await client.publish(toPublish);
 
-      if (localVideoMountRef.current) {
-        localVideoMountRef.current.innerHTML = "";
-        const tile = document.createElement("div");
-        tile.className = "w-full h-full";
-        localVideoMountRef.current.appendChild(tile);
-        if (isCamOn && localVideoRef.current) {
-          localVideoRef.current.play(tile);
-        }
-      }
-
       setIsJoined(true);
     } catch (err) {
       console.error("join error", err);
@@ -340,10 +372,11 @@ const VideoCallPage: React.FC = () => {
       localAudioRef.current = null;
       localVideoRef.current = null;
 
-      // Remove local container content
-      if (localVideoMountRef.current) localVideoMountRef.current.innerHTML = "";
-      if (remoteVideoMountRef.current)
-        remoteVideoMountRef.current.innerHTML = "";
+      // Remove container content
+      if (mainVideoContainerRef.current)
+        mainVideoContainerRef.current.innerHTML = "";
+      if (pipVideoContainerRef.current)
+        pipVideoContainerRef.current.innerHTML = "";
 
       await client?.leave();
     } catch (err) {
@@ -380,22 +413,14 @@ const VideoCallPage: React.FC = () => {
       localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
     }
     await localVideoRef.current.setEnabled(next);
-    if (localVideoMountRef.current) {
-      localVideoMountRef.current.innerHTML = "";
-      const tile = document.createElement("div");
-      tile.className = "w-full h-full";
-      localVideoMountRef.current.appendChild(tile);
-      if (next) localVideoRef.current.play(tile);
-    }
   }, [isCamOn]);
 
   const swapViews = useCallback(() => {
+    if (!remoteUser) return;
     setIsSwapped(!isSwapped);
-  }, [isSwapped]);
+  }, [isSwapped, remoteUser]);
 
-  // Determine which video should be displayed in main stage
-  const mainVideoRef = isSwapped ? remoteVideoMountRef : localVideoMountRef;
-  const pipVideoRef = isSwapped ? localVideoMountRef : remoteVideoMountRef;
+  // Determine display information based on swap state
   const mainDisplayName = isSwapped
     ? remoteUser?.displayName || state?.appointment?.fullName
     : displayName;
@@ -427,16 +452,14 @@ const VideoCallPage: React.FC = () => {
           <div className="relative w-full h-full bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200">
             <div
               className="absolute inset-0 transition-all duration-500 ease-in-out"
-              ref={mainVideoRef}
+              ref={mainVideoContainerRef}
             />
 
             {mainCameraOff && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100 transition-opacity duration-300">
-                (
                 <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-semibold">
                   {getInitials(mainDisplayName)}
                 </div>
-                )
               </div>
             )}
 
@@ -454,7 +477,7 @@ const VideoCallPage: React.FC = () => {
                   <div className="relative w-full h-full">
                     <div
                       className="absolute inset-0 transition-all duration-500 ease-in-out"
-                      ref={pipVideoRef}
+                      ref={pipVideoContainerRef}
                     />
 
                     {remoteUser
@@ -486,7 +509,7 @@ const VideoCallPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20 backdrop-blur-sm">
+                    <div className="absolute rounded inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20 backdrop-blur-sm">
                       <div className="bg-white/90 rounded-full p-2 shadow-lg">
                         <SwapIcon />
                       </div>
