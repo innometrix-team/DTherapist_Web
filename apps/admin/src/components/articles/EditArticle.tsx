@@ -43,6 +43,7 @@ const EditArticle: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [featuredImage, setFeaturedImage] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+   const [customCategory, setCustomCategory] = useState("");
 
   // Word count
   const wordCount = body.trim().split(/\s+/).filter(word => word.length > 0).length;
@@ -158,6 +159,30 @@ const EditArticle: React.FC = () => {
       setSelectedCategories(prev => prev.filter(cat => cat !== category));
     }
   };
+
+  const handleAddCustomCategory = () => {
+     const trimmedCategory = customCategory.trim();
+     
+     if (!trimmedCategory) {
+       return;
+     }
+
+     // Check if category already exists (case-insensitive)
+     const categoryExists = selectedCategories.some(
+       cat => cat.toLowerCase() === trimmedCategory.toLowerCase()
+     ) || categories.some(
+       cat => cat.toLowerCase() === trimmedCategory.toLowerCase()
+     );
+
+     if (categoryExists) {
+       alert("This category is already selected or exists in the predefined list.");
+       return;
+     }
+
+     // Add the custom category to selected categories
+     setSelectedCategories(prev => [...prev, trimmedCategory]);
+     setCustomCategory(""); // Clear the input
+   };
 
   // Handle image selection
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -410,6 +435,24 @@ const EditArticle: React.FC = () => {
                       <span className="ml-3 text-sm text-gray-700">{category}</span>
                     </label>
                   ))}
+
+                  {/* Custom Category Input */}
+                  <div className="flex mt-2">
+                    <input 
+                      type="text"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Enter custom category..."
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    </div>
+                    <button
+                      onClick={handleAddCustomCategory}
+                      disabled={!customCategory.trim()}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Add Category
+                    </button>
                 </div>
               </div>
 
