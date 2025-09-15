@@ -49,6 +49,14 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// NEW: Interface for Agora token refresh response
+export interface AgoraTokenResponse {
+  uid: string;
+  token: string;
+  sessionName: string;
+  expiresAt: number;
+}
+
 interface AppointmentsAPIResponse {
   status: string;
   message: string;
@@ -65,6 +73,12 @@ interface UserProfileAPIResponse {
   status: string;
   message: string;
   data: UserProfile[];
+}
+
+interface AgoraTokenAPIResponse {
+  status: string;
+  message: string;
+  data: AgoraTokenResponse;
 }
 
 // API Functions
@@ -254,7 +268,46 @@ export async function getAppointmentsWithUser(
   }
 }
 
-// NEW: Download invoice PDF function
+// NEW: Refresh Agora token function
+export async function refreshAgoraToken(
+  sessionName: string,
+  uid: number,
+  role: string = "publisher",
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<AgoraTokenResponse> | null> {
+  try {
+    const response = await Api.get<AgoraTokenAPIResponse>(
+      `/api/agora/refresh-token?sessionName=${encodeURIComponent(sessionName)}&uid=${uid}&role=${encodeURIComponent(role)}`,
+      config
+    );
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+// Download invoice PDF function
 export async function downloadInvoice(
   bookingId: string,
   config?: AxiosRequestConfig
