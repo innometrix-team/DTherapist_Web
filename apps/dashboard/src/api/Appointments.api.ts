@@ -49,8 +49,8 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-// NEW: Interface for Agora token refresh response
-export interface AgoraTokenResponse {
+// Add interface for token refresh response
+export interface TokenRefreshResponse {
   uid: string;
   token: string;
   sessionName: string;
@@ -75,10 +75,10 @@ interface UserProfileAPIResponse {
   data: UserProfile[];
 }
 
-interface AgoraTokenAPIResponse {
+interface TokenRefreshAPIResponse {
   status: string;
   message: string;
-  data: AgoraTokenResponse;
+  data: TokenRefreshResponse;
 }
 
 // API Functions
@@ -268,46 +268,7 @@ export async function getAppointmentsWithUser(
   }
 }
 
-// NEW: Refresh Agora token function
-export async function refreshAgoraToken(
-  sessionName: string,
-  uid: number,
-  role: string = "publisher",
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<AgoraTokenResponse> | null> {
-  try {
-    const response = await Api.get<AgoraTokenAPIResponse>(
-      `/api/agora/refresh-token?sessionName=${encodeURIComponent(sessionName)}&uid=${uid}&role=${encodeURIComponent(role)}`,
-      config
-    );
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Download invoice PDF function
+// NEW: Download invoice PDF function
 export async function downloadInvoice(
   bookingId: string,
   config?: AxiosRequestConfig
@@ -348,5 +309,51 @@ export async function downloadInvoice(
       message: errorMessage || "Failed to download invoice",
       data: undefined,
     };
+  }
+}
+
+// NEW: Refresh Agora token function
+export async function refreshAgoraToken(
+  sessionName: string,
+  uid: number,
+  role: string = 'publisher',
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<TokenRefreshResponse> | null> {
+  try {
+    const response = await Api.get<TokenRefreshAPIResponse>(
+      '/api/agora/refresh-token',
+      {
+        ...config,
+        params: {
+          sessionName,
+          uid,
+          role
+        }
+      }
+    );
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
   }
 }
