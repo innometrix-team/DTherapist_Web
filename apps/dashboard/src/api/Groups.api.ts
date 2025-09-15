@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api,  { IAPIResult } from "./Api";
+import Api, { IAPIResult } from "./Api";
 
 export interface IGroup {
   _id: string;
@@ -52,8 +52,32 @@ interface SendGroupMessageApiResponse {
   data: IMessageData;
 }
 
+// Define an interface for error response data
+interface ErrorResponseData {
+  error?: string;
+  message?: string;
+  status?: string;
+}
 
-export async function GetGroupsApi(config?: AxiosRequestConfig): Promise<IAPIResult<IGroup[]> | null> {
+// Helper function to extract error message from response
+function getErrorMessage(error: AxiosError): string {
+  const responseData = error.response?.data as ErrorResponseData;
+
+  // Check for different error message formats
+  if (responseData?.error) {
+    return responseData.error;
+  }
+  if (responseData?.message) {
+    return responseData.message;
+  }
+
+  // Fallback to default error message
+  return error.message || "An unexpected error occurred";
+}
+
+export async function GetGroupsApi(
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<IGroup[]> | null> {
   try {
     const response = await Api.get<APIResponse>("/api/group/getGroups", {
       ...config,
@@ -70,12 +94,11 @@ export async function GetGroupsApi(config?: AxiosRequestConfig): Promise<IAPIRes
       return Promise.resolve(null);
     }
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
     const status =
-      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
     return Promise.reject({
       code: statusCode,
@@ -86,17 +109,25 @@ export async function GetGroupsApi(config?: AxiosRequestConfig): Promise<IAPIRes
   }
 }
 
-
-
-export async function JoinGroupApi(groupId: string, config?: AxiosRequestConfig): Promise<IAPIResult<string> | null> {
+export async function JoinGroupApi(
+  groupId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> {
   try {
-    const response = await Api.post<GetGroupsApiResponse>(`/api/group/${groupId}/join`, null, {
-      ...config,
-    });
+    const response = await Api.post<GetGroupsApiResponse>(
+      `/api/group/${groupId}/join`,
+      null,
+      {
+        ...config,
+      }
+    );
 
     return Promise.resolve({
       code: response.status,
-      status: response.status === 200 || response.status === 201 ? "success" : "error",
+      status:
+        response.status === 200 || response.status === 201
+          ? "success"
+          : "error",
       message: response.data.message ?? "Joined group successfully",
       data: response.data.message,
     });
@@ -105,12 +136,11 @@ export async function JoinGroupApi(groupId: string, config?: AxiosRequestConfig)
       return Promise.resolve(null);
     }
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
     const status =
-      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
     return Promise.reject({
       code: statusCode,
@@ -120,8 +150,6 @@ export async function JoinGroupApi(groupId: string, config?: AxiosRequestConfig)
     });
   }
 }
-
-
 
 export async function GetGroupMessagesApi(
   data: IGroupMessagesRequestData,
@@ -146,12 +174,11 @@ export async function GetGroupMessagesApi(
       return Promise.resolve(null);
     }
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
     const status =
-      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
     return Promise.reject({
       code: statusCode,
@@ -162,8 +189,7 @@ export async function GetGroupMessagesApi(
   }
 }
 
-
-export  async function SendGroupMessageApi(
+export async function SendGroupMessageApi(
   data: ISendGroupMessageRequestData,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<IMessageData> | null> {
@@ -187,12 +213,11 @@ export  async function SendGroupMessageApi(
       return Promise.resolve(null);
     }
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
     const status =
-      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
     return Promise.reject({
       code: statusCode,
