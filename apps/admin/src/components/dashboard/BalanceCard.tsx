@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { BalanceConfig } from "../../pages/Dashboard/types";
-import { TopUpIcon, WithdrawIcon, TimerIcon } from "../../assets/icons";
+import {  TimerIcon } from "../../assets/icons";
 import FundWalletApi, { 
   IFundWalletRequest, 
   getBanksApi, 
@@ -13,7 +13,7 @@ import FundWalletApi, {
 import AdminDashboardApi from "../../api/AdminDashboard.api";
 import { useAuthStore } from "../../Store/auth/useAuthStore";
 
-const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
+const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   
@@ -80,7 +80,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const {
     data: banksData,
     isLoading: isLoadingBanks,
-    refetch: refetchBanks,
+    // refetch: refetchBanks,
   } = useQuery({
     queryKey: ["banks"],
     queryFn: async () => {
@@ -225,24 +225,24 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     setShowBanksList(false);
   }, []);
 
-  const handleTopUpClick = useCallback(() => {
-    if (actions.includes("topUp")) {
-      // Check if user email is available from auth store
-      if (!email) {
-        toast.error("User email not found. Please login again.");
-        return;
-      }
-      setShowTopUpModal(true);
-    }
-  }, [actions, email]);
+  // const handleTopUpClick = useCallback(() => {
+  //   if (actions.includes("topUp")) {
+  //     // Check if user email is available from auth store
+  //     if (!email) {
+  //       toast.error("User email not found. Please login again.");
+  //       return;
+  //     }
+  //     setShowTopUpModal(true);
+  //   }
+  // }, [actions, email]);
 
-  const handleWithdrawClick = useCallback(() => {
-    if (actions.includes("withdraw") && userType === "admin") {
-      setShowWithdrawModal(true);
-      // Fetch banks when opening withdraw modal
-      refetchBanks();
-    }
-  }, [actions, userType, refetchBanks]);
+  // const handleWithdrawClick = useCallback(() => {
+  //   if (actions.includes("withdraw") && userType === "admin") {
+  //     setShowWithdrawModal(true);
+  //     // Fetch banks when opening withdraw modal
+  //     refetchBanks();
+  //   }
+  // }, [actions, userType, refetchBanks]);
 
   const closeTopUpModal = useCallback(() => {
     setShowTopUpModal(false);
@@ -308,7 +308,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
           <div className="text-2xl font-bold">
             {isLoading ? "Loading..." : currentBalance}
           </div>
-
+{/* 
           <div className="space-x-4 space-y-2">
             {actions.includes("topUp") && userType !== "admin" && (
               <button 
@@ -330,7 +330,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                 <span>Withdraw</span>
               </button>
             )}
-          </div>
+          </div> */}
         </div>
         <div className="absolute top-1/2 transform -translate-y-1/2 right-4 w-12 h-12 bg-[#E2EBF61A] grid place-items-center rounded-full">
           <TimerIcon className="h-6 w-6" />

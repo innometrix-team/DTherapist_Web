@@ -11,13 +11,21 @@ import Transaction from "./pages/Transaction/Transaction";
 import Book from "./pages/Bookings/Bookings";
 import DAnonymous from "./pages/DAnonymous/DAnonymous";
 import UserDetail from "./pages/UserDetail/UserDetail";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
     <>
       <Routes>
         {/* Protected Routes */}
-        <Route path="/" element={<Layout />}>
+       <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Dashboard />} />
           {/* Add other protected routes here */}
 

@@ -117,10 +117,20 @@ const ArticlesList: React.FC = () => {
     });
   };
 
+  // Format date for mobile (shorter)
+  const formatDateMobile = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   // If not admin, show unauthorized message
   if (!isAdmin) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
           <p className="text-yellow-600 text-sm">Access Denied</p>
           <p className="text-yellow-500 text-xs mt-1">Admin access required to view articles</p>
@@ -131,15 +141,15 @@ const ArticlesList: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-gray-200 animate-pulse h-10 w-32 rounded"></div>
-            <div className="bg-gray-200 animate-pulse h-10 w-80 rounded"></div>
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="bg-gray-200 animate-pulse h-10 w-full sm:w-32 rounded"></div>
+            <div className="bg-gray-200 animate-pulse h-10 w-full sm:w-80 rounded"></div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="bg-gray-200 animate-pulse h-6 w-24 rounded"></div>
-            <div className="bg-gray-200 animate-pulse h-10 w-32 rounded"></div>
+            <div className="bg-gray-200 animate-pulse h-10 w-full sm:w-32 rounded"></div>
           </div>
         </div>
         
@@ -154,7 +164,7 @@ const ArticlesList: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600 text-sm">Failed to load articles</p>
           <p className="text-red-500 text-xs mt-1">Please refresh the page</p>
@@ -170,16 +180,16 @@ const ArticlesList: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
+    <div className="p-4 sm:p-6">
+      {/* Header - Stack on mobile, side-by-side on desktop */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Filter Dropdown */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none pr-8"
+              className="w-full sm:w-auto flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none pr-8"
             >
               <option value="All Articles">All Articles</option>
               {categoriesData?.categories?.map((category) => (
@@ -192,19 +202,19 @@ const ArticlesList: React.FC = () => {
           </div>
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search Articles"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-80 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sm:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Articles Count */}
           <span className="text-gray-600 text-sm">
             Articles: <span className="font-semibold">{filteredArticles.length.toLocaleString()}</span>
@@ -213,7 +223,7 @@ const ArticlesList: React.FC = () => {
           {/* Create Article Button */}
           <button
             onClick={handleCreateArticle}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
+            className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors"
           >
             Create Article
           </button>
@@ -222,7 +232,7 @@ const ArticlesList: React.FC = () => {
 
       {/* Bulk Actions */}
       {selectedArticles.length > 0 && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="text-sm text-primary">
             {selectedArticles.length} article{selectedArticles.length === 1 ? '' : 's'} selected
           </span>
@@ -244,7 +254,7 @@ const ArticlesList: React.FC = () => {
       )}
 
       {/* Articles List */}
-      <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
         {filteredArticles.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <p>No articles found</p>
@@ -253,69 +263,149 @@ const ArticlesList: React.FC = () => {
             )}
           </div>
         ) : (
-          filteredArticles.map((article, index) => (
-            <div
-              key={article._id}
-              className={`flex items-center p-4 hover:bg-gray-50 transition-colors ${
-                index !== filteredArticles.length - 1 ? 'border-b border-gray-200' : ''
-              }`}
-            >
-              {/* Checkbox */}
-              <div className="mr-4">
-                <input
-                  type="checkbox"
-                  checked={selectedArticles.includes(article._id)}
-                  onChange={(e) => handleArticleSelect(article._id, e.target.checked)}
-                  className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Article Image */}
-              <div className="w-16 h-16 mr-4 flex-shrink-0">
-                {article.image ? (
-                  <img
-                    src={article.image}
-                    alt={article.title}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-                    <span className="text-gray-400 text-xs">No Image</span>
+          <div className="space-y-0">
+            {/* Desktop/Tablet View - Hidden on mobile */}
+            <div className="hidden sm:block">
+              {filteredArticles.map((article, index) => (
+                <div
+                  key={article._id}
+                  className={`flex items-center p-4 hover:bg-gray-50 transition-colors ${
+                    index !== filteredArticles.length - 1 ? 'border-b border-gray-200' : ''
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <div className="mr-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedArticles.includes(article._id)}
+                      onChange={(e) => handleArticleSelect(article._id, e.target.checked)}
+                      className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                    />
                   </div>
-                )}
-              </div>
 
-              {/* Article Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-gray-900 truncate">
-                  {article.title}
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  {article.body && article.body.length > 50 
-                    ? `${article.body.substring(0, 50)}...` 
-                    : article.body || 'No content preview available'}
-                </p>
-              </div>
+                  {/* Article Image */}
+                  <div className="w-12 h-12 lg:w-16 lg:h-16 mr-4 flex-shrink-0">
+                    {article.image ? (
+                      <img
+                        src={article.image}
+                        alt={article.title}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">No Image</span>
+                      </div>
+                    )}
+                  </div>
 
-              {/* Category */}
-              <div className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded mr-4">
-                {article.category}
-              </div>
+                  {/* Article Info */}
+                  <div className="flex-1 min-w-0 mr-4">
+                    <h3 className="text-sm font-medium text-gray-900 truncate">
+                      {article.title}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 hidden lg:block">
+                      {article.body && article.body.length > 50 
+                        ? `${article.body.substring(0, 50)}...` 
+                        : article.body || 'No content preview available'}
+                    </p>
+                  </div>
 
-              {/* Date */}
-              <div className="text-gray-500 text-sm mr-4 w-40">
-                {formatDate(article.date)}
-              </div>
+                  {/* Category - Hidden on small tablets */}
+                  <div className="hidden md:block px-3 py-1 bg-gray-100 text-gray-700 text-xs lg:text-sm rounded mr-4 flex-shrink-0">
+                    {article.category}
+                  </div>
 
-              {/* Open Button */}
-              <button
-                onClick={() => handleOpenArticle(article._id)}
-                className="px-4 py-1 text-primary hover:bg-blue-50 rounded text-sm transition-colors"
-              >
-                Open
-              </button>
+                  {/* Date */}
+                  <div className="text-gray-500 text-xs lg:text-sm mr-4 w-20 lg:w-40 flex-shrink-0">
+                    <span className="lg:hidden">{formatDateMobile(article.date)}</span>
+                    <span className="hidden lg:block">{formatDate(article.date)}</span>
+                  </div>
+
+                  {/* Open Button */}
+                  <button
+                    onClick={() => handleOpenArticle(article._id)}
+                    className="px-3 lg:px-4 py-1 text-primary hover:bg-blue-50 rounded text-xs lg:text-sm transition-colors flex-shrink-0"
+                  >
+                    Open
+                  </button>
+                </div>
+              ))}
             </div>
-          ))
+
+            {/* Mobile View - Card Layout */}
+            <div className="sm:hidden space-y-0">
+              {filteredArticles.map((article, index) => (
+                <div
+                  key={article._id}
+                  className={`p-4 ${
+                    index !== filteredArticles.length - 1 ? 'border-b border-gray-200' : ''
+                  }`}
+                >
+                  {/* Mobile Card Header */}
+                  <div className="flex items-start gap-3">
+                    {/* Checkbox */}
+                    <div className="flex-shrink-0 pt-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedArticles.includes(article._id)}
+                        onChange={(e) => handleArticleSelect(article._id, e.target.checked)}
+                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Article Image */}
+                    <div className="w-16 h-16 flex-shrink-0">
+                      {article.image ? (
+                        <img
+                          src={article.image}
+                          alt={article.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-400 text-xs">No Image</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Article Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium text-gray-900 mb-1 pr-2">
+                        {article.title}
+                      </h3>
+                      
+                      {/* Category and Date */}
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="inline-flex px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                          {article.category}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          {formatDateMobile(article.date)}
+                        </span>
+                      </div>
+
+                      {/* Content Preview */}
+                      {article.body && (
+                        <p className="text-xs text-gray-500 mb-3">
+                          {article.body.length > 60 
+                            ? `${article.body.substring(0, 60)}...` 
+                            : article.body}
+                        </p>
+                      )}
+
+                      {/* Action Button */}
+                      <button
+                        onClick={() => handleOpenArticle(article._id)}
+                        className="w-full px-3 py-2 text-primary border border-primary hover:bg-blue-50 rounded text-sm transition-colors"
+                      >
+                        Open Article
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
