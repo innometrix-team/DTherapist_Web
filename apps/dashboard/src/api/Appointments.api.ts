@@ -49,14 +49,6 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-// Add interface for token refresh response
-export interface TokenRefreshResponse {
-  uid: string;
-  token: string;
-  sessionName: string;
-  expiresAt: number;
-}
-
 interface AppointmentsAPIResponse {
   status: string;
   message: string;
@@ -73,12 +65,6 @@ interface UserProfileAPIResponse {
   status: string;
   message: string;
   data: UserProfile[];
-}
-
-interface TokenRefreshAPIResponse {
-  status: string;
-  message: string;
-  data: TokenRefreshResponse;
 }
 
 // API Functions
@@ -309,51 +295,5 @@ export async function downloadInvoice(
       message: errorMessage || "Failed to download invoice",
       data: undefined,
     };
-  }
-}
-
-// NEW: Refresh Agora token function
-export async function refreshAgoraToken(
-  sessionName: string,
-  uid: number,
-  role: string = 'publisher',
-  config?: AxiosRequestConfig
-): Promise<IAPIResult<TokenRefreshResponse> | null> {
-  try {
-    const response = await Api.get<TokenRefreshAPIResponse>(
-      '/api/agora/refresh-token',
-      {
-        ...config,
-        params: {
-          sessionName,
-          uid,
-          role
-        }
-      }
-    );
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
   }
 }

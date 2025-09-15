@@ -8,7 +8,7 @@ import AgoraRTC, {
 } from "agora-rtc-sdk-ng";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Appointment, refreshAgoraToken } from "../../api/Appointments.api";
+import { Appointment } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const getInitials = (name?: string) => {
@@ -147,7 +147,7 @@ const VideoCallPage: React.FC = () => {
     state?.agora?.channel
   );
   const [token, setToken] = useState<string | undefined>(state?.agora?.token);
-  // Removed unused uid state
+  const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
 
   // Agora client & tracks
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -155,8 +155,6 @@ const VideoCallPage: React.FC = () => {
   const localVideoRef = useRef<ICameraVideoTrack | null>(null);
 
   const [isJoined, setIsJoined] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
   const [remoteUser, setRemoteUser] = useState<RemoteUserState | null>(null);
@@ -173,7 +171,7 @@ const VideoCallPage: React.FC = () => {
         setAppId(import.meta.env.VITE_AGORA_APP_ID);
         setChannel(state?.agora?.channel);
         setToken(state?.agora?.token);
-        // Removed setUid since uid state is removed
+        setUid(state?.agora?.uid ?? 0);
       } catch (e) {
         console.error(e);
       }
@@ -334,44 +332,16 @@ const VideoCallPage: React.FC = () => {
     createPreviewTracks();
   }, [createPreviewTracks]);
 
-  // Function to get fresh token and join
   const join = useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
-    if (!appId || !channel) {
+    if (!appId || !channel || !token) {
       alert("Video is not ready yet. Missing Agora credentials.");
       return;
     }
 
-    setIsJoining(true);
-    setJoinError(null);
-
     try {
-      // Get fresh token from backend using the original appointment channel and uid
-      const originalChannel = state?.agora?.channel;
-      const originalUid = state?.agora?.uid ?? 0;
-      
-      if (!originalChannel) {
-        throw new Error("No session channel found");
-      }
-
-      const tokenResult = await refreshAgoraToken(originalChannel, originalUid, "publisher");
-      
-      if (!tokenResult || !tokenResult.data) {
-        throw new Error("Failed to get fresh token");
-      }
-
-      const { token: freshToken, uid: responseUid, sessionName: responseChannel } = tokenResult.data;
-      const finalUid = parseInt(responseUid) || originalUid;
-
-      // Update state with fresh token data (replace the old token)
-      setToken(freshToken);
-      // Removed setUid since uid state is removed
-      setChannel(responseChannel);
-
-      // Join with fresh token
-      await client.join(appId, responseChannel, freshToken, finalUid);
-      
+      await client.join(appId, channel, token, uid);
       if (!localAudioRef.current) {
         localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
         await localAudioRef.current.setEnabled(isMicOn);
@@ -380,7 +350,6 @@ const VideoCallPage: React.FC = () => {
         localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
         await localVideoRef.current.setEnabled(isCamOn);
       }
-      
       const toPublish = [
         ...(localAudioRef.current ? [localAudioRef.current] : []),
         ...(localVideoRef.current ? [localVideoRef.current] : []),
@@ -388,30 +357,11 @@ const VideoCallPage: React.FC = () => {
       await client.publish(toPublish);
 
       setIsJoined(true);
-    } catch (err: unknown) {
+    } catch (err) {
       console.error("join error", err);
-
-      // Handle specific error cases
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        ("code" in err || "status" in err || "message" in err)
-      ) {
-        const errorObj = err as { code?: number; status?: number; message?: string };
-        if (errorObj.code === 403 || errorObj.status === 403) {
-          setJoinError("Meeting has ended or expired.");
-        } else if (errorObj.message?.includes("token")) {
-          setJoinError("Invalid or expired token. Please try again.");
-        } else {
-          setJoinError(errorObj.message || "Failed to join the call. Please try again.");
-        }
-      } else {
-        setJoinError("Failed to join the call. Please try again.");
-      }
-    } finally {
-      setIsJoining(false);
+      alert("Failed to join the call.");
     }
-  }, [appId, channel, state?.agora?.channel, state?.agora?.uid, isMicOn, isCamOn]);
+  }, [appId, channel, token, uid, isMicOn, isCamOn]);
 
   const leave = useCallback(async () => {
     const client = clientRef.current;
@@ -434,7 +384,6 @@ const VideoCallPage: React.FC = () => {
     } finally {
       setIsJoined(false);
       setRemoteUser(null);
-      setJoinError(null);
     }
   }, []);
 
@@ -574,31 +523,13 @@ const VideoCallPage: React.FC = () => {
 
         {/* Controls */}
         <div className="px-6 pb-6">
-          {/* Error message */}
-          {joinError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
-              {joinError}
-            </div>
-          )}
-
           <div className="flex items-center justify-center gap-3">
             {!isJoined ? (
               <button
                 onClick={join}
-                disabled={isJoining}
-                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg"
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg"
               >
-                {isJoining ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Joining...
-                  </>
-                ) : (
-                  "Join Call"
-                )}
+                Join Call
               </button>
             ) : (
               <>
@@ -642,8 +573,7 @@ const VideoCallPage: React.FC = () => {
             <div className="mt-4 flex items-center justify-center gap-3">
               <button
                 onClick={toggleMic}
-                disabled={isJoining}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
                   isMicOn
                     ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
                     : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
@@ -655,8 +585,7 @@ const VideoCallPage: React.FC = () => {
 
               <button
                 onClick={toggleCam}
-                disabled={isJoining}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
                   isCamOn
                     ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
                     : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
