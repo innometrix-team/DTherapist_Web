@@ -2,11 +2,7 @@ import React, { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { 
-  Bold, 
-  Italic, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight,
+ 
   Camera,
   Plus
 } from "lucide-react";
@@ -188,33 +184,9 @@ const CreateArticle: React.FC = () => {
                 {/* Editor Toolbar */}
                 <div className="p-4 border-b border-gray-200">
                   <div className="flex items-center gap-2">
-                    <select className="px-3 py-1 border border-gray-300 rounded text-sm">
-                      <option>H1</option>
-                      <option>H2</option>
-                      <option>H3</option>
-                      <option>Paragraph</option>
-                    </select>
                     
-                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
                     
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                      <Bold className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                    
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                      <AlignLeft className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                      <AlignCenter className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded">
-                      <AlignRight className="w-4 h-4" />
-                    </button>
+                   
                   </div>
                 </div>
 
