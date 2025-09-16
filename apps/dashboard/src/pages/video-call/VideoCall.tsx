@@ -8,7 +8,7 @@ import AgoraRTC, {
 } from "agora-rtc-sdk-ng";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Appointment } from "../../api/Appointments.api";
+import { Appointment, refreshAgoraToken } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const getInitials = (name?: string) => {
@@ -148,6 +148,9 @@ const VideoCallPage: React.FC = () => {
   );
   const [token, setToken] = useState<string | undefined>(state?.agora?.token);
   const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
+
+  // New state for loading and error handling
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
 
   // Agora client & tracks
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -332,16 +335,95 @@ const VideoCallPage: React.FC = () => {
     createPreviewTracks();
   }, [createPreviewTracks]);
 
+  // NEW: Function to refresh the Agora token
+  const refreshToken = useCallback(async () => {
+    setIsGeneratingToken(true);
+    
+    try {
+      const response = await refreshAgoraToken();
+      
+      if (response && response.data) {
+        const { uid: newUid, token: newToken, sessionName: newChannel } = response.data;
+        
+        // Update the token and related data
+        setToken(newToken);
+        setChannel(newChannel);
+        setUid(newUid);
+        
+        console.log("Token refreshed successfully:", {
+          uid: newUid,
+          channel: newChannel,
+          expiresAt: response.data.expiresAt
+        });
+        
+        return { token: newToken, channel: newChannel, uid: newUid };
+      } else {
+        throw new Error("Failed to refresh token: Invalid response");
+      }
+    } catch (error: unknown) {
+      console.error("Token refresh error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to refresh token. Please try again.";
+      throw new Error(errorMessage);
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  }, []);
+
+  // UPDATED: Join function with token refresh
   const join = useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
-    if (!appId || !channel || !token) {
-      alert("Video is not ready yet. Missing Agora credentials.");
-      return;
+
+    let currentAppId = appId;
+    let currentChannel = channel;
+    let currentToken = token;
+    let currentUid = uid;
+
+    // Check if we have required credentials, if not try to refresh
+    if (!currentAppId) {
+      currentAppId = import.meta.env.VITE_AGORA_APP_ID;
+      setAppId(currentAppId);
+    }
+
+    if (!currentAppId || !currentChannel || !currentToken) {
+      try {
+        console.log("Missing credentials, refreshing token...");
+        const refreshedData = await refreshToken();
+        currentToken = refreshedData.token;
+        currentChannel = refreshedData.channel;
+        currentUid = refreshedData.uid;
+      } catch (error) {
+        console.error("Failed to refresh token before joining:", error);
+        return; // Exit early if token refresh fails
+      }
+    } else {
+      // Even if we have credentials, refresh the token for a fresh one
+      try {
+        console.log("Refreshing token for fresh credentials...");
+        const refreshedData = await refreshToken();
+        currentToken = refreshedData.token;
+        currentChannel = refreshedData.channel;
+        currentUid = refreshedData.uid;
+      } catch (error) {
+        console.error("Token refresh failed, using existing token:", error);
+        // Continue with existing token if refresh fails
+      }
     }
 
     try {
-      await client.join(appId, channel, token, uid);
+      if (
+        typeof currentAppId !== "string" ||
+        typeof currentChannel !== "string" ||
+        typeof currentToken !== "string"
+      ) {
+        return;
+      }
+
+      await client.join(currentAppId, currentChannel, currentToken, currentUid);
+      
       if (!localAudioRef.current) {
         localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
         await localAudioRef.current.setEnabled(isMicOn);
@@ -350,6 +432,7 @@ const VideoCallPage: React.FC = () => {
         localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
         await localVideoRef.current.setEnabled(isCamOn);
       }
+      
       const toPublish = [
         ...(localAudioRef.current ? [localAudioRef.current] : []),
         ...(localVideoRef.current ? [localVideoRef.current] : []),
@@ -359,9 +442,8 @@ const VideoCallPage: React.FC = () => {
       setIsJoined(true);
     } catch (err) {
       console.error("join error", err);
-      alert("Failed to join the call.");
     }
-  }, [appId, channel, token, uid, isMicOn, isCamOn]);
+  }, [appId, channel, token, uid, isMicOn, isCamOn, refreshToken]);
 
   const leave = useCallback(async () => {
     const client = clientRef.current;
@@ -521,15 +603,29 @@ const VideoCallPage: React.FC = () => {
           </div>
         </div>
 
+        
+
         {/* Controls */}
         <div className="px-6 pb-6">
           <div className="flex items-center justify-center gap-3">
             {!isJoined ? (
               <button
                 onClick={join}
-                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg"
+                disabled={isGeneratingToken}
+                className={`px-8 py-3 rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg ${
+                  isGeneratingToken
+                    ? "bg-gray-400 cursor-not-allowed text-white"
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
               >
-                Join Call
+                {isGeneratingToken ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Joining Call...
+                  </>
+                ) : (
+                  "Join Call"
+                )}
               </button>
             ) : (
               <>
@@ -569,7 +665,7 @@ const VideoCallPage: React.FC = () => {
           </div>
 
           {/* Pre-join controls */}
-          {!isJoined && (
+          {!isJoined && !isGeneratingToken && (
             <div className="mt-4 flex items-center justify-center gap-3">
               <button
                 onClick={toggleMic}
