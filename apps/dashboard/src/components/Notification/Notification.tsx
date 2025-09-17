@@ -150,7 +150,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {notifications.slice(0, 10).map((notification) => (
+                {notifications.map((notification) => (
                   <div
                     key={notification._id}
                     className={`p-4 hover:bg-gray-50 cursor-pointer ${
@@ -193,14 +193,6 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                     </div>
                   </div>
                 ))}
-
-                {notifications.length > 10 && (
-                  <div className="p-4 text-center border-t border-gray-200">
-                    <span className="text-sm text-gray-500">
-                      Showing 10 of {notifications.length} notifications
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </div>
