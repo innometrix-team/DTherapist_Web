@@ -8,8 +8,17 @@ import AgoraRTC, {
 } from "agora-rtc-sdk-ng";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Appointment, refreshAgoraToken } from "../../api/Appointments.api";
+import { Appointment } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import Api from "../../api/Api";
+
+// Token refresh API response interface
+interface TokenRefreshResponse {
+  uid: number;
+  token: string;
+  sessionName: string;
+  expiresAt: number;
+}
 
 const getInitials = (name?: string) => {
   if (!name) return "You";
@@ -123,7 +132,7 @@ interface AgoraState {
   agora?: {
     appId: string;
     channel: string;
-    token: string;
+    token?: string; // Make token optional since we'll fetch it fresh
     uid?: number;
   };
   appointment?: Appointment;
@@ -146,11 +155,9 @@ const VideoCallPage: React.FC = () => {
   const [channel, setChannel] = useState<string | undefined>(
     state?.agora?.channel
   );
-  const [token, setToken] = useState<string | undefined>(state?.agora?.token);
   const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
 
-  // New state for loading and error handling
-  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [isLoadingToken, setIsLoadingToken] = useState(false);
 
   // Agora client & tracks
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -169,18 +176,47 @@ const VideoCallPage: React.FC = () => {
 
   useEffect(() => {
     function fetchIfNeeded() {
-      if (appId && channel && token) return;
+      if (appId && channel) return;
       try {
         setAppId(import.meta.env.VITE_AGORA_APP_ID);
         setChannel(state?.agora?.channel);
-        setToken(state?.agora?.token);
         setUid(state?.agora?.uid ?? 0);
       } catch (e) {
         console.error(e);
       }
     }
     fetchIfNeeded();
-  }, [appId, channel, token, state]);
+  }, [appId, channel, state]);
+
+  // Function to fetch fresh token from the API
+  const fetchFreshToken = useCallback(async (): Promise<TokenRefreshResponse | null> => {
+    if (!channel || uid === undefined) {
+      console.error("Missing channel or uid for token refresh");
+      return null;
+    }
+
+    try {
+      setIsLoadingToken(true);
+      const response = await Api.get<TokenRefreshResponse>(
+        "/api/agora/refresh-token",
+        {
+          params: {
+            sessionName: channel,
+            uid: uid,
+          },
+        }
+      );
+
+      // Don't set token in state, just return the response
+      return response.data || null;
+    } catch (error: unknown) {
+      // Properly handle the error
+      console.error("Failed to fetch fresh token:", error instanceof Error ? error.message : 'Unknown error');
+      throw new Error("Failed to refresh Agora token");
+    } finally {
+      setIsLoadingToken(false);
+    }
+  }, [channel, uid]);
 
   const renderVideoInContainer = useCallback(
     (
@@ -335,95 +371,27 @@ const VideoCallPage: React.FC = () => {
     createPreviewTracks();
   }, [createPreviewTracks]);
 
-  // NEW: Function to refresh the Agora token
-  const refreshToken = useCallback(async () => {
-    setIsGeneratingToken(true);
-    
-    try {
-      const response = await refreshAgoraToken();
-      
-      if (response && response.data) {
-        const { uid: newUid, token: newToken, sessionName: newChannel } = response.data;
-        
-        // Update the token and related data
-        setToken(newToken);
-        setChannel(newChannel);
-        setUid(newUid);
-        
-        console.log("Token refreshed successfully:", {
-          uid: newUid,
-          channel: newChannel,
-          expiresAt: response.data.expiresAt
-        });
-        
-        return { token: newToken, channel: newChannel, uid: newUid };
-      } else {
-        throw new Error("Failed to refresh token: Invalid response");
-      }
-    } catch (error: unknown) {
-      console.error("Token refresh error:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to refresh token. Please try again.";
-      throw new Error(errorMessage);
-    } finally {
-      setIsGeneratingToken(false);
-    }
-  }, []);
-
-  // UPDATED: Join function with token refresh
   const join = useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
-
-    let currentAppId = appId;
-    let currentChannel = channel;
-    let currentToken = token;
-    let currentUid = uid;
-
-    // Check if we have required credentials, if not try to refresh
-    if (!currentAppId) {
-      currentAppId = import.meta.env.VITE_AGORA_APP_ID;
-      setAppId(currentAppId);
-    }
-
-    if (!currentAppId || !currentChannel || !currentToken) {
-      try {
-        console.log("Missing credentials, refreshing token...");
-        const refreshedData = await refreshToken();
-        currentToken = refreshedData.token;
-        currentChannel = refreshedData.channel;
-        currentUid = refreshedData.uid;
-      } catch (error) {
-        console.error("Failed to refresh token before joining:", error);
-        return; // Exit early if token refresh fails
-      }
-    } else {
-      // Even if we have credentials, refresh the token for a fresh one
-      try {
-        console.log("Refreshing token for fresh credentials...");
-        const refreshedData = await refreshToken();
-        currentToken = refreshedData.token;
-        currentChannel = refreshedData.channel;
-        currentUid = refreshedData.uid;
-      } catch (error) {
-        console.error("Token refresh failed, using existing token:", error);
-        // Continue with existing token if refresh fails
-      }
+    if (!appId || !channel) {
+      alert("Video is not ready yet. Missing Agora credentials.");
+      return;
     }
 
     try {
-      if (
-        typeof currentAppId !== "string" ||
-        typeof currentChannel !== "string" ||
-        typeof currentToken !== "string"
-      ) {
+      // Fetch fresh token before joining
+      const tokenData = await fetchFreshToken();
+      if (!tokenData || !tokenData.token) {
+        alert("Failed to get video call token. Please try again.");
         return;
       }
 
-      await client.join(currentAppId, currentChannel, currentToken, currentUid);
-      
+      await client.join(appId, channel, tokenData.token, tokenData.uid);
+
+      // Update uid in case it changed from the server
+      setUid(tokenData.uid);
+
       if (!localAudioRef.current) {
         localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
         await localAudioRef.current.setEnabled(isMicOn);
@@ -432,7 +400,6 @@ const VideoCallPage: React.FC = () => {
         localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
         await localVideoRef.current.setEnabled(isCamOn);
       }
-      
       const toPublish = [
         ...(localAudioRef.current ? [localAudioRef.current] : []),
         ...(localVideoRef.current ? [localVideoRef.current] : []),
@@ -442,8 +409,11 @@ const VideoCallPage: React.FC = () => {
       setIsJoined(true);
     } catch (err) {
       console.error("join error", err);
+      alert(
+        "Failed to join the call. Please check your connection and try again."
+      );
     }
-  }, [appId, channel, token, uid, isMicOn, isCamOn, refreshToken]);
+  }, [appId, channel, isMicOn, isCamOn, fetchFreshToken]);
 
   const leave = useCallback(async () => {
     const client = clientRef.current;
@@ -510,188 +480,131 @@ const VideoCallPage: React.FC = () => {
     ? displayName
     : remoteUser?.displayName || state?.appointment?.fullName;
   const mainIsMuted = isSwapped ? !remoteUser?.hasAudio : !isMicOn;
-  const pipIsMuted = isSwapped ? !isMicOn : !remoteUser?.hasAudio;
   const mainCameraOff = isSwapped ? !remoteUser?.hasVideo : !isCamOn;
   const pipCameraOff = isSwapped ? !isCamOn : !remoteUser?.hasVideo;
 
+  // Update the return JSX with the new fullscreen design
   return (
-    <div className="h-full w-full bg-gray-50">
-      <div className="max-w-7xl mx-auto h-full flex flex-col">
-        <div className="flex items-center justify-between p-6 ">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Therapy Session
-          </h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            ← Back
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black z-[100]">
+      {/* Main container - fills entire screen */}
+      <div className="relative w-full h-full">
+        {/* Main Stage -fullscreen */}
+        <div className="absolute inset-0">
+          <div
+            className="absolute inset-0 transition-all duration-500 ease-in-out"
+            ref={mainVideoContainerRef}
+          />
 
-        <div className="flex-1 relative p-6">
-          {/* Main Stage */}
-          <div className="relative w-full h-full bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200">
-            <div
-              className="absolute inset-0 transition-all duration-500 ease-in-out"
-              ref={mainVideoContainerRef}
-            />
-
-            {mainCameraOff && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 transition-opacity duration-300">
-                <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-semibold">
-                  {getInitials(mainDisplayName)}
-                </div>
+          {mainCameraOff && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 transition-opacity duration-300">
+              <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-semibold">
+                {getInitials(mainDisplayName)}
               </div>
-            )}
-
-            <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-gray-800 text-sm font-medium shadow-sm">
-              {mainDisplayName}
-              {mainIsMuted && <span className="ml-2 text-red-500">🔇</span>}
             </div>
+          )}
 
-            {isJoined && (
-              <div className="absolute top-4 right-4 group">
-                <div
-                  className="w-48 h-36 bg-gray-200 rounded-xl overflow-hidden border-2 border-gray-300 shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                  onClick={swapViews}
-                >
-                  <div className="relative w-full h-full">
-                    <div
-                      className="absolute inset-0 transition-all duration-500 ease-in-out"
-                      ref={pipVideoContainerRef}
-                    />
+          {/* Top bar with back button and title */}
+          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent flex items-center justify-between z-[101]">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-2"
+            >
+              ← Back
+            </button>
+            <h1 className="text-xl font-semibold text-white">
+              Therapy Session
+            </h1>
+          </div>
 
-                    {remoteUser
-                      ? pipCameraOff && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 transition-opacity duration-300">
-                            <div className="w-16 h-16 rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-semibold">
-                              {getInitials(pipDisplayName)}
-                            </div>
-                          </div>
-                        )
-                      : null}
+          {/* Name label */}
+          <div className="absolute bottom-20 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white text-sm font-medium z-[101]">
+            {mainDisplayName}
+            {mainIsMuted && <span className="ml-2 text-red-500">🔇</span>}
+          </div>
 
-                    <div className="absolute bottom-2 left-2 right-2">
-                      {remoteUser ? (
-                        <div className="flex items-center justify-between">
-                          <span className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded text-gray-800 text-xs font-medium truncate shadow-sm">
-                            {pipDisplayName}
-                          </span>
-                          {pipIsMuted && (
-                            <span className="px-1.5 py-1 bg-red-500/90 backdrop-blur-sm rounded text-white text-xs">
-                              🔇
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="px-2 py-1 bg-white/90 backdrop-blur-sm rounded text-gray-600 text-xs text-center shadow-sm">
-                          {isJoined ? "Waiting for other user..." : "Just you"}
-                        </div>
-                      )}
-                    </div>
+          {/* PIP Video */}
+          {isJoined && (
+            <div className="absolute top-20 right-4 group z-[101]">
+              <div
+                className="relative w-48 h-36 bg-gray-900 rounded-xl overflow-hidden border border-gray-700 shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105"
+                onClick={swapViews}
+              >
+                {/* Add swap icon overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full">
+                    <SwapIcon />
+                  </div>
+                </div>
 
-                    <div className="absolute rounded inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20 backdrop-blur-sm">
-                      <div className="bg-white/90 rounded-full p-2 shadow-lg">
-                        <SwapIcon />
+                <div className="relative w-full h-full">
+                  <div
+                    className="absolute inset-0 transition-all duration-500 ease-in-out"
+                    ref={pipVideoContainerRef}
+                  />
+
+                  {remoteUser && pipCameraOff && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                      <div className="w-16 h-16 rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-semibold">
+                        {getInitials(pipDisplayName)}
                       </div>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <div className="px-2 py-1 bg-black/50 backdrop-blur-sm rounded text-white text-xs">
+                      {remoteUser ? pipDisplayName : "Waiting..."}
                     </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        
-
-        {/* Controls */}
-        <div className="px-6 pb-6">
-          <div className="flex items-center justify-center gap-3">
-            {!isJoined ? (
-              <button
-                onClick={join}
-                disabled={isGeneratingToken}
-                className={`px-8 py-3 rounded-full font-medium transition-colors flex items-center gap-2 shadow-lg ${
-                  isGeneratingToken
-                    ? "bg-gray-400 cursor-not-allowed text-white"
-                    : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-              >
-                {isGeneratingToken ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Joining Call...
-                  </>
-                ) : (
-                  "Join Call"
-                )}
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={toggleMic}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
-                    isMicOn
-                      ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
-                  title={isMicOn ? "Mute microphone" : "Unmute microphone"}
-                >
-                  <MicIcon muted={!isMicOn} />
-                </button>
-
-                <button
-                  onClick={toggleCam}
-                  className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
-                    isCamOn
-                      ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                      : "bg-red-500 hover:bg-red-600 text-white"
-                  }`}
-                  title={isCamOn ? "Turn off camera" : "Turn on camera"}
-                >
-                  <VideoIcon disabled={!isCamOn} />
-                </button>
-
-                <button
-                  onClick={leave}
-                  className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 shadow-lg"
-                  title="End call"
-                >
-                  <PhoneIcon />
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Pre-join controls */}
-          {!isJoined && !isGeneratingToken && (
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <button
-                onClick={toggleMic}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
-                  isMicOn
-                    ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                    : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
-                }`}
-              >
-                <MicIcon muted={!isMicOn} />
-                {isMicOn ? "Mic On" : "Mic Off"}
-              </button>
-
-              <button
-                onClick={toggleCam}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-sm ${
-                  isCamOn
-                    ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                    : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
-                }`}
-              >
-                <VideoIcon disabled={!isCamOn} />
-                {isCamOn ? "Camera On" : "Camera Off"}
-              </button>
             </div>
           )}
+
+          {/* Controls - centered at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent z-[101]">
+            <div className="flex items-center justify-center gap-4">
+              {!isJoined ? (
+                <button
+                  onClick={join}
+                  disabled={isLoadingToken}
+                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2"
+                >
+                  {isLoadingToken ? "Getting Ready..." : "Join Call"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={toggleMic}
+                    className={`p-4 rounded-full transition-all duration-200 ${
+                      isMicOn
+                        ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
+                  >
+                    <MicIcon muted={!isMicOn} />
+                  </button>
+
+                  <button
+                    onClick={toggleCam}
+                    className={`p-4 rounded-full transition-all duration-200 ${
+                      isCamOn
+                        ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
+                        : "bg-red-500 hover:bg-red-600 text-white"
+                    }`}
+                  >
+                    <VideoIcon disabled={!isCamOn} />
+                  </button>
+
+                  <button
+                    onClick={leave}
+                    className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200"
+                  >
+                    <PhoneIcon />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
