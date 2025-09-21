@@ -9,6 +9,13 @@ export interface IUpcomingAppointment {
   time: string;
   type: string;
   joinLink?: string;
+  chatId?: string | null; // Add chatId to the interface
+  agoraChannel?: string | null; // Add agora fields
+  agoraToken?: {
+    token: string;
+    uid: number;
+  } | null;
+  invoiceDownloadLink?: string | null; // Add invoice download link
 }
 
 export interface IDashboardData {
@@ -19,14 +26,15 @@ export interface IDashboardData {
   upcomingAppointments: IUpcomingAppointment[];
 }
 
-// User API response interface
+// Updated User API response interface to match new response structure
 interface UserAPIResponse {
   walletBalance: number;
   totalSessions: number;
   timeSpent: number;
   amountPaid: number;
   upcomingAppointments: Array<{
-    id: string;
+    bookingId: string;
+    therapistId: string;
     fullName: string;
     profilePicture: string;
     date: string;
@@ -35,26 +43,40 @@ interface UserAPIResponse {
     status: string;
     chatId: string | null;
     action: {
-      joinMeetingLink: string;
+      agoraChannel: string | null;
+      agoraToken: {
+        token: string;
+        uid: number;
+      } | null;
       invoiceDownloadLink: string | null;
     };
   }>;
 }
 
-// Counselor API response interface
+// Updated Counselor API response interface to match new response structure
 interface CounselorAPIResponse {
   balance: number;
   totalSessions: number;
   timeSpent: number;
   amountEarned: number;
   upcomingAppointments: Array<{
-    _id: string;
-    name: string;
+    bookingId: string;
+    userId: string;
+    fullName: string;
     profilePicture: string;
     date: string;
     time: string;
     type: string;
-    joinLink: string;
+    status: string;
+    chatId: string | null;
+    action: {
+      agoraChannel: string | null;
+      agoraToken: {
+        token: string;
+        uid: number;
+      } | null;
+      invoiceDownloadLink: string | null;
+    };
   }>;
 }
 
@@ -88,13 +110,18 @@ export default async function DashboardApi(
         timeSpent: userData.timeSpent,
         amountEarned: userData.amountPaid,
         upcomingAppointments: userData.upcomingAppointments.map(appointment => ({
-          _id: appointment.id,
+          _id: appointment.bookingId,
           fullname: appointment.fullName,
           profilePicture: appointment.profilePicture,
           date: appointment.date,
           time: appointment.time,
           type: appointment.type,
-          joinLink: appointment.action.joinMeetingLink,
+          chatId: appointment.chatId, // Map chatId properly
+          agoraChannel: appointment.action.agoraChannel, // Map agora channel
+          agoraToken: appointment.action.agoraToken, // Map agora token
+          invoiceDownloadLink: appointment.action.invoiceDownloadLink, // Map invoice link
+          // Keep joinLink for backward compatibility (can be removed if not needed)
+          joinLink: undefined,
         }))
       };
     } else {
@@ -106,13 +133,18 @@ export default async function DashboardApi(
         timeSpent: counselorData.timeSpent,
         amountEarned: counselorData.amountEarned,
         upcomingAppointments: counselorData.upcomingAppointments.map(appointment => ({
-          _id: appointment._id,
-          fullname: appointment.name, // Note: counselor API uses 'name' instead of 'fullName'
+          _id: appointment.bookingId,
+          fullname: appointment.fullName, // Counselor API uses 'fullName'
           profilePicture: appointment.profilePicture,
           date: appointment.date,
           time: appointment.time,
           type: appointment.type,
-          joinLink: appointment.joinLink,
+          chatId: appointment.chatId, // Map chatId properly
+          agoraChannel: appointment.action.agoraChannel, // Map agora channel
+          agoraToken: appointment.action.agoraToken, // Map agora token
+          invoiceDownloadLink: appointment.action.invoiceDownloadLink, // Map invoice link
+          // Keep joinLink for backward compatibility (can be removed if not needed)
+          joinLink: undefined,
         }))
       };
     }
