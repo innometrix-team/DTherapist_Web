@@ -299,10 +299,7 @@ const DAnonymousGroupsList: React.FC = () => {
 
                 {/* Stats */}
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-1" />
-                    <span>{group.membersCount || 0} members</span>
-                  </div>
+                 
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1" />
                     <span>{formatDate(group.createdAt)}</span>

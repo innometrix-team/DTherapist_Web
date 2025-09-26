@@ -280,6 +280,9 @@ function User() {
                     <div className="text-xs text-gray-500 truncate">
                       {user.email}
                     </div>
+                    <div className="text-xs text-gray-400 truncate">
+                      Alias: {user.alias || 'Not set'}
+                    </div>
                   </div>
                 </div>
                 <div className="ml-3 flex flex-col items-end gap-1">
@@ -312,24 +315,21 @@ function User() {
           ))}
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+        {/* Tablet View */}
+        <div className="hidden sm:block lg:hidden overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -337,10 +337,10 @@ function User() {
             <tbody className="divide-y divide-gray-200">
               {paginatedUsers.map((user: IUser) => (
                 <tr key={user._id} className="hover:bg-gray-50">
-                  {/* User Info */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* User Info with Alias */}
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 flex-shrink-0">
                         {user.profilePicture ? (
                           <img
                             src={user.profilePicture}
@@ -353,16 +353,22 @@ function User() {
                           </span>
                         )}
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 truncate">
                           {user.fullName}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {user.email}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">
+                          Alias: {user.alias || 'Not set'}
                         </div>
                       </div>
                     </div>
                   </td>
 
                   {/* Role */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getRoleColor(
                         user.role
@@ -372,13 +378,8 @@ function User() {
                     </span>
                   </td>
 
-                  {/* Email */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.email}
-                  </td>
-
                   {/* Status */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusColor(
                         user.isSuspended
@@ -389,7 +390,114 @@ function User() {
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleOpenUser(user._id)}
+                      className="text-blue-600 hover:text-blue-900 font-medium"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {paginatedUsers.length === 0 && (
+            <div className="text-center py-8 text-gray-500">No users found</div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full min-w-[800px]">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  User
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  Alias
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  Role
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  Email
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  Status
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {paginatedUsers.map((user: IUser) => (
+                <tr key={user._id} className="hover:bg-gray-50">
+                  {/* User Info */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 flex-shrink-0">
+                        {user.profilePicture ? (
+                          <img
+                            src={user.profilePicture}
+                            alt={user.fullName}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-gray-600 font-medium">
+                            {user.fullName.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 truncate">
+                          {user.fullName}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Alias */}
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="truncate max-w-[120px]">
+                      {user.alias || '-'}
+                    </div>
+                  </td>
+
+                  {/* Role */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getRoleColor(
+                        user.role
+                      )}`}
+                    >
+                      {user.role}
+                    </span>
+                  </td>
+
+                  {/* Email */}
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="truncate max-w-[180px]">
+                      {user.email}
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusColor(
+                        user.isSuspended
+                      )}`}
+                    >
+                      {getSuspensionStatus(user.isSuspended)}
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleOpenUser(user._id)}
                       className="text-blue-600 hover:text-blue-900 font-medium"

@@ -9,6 +9,7 @@ export interface IUser {
   role: 'admin' | 'counselor' | 'client' | 'therapist';
   isSuspended: boolean;
   profilePicture?: string;
+  alias: string;
 }
 
 export interface IUserProfile {
