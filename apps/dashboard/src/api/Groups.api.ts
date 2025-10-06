@@ -34,7 +34,7 @@ export interface IMessage {
   _id: string;
   content: string;
   createdAt: string;
-  userId: string;
+  senderId: string; // Changed from userId to senderId to match actual API response
   groupId: string;
   alias?: string;
   replyTo?: IReplyTo | null; // Changed from string to IReplyTo object

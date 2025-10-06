@@ -242,9 +242,11 @@ export default function DAnonymousChat() {
             <DateSeparator date={group.date} />
             <div className="space-y-4">
               {group.messages.map((msg, index) => {
-                // Check if message belongs to current user by comparing _id with auth store id
-                const isOwnMessage = msg._id === userId;
+                // Check if message belongs to current user
+                // Use senderId field which is the actual field name in the API response
+                const isOwnMessage = userId && msg.senderId && msg.senderId === userId;
                 const repliedMessage = msg.replyTo; // Now it's already an object!
+                
 
                 return (
                   <div
@@ -309,7 +311,7 @@ export default function DAnonymousChat() {
                         
                         <button
                           onClick={() => handleReply(msg)}
-                          className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                          className={`p-1 rounded opacity-100 transition-opacity ${
                             isOwnMessage
                               ? "hover:bg-blue-600 text-blue-100"
                               : "hover:bg-gray-100 text-gray-500"
