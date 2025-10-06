@@ -23,12 +23,21 @@ interface IGroupMessagesRequestData {
   groupId: string;
 }
 
+// Updated reply structure
+export interface IReplyTo {
+  _id: string;
+  alias?: string;
+  content: string;
+}
+
 export interface IMessage {
+  _id: string;
   content: string;
   createdAt: string;
   userId: string;
-  _id: string;
   groupId: string;
+  alias?: string;
+  replyTo?: IReplyTo | null; // Changed from string to IReplyTo object
 }
 
 interface GroupMessagesAPIResponse {
@@ -39,12 +48,14 @@ interface GroupMessagesAPIResponse {
 interface ISendGroupMessageRequestData {
   groupId: string;
   content: string;
+  replyTo?: string | null;
 }
 
 interface IMessageData {
   content: string;
   groupId: string;
   createdAt: string;
+  replyTo?: string | null;
 }
 
 interface SendGroupMessageApiResponse {
@@ -194,9 +205,18 @@ export async function SendGroupMessageApi(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<IMessageData> | null> {
   try {
+    const payload: { content: string; replyTo?: string | null } = {
+      content: data.content,
+    };
+
+    // Only include replyTo if it exists
+    if (data.replyTo) {
+      payload.replyTo = data.replyTo;
+    }
+
     const response = await Api.post<SendGroupMessageApiResponse>(
       `/api/group/${data.groupId}/message`,
-      { content: data.content },
+      payload,
       {
         ...config,
       }

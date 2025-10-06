@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Reply, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ import {
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import { formatMessageTime, groupMessagesByDate } from "../../utils/Date.utils";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import type { IMessage } from "../../api/Groups.api";
 
 const DateSeparator = ({ date }: { date: string }) => (
   <div className="flex justify-center items-center mb-4">
@@ -35,9 +36,11 @@ export default function DAnonymousChat() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const user = useAuthStore();
+  const userId = useAuthStore((state) => state.id);
 
   const [joined, setJoined] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<IMessage | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const joinAbortRef = useRef<AbortController | null>(null);
   const { mutateAsync: joinGroup, isPending: isJoining } = useMutation({
@@ -97,12 +100,13 @@ export default function DAnonymousChat() {
   const contentValue = watch("content");
 
   const mutation = useMutation({
-    mutationFn: (content: string) => {
+    mutationFn: ({ content, replyToId }: { content: string; replyToId: string | null }) => {
       const controller = new AbortController();
       const promise = SendGroupMessageApi(
         {
           groupId: groupId!,
           content,
+          replyTo: replyToId,
         },
         { signal: controller.signal }
       );
@@ -115,6 +119,7 @@ export default function DAnonymousChat() {
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
       reset();
+      setReplyingTo(null);
     },
     onError: (error) => {
       toast.error(error.message || "Failed to send message");
@@ -127,8 +132,32 @@ export default function DAnonymousChat() {
   );
 
   const onSubmit = (data: MessageFormData) => {
-    mutation.mutate(data.content);
+    mutation.mutate({ 
+      content: data.content, 
+      replyToId: replyingTo?._id || null 
+    });
   };
+
+  const handleReply = (message: IMessage) => {
+    setReplyingTo(message);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const scrollToMessage = (messageId: string) => {
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('highlight-flash');
+      setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messagesData]);
 
   if (!groupId) {
     navigate("/anonymous");
@@ -166,6 +195,19 @@ export default function DAnonymousChat() {
 
   return (
     <>
+      <style>
+        {`
+          @keyframes highlight {
+            0% { background-color: rgba(59, 130, 246, 0.2); }
+            100% { background-color: transparent; }
+          }
+          
+          .highlight-flash {
+            animation: highlight 2s ease-out;
+          }
+        `}
+      </style>
+
       <div className="border-b border-gray-200 relative">
         <img
           src={group?.image}
@@ -199,50 +241,118 @@ export default function DAnonymousChat() {
           <div key={`group-${group.date}`}>
             <DateSeparator date={group.date} />
             <div className="space-y-4">
-              {group.messages.map((msg, index) => (
-                <div
-                  key={msg.createdAt + index}
-                  className={`flex ${
-                    msg.userId === user.id ? "justify-end" : "justify-start"
-                  }`}
-                >
+              {group.messages.map((msg, index) => {
+                // Check if message belongs to current user by comparing _id with auth store id
+                const isOwnMessage = msg._id === userId;
+                const repliedMessage = msg.replyTo; // Now it's already an object!
+
+                return (
                   <div
-                    className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
-                      msg.userId === user.id
-                        ? "bg-primary text-white rounded-br-md"
-                        : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+                    key={msg._id || msg.createdAt + index}
+                    id={`message-${msg._id}`}
+                    className={`flex ${
+                      isOwnMessage ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {/* {!(msg.userId === user.id) && (
-                      <div
-                        className={`text-xs font-medium mb-1 ${
-                          msg.role === "user"
-                            ? "text-success-700"
-                            : "text-primary"
-                        }`}
-                      >
-                        {msg.name}
-                      </div>
-                    )} */}
-                    <p className="text-sm leading-relaxed break-words ">
-                      {msg.content}
-                    </p>
                     <div
-                      className={`text-xs mt-2 ${
-                        msg.userId === user.id
-                          ? "text-blue-100"
-                          : "text-gray-500"
+                      className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl relative group ${
+                        isOwnMessage
+                          ? "bg-blue-500 text-white rounded-br-md"
+                          : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                       }`}
                     >
-                      {formatMessageTime(msg.createdAt)}
+                      {/* Alias */}
+                      {!isOwnMessage && (
+                        <div className="text-xs font-medium mb-1 text-primary">
+                          {msg.alias || "Anonymous"}
+                        </div>
+                      )}
+
+                      {/* Reply Preview - Shows what message this is replying to */}
+                      {repliedMessage && (
+                        <div
+                          onClick={() => scrollToMessage(repliedMessage._id)}
+                          className={`mb-2 p-2 rounded-lg border-l-4 cursor-pointer ${
+                            isOwnMessage
+                              ? "bg-blue-600/30 border-blue-300"
+                              : "bg-gray-100 border-gray-400"
+                          }`}
+                        >
+                          <div className={`text-xs font-semibold mb-1 flex items-center gap-1 ${
+                            isOwnMessage ? "text-blue-100" : "text-gray-700"
+                          }`}>
+                            <Reply size={12} />
+                            {repliedMessage.alias || "Anonymous"}
+                          </div>
+                          <div className={`text-xs line-clamp-2 ${
+                            isOwnMessage ? "text-blue-50" : "text-gray-600"
+                          }`}>
+                            {repliedMessage.content}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Message Content */}
+                      <p className="text-sm leading-relaxed break-words">
+                        {msg.content}
+                      </p>
+
+                      {/* Time and Reply Button */}
+                      <div className="flex items-center justify-between mt-2 gap-2">
+                        <div
+                          className={`text-xs ${
+                            isOwnMessage ? "text-blue-100" : "text-gray-500"
+                          }`}
+                        >
+                          {formatMessageTime(msg.createdAt)}
+                        </div>
+                        
+                        <button
+                          onClick={() => handleReply(msg)}
+                          className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                            isOwnMessage
+                              ? "hover:bg-blue-600 text-blue-100"
+                              : "hover:bg-gray-100 text-gray-500"
+                          }`}
+                          title="Reply to message"
+                        >
+                          <Reply size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* Reply Preview Bar - Shows when you're composing a reply */}
+      {replyingTo && (
+        <div className="bg-blue-50 border-t border-blue-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <Reply size={16} className="text-blue-500 flex-shrink-0" />
+              <div className="text-sm min-w-0 flex-1">
+                <span className="font-medium text-blue-700 block">
+                  Replying to {replyingTo.alias || "Anonymous"}
+                </span>
+                <div className="text-blue-600 truncate">
+                  {replyingTo.content}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={cancelReply}
+              className="text-blue-500 hover:text-blue-700 flex-shrink-0 ml-2"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#F7FAFF] p-4 border-t border-gray-200">
         <form
@@ -255,7 +365,11 @@ export default function DAnonymousChat() {
             fullWidth
             disableUnderline
             {...register("content")}
-            placeholder="Type a message"
+            placeholder={
+              replyingTo 
+                ? `Reply to ${replyingTo.alias || "Anonymous"}...` 
+                : "Type a message"
+            }
             className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-base lg:text-sm"
             error={!!errors.content}
           />
