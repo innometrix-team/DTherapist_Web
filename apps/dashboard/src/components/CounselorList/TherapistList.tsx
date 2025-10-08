@@ -21,6 +21,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
   onViewProfile,
 }) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top?: string; bottom?: string; left?: string; right?: string }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,7 +36,40 @@ const TherapistList: React.FC<TherapistListProps> = ({
   };
 
   const toggleDropdown = (therapistId: string) => {
-    setOpenDropdown((prev) => (prev === therapistId ? null : therapistId));
+    setOpenDropdown((prev) => {
+      const newValue = prev === therapistId ? null : therapistId;
+      
+      if (newValue) {
+        // Calculate position after state update
+        setTimeout(() => {
+          const button = document.querySelector(`[data-dropdown-id="${therapistId}"]`);
+          if (button) {
+            const rect = button.getBoundingClientRect();
+            const dropdownHeight = 120; // Approximate height of dropdown
+            const viewportHeight = window.innerHeight;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            
+            const position: { top?: string; bottom?: string; left?: string; right?: string } = {};
+            
+            // Check if there's enough space below
+            if (spaceBelow >= dropdownHeight) {
+              position.top = '100%';
+            } else if (spaceAbove >= dropdownHeight) {
+              // Position above if not enough space below
+              position.bottom = '100%';
+            } else {
+              // Default to below if neither has enough space
+              position.top = '100%';
+            }
+            
+            setDropdownPosition(position);
+          }
+        }, 0);
+      }
+      
+      return newValue;
+    });
   };
 
   const handleBooking = (therapistId: string, sessionType: SessionType) => {
@@ -45,9 +79,11 @@ const TherapistList: React.FC<TherapistListProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
       if (
         openDropdown &&
-        !(event.target as Element).closest(".dropdown-container")
+        !target.closest(".dropdown-container") &&
+        !target.closest(".dropdown-menu")
       ) {
         setOpenDropdown(null);
       }
@@ -290,7 +326,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
         {/* Desktop Table */}
         {!therapistsLoading && !therapistsError && therapists.length > 0 && (
           <>
-            <div className="hidden lg:block bg-white rounded-lg shadow-sm overflow-x-auto">
+            <div className="hidden lg:block bg-white rounded-lg shadow-sm overflow-x-auto overflow-y-visible">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
@@ -366,6 +402,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
                       {/* Action */}
                       <td className="px-3 lg:px-6 py-4 relative dropdown-container">
                         <button
+                          data-dropdown-id={therapist.userId}
                           onClick={() => toggleDropdown(therapist.userId)}
                           className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs lg:text-sm"
                         >
@@ -380,7 +417,15 @@ const TherapistList: React.FC<TherapistListProps> = ({
                         </button>
 
                         {openDropdown === therapist.userId && (
-                          <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-300 z-50">
+                          <div 
+                            className="dropdown-menu absolute left-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-300 z-50"
+                            style={{
+                              top: dropdownPosition.top,
+                              bottom: dropdownPosition.bottom,
+                              marginTop: dropdownPosition.bottom ? '0' : '0.5rem',
+                              marginBottom: dropdownPosition.bottom ? '0.5rem' : '0'
+                            }}
+                          >
                             <button
                               onClick={() =>
                                 handleBooking(therapist.userId, "video")
@@ -469,6 +514,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
                   {/* Mobile Action Button */}
                   <div className="relative dropdown-container border-t border-gray-100 pt-3">
                     <button
+                      data-dropdown-id={therapist.userId}
                       onClick={() => toggleDropdown(therapist.userId)}
                       className="flex items-center justify-center gap-2 w-full px-4 py-2 sm:py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
                     >
@@ -481,7 +527,15 @@ const TherapistList: React.FC<TherapistListProps> = ({
                     </button>
 
                     {openDropdown === therapist.userId && (
-                      <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-lg border z-50">
+                      <div 
+                        className="dropdown-menu absolute left-0 mt-2 w-full bg-white rounded-lg shadow-lg border z-50"
+                        style={{
+                          top: dropdownPosition.top,
+                          bottom: dropdownPosition.bottom,
+                          marginTop: dropdownPosition.bottom ? '0' : '0.5rem',
+                          marginBottom: dropdownPosition.bottom ? '0.5rem' : '0'
+                        }}
+                      >
                         <button
                           onClick={() =>
                             handleBooking(therapist.userId, "video")

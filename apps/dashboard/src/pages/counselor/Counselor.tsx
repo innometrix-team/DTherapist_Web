@@ -47,7 +47,6 @@ const Counselor: React.FC = () => {
   };
 
   const navigateToList = () => {
-    console.log('Navigating to list'); // Debug log
     setAppState({
       currentView: 'list',
       selectedTherapistId: null,
@@ -56,7 +55,6 @@ const Counselor: React.FC = () => {
   };
 
   const renderCurrentPage = () => {
-    console.log('Current app state:', appState); // Debug log
 
     switch (appState.currentView) {
       case 'list':
@@ -70,7 +68,6 @@ const Counselor: React.FC = () => {
       case 'booking':
         // More detailed validation and error messages
         if (!appState.selectedTherapistId) {
-          console.error('Missing therapist ID for booking');
           return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
               <div className="text-center bg-white p-8 rounded-lg shadow-lg">

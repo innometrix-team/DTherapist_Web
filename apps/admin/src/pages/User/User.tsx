@@ -16,7 +16,7 @@ function User() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   // Get filters and pagination from URL params with defaults
   const filters: UserFilters = useMemo(
