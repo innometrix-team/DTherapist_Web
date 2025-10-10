@@ -72,6 +72,14 @@ const DateTimeStep: React.FC<Props> = ({
   ) => {
     const updated = [...availability];
     updated[dayIndex][slotIndex][field] = value;
+    
+    // If updating start time, automatically set end time to 1 hour later
+    if (field === "startTime") {
+      const [hours, minutes] = value.split(':').map(Number);
+      const endHours = (hours + 1).toString().padStart(2, '0');
+      updated[dayIndex][slotIndex]["endTime"] = `${endHours}:${minutes.toString().padStart(2, '0')}`;
+    }
+    
     setAvailability(updated);
     
     // Update the parent component state
@@ -125,12 +133,13 @@ const DateTimeStep: React.FC<Props> = ({
     const hasValidTimes = availability.every(daySlots => 
       daySlots.every(slot => {
         if (!slot.startTime || !slot.endTime) return false;
-        return slot.startTime < slot.endTime;
+        // End time is automatically set to 1 hour after start, so just check they exist
+        return true;
       })
     );
 
     if (!hasValidTimes) {
-      alert("Please ensure all time slots have valid start and end times, with start time before end time.");
+      alert("Please ensure all time slots have valid start and end times.");
       return;
     }
 
@@ -230,7 +239,8 @@ const DateTimeStep: React.FC<Props> = ({
                       type="time"
                       value={slot.endTime}
                       onChange={(e) => updateSlot(index, slotIdx, "endTime", e.target.value)}
-                      className="border rounded px-3 py-2 w-24"
+                      className="border rounded px-3 py-2 w-24 bg-gray-100 cursor-not-allowed"
+                      disabled
                     />
                     {availableModes.length > 1 && (
                       <select
