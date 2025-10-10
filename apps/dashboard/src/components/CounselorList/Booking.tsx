@@ -178,7 +178,12 @@ const BookingSession: React.FC<BookingSessionProps> = ({
         const dates = getDatesForDayInCurrentMonth(dayName, currentMonth);
 
         dates.forEach((date) => {
-          const dateStr = date.toISOString().split("T")[0];
+          // Use consistent date formatting
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const dateStr = `${year}-${month}-${day}`;
+          
           // Only add future dates
           const today = new Date();
           today.setHours(0, 0, 0, 0);
@@ -229,21 +234,21 @@ const BookingSession: React.FC<BookingSessionProps> = ({
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   const formatDateToString = useCallback((date: Date): string => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(date.getDate()).padStart(2, "0")}`;
+    // Use local timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }, []);
 
   // Check if a date is available
   const isDateAvailable = (day: number): boolean => {
-    const dateStr = new Date(
+    const date = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
       day
-    )
-      .toISOString()
-      .split("T")[0];
+    );
+    const dateStr = formatDateToString(date);
     return availableDatesMap.has(dateStr);
   };
 
