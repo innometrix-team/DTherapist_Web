@@ -12,4 +12,16 @@ export default defineConfig({
         svgo: false,
       }
     })],
+    build: {
+    chunkSizeWarningLimit: 1000, // Increase limit to 1000KB
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor code into separate chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          
+        }
+      }
+    }
+  }
 });
