@@ -612,7 +612,10 @@ const BookingSession: React.FC<BookingSessionProps> = ({
                 <div>
                   <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                     Available Times for{" "}
-                    {new Date(selectedDate).toLocaleDateString()}
+                    {(() => {
+                      const [year, month, day] = selectedDate.split('-');
+                      return `${day}/${month}/${year}`;
+                    })()}
                   </h4>
                   {availableTimes.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
