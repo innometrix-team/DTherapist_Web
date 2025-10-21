@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BellIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import {
   getUserNotificationsApi,
+  markNotificationAsReadApi,
   IUserNotification,
   formatNotificationDate,
   getNotificationTypeColor,
@@ -28,6 +29,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
   const isUser = role === "user";
   const isCounselor = role === "counselor";
   const userType = isCounselor ? "counselor" : "user";
+  const queryClient = useQueryClient();
 
   // Fetch notifications
   const {
@@ -48,6 +50,31 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     enabled: (isUser || isCounselor) && !!currentUserId,
   });
 
+  // Mark as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: (notificationId: string) => markNotificationAsReadApi(notificationId),
+    onSuccess: (_data, notificationId) => {
+      // Update the query cache optimistically
+      queryClient.setQueryData(
+        ["user-notifications", userType, currentUserId],
+        (oldData: unknown) => {
+          const typedOldData = oldData as { data: IUserNotification[] } | undefined;
+          if (!typedOldData?.data) return oldData;
+          return {
+            ...typedOldData,
+            data: typedOldData.data.map((notif: IUserNotification) =>
+              notif._id === notificationId ? { ...notif, seen: true } : notif
+            ),
+          };
+        }
+      );
+    },
+    onError: (error) => {
+      toast.error("Failed to mark notification as read");
+      console.error("Mark as read error:", error);
+    },
+  });
+
   // Filter notifications for current user only
   const notifications = useMemo(() => {
     const allNotifications = notificationsResponse?.data || [];
@@ -62,7 +89,14 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     return notifications.filter((n: IUserNotification) => !n.seen).length;
   }, [notifications]);
 
- 
+  // Handle notification click
+  const handleNotificationClick = (notification: IUserNotification) => {
+    if (!notification.seen) {
+      markAsReadMutation.mutate(notification._id);
+    }
+    // You can add additional navigation logic here
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -153,7 +187,8 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                 {notifications.map((notification) => (
                   <div
                     key={notification._id}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer ${
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
                       !notification.seen ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                     }`}
                   >
@@ -197,20 +232,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-4 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  // You can add navigation to a full notifications page here
-                }}
-                className="w-full text-center text-sm text-primary hover:text-blue-800 font-medium"
-              >
-                View All Notifications
-              </button>
-            </div>
-          )}
+          
         </div>
       )}
     </div>

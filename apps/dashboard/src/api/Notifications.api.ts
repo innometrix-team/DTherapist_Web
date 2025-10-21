@@ -5,7 +5,7 @@ export interface IUserNotification {
   _id: string;
   userId: string;
   type: string;
-  audience: "client" | "therapist";
+  audience: "client" | "therapist | all";
   seenBy: string[];
   title: string;
   message: string;
@@ -56,6 +56,47 @@ export async function getUserNotificationsApi(
     const error = e as AxiosError<IAPIResult>;
     const statusCode = error.response?.status || 0;
     const errorMessage = error.response?.data?.message || error.message || "Failed to fetch notifications";
+    const status = error.response?.data?.status || "error";
+    
+    return Promise.reject<APIErrorResponse>({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+// Mark notification as read
+export async function markNotificationAsReadApi(
+  notificationId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<IUserNotification> | null> {
+  try {
+    const endpoint = `/api/admin/notifications/${notificationId}/read`;
+    
+    const response = await Api.patch<{
+      status: string;
+      message: string;
+      data: IUserNotification;
+    }>(endpoint, {}, {
+      ...config,
+    });
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message,
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const error = e as AxiosError<IAPIResult>;
+    const statusCode = error.response?.status || 0;
+    const errorMessage = error.response?.data?.message || error.message || "Failed to mark notification as read";
     const status = error.response?.data?.status || "error";
     
     return Promise.reject<APIErrorResponse>({
