@@ -73,12 +73,12 @@ export async function markNotificationAsReadApi(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<IUserNotification> | null> {
   try {
-    const endpoint = `/api/admin/notifications/${notificationId}/read`;
+    const endpoint = `/api/notifications/${notificationId}/read`;
     
     const response = await Api.patch<{
       status: string;
       message: string;
-      data: IUserNotification;
+      data: IUserNotification & { isRead: boolean };
     }>(endpoint, {}, {
       ...config,
     });
