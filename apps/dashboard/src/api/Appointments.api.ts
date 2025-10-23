@@ -1,6 +1,25 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import Api, { IAPIResult } from "./Api";
 
+
+export interface SessionCompletionResponse {
+  message: string;
+  booking: {
+    _id: string;
+    status: string;
+    clientCompleted: boolean;
+    therapistCompleted: boolean;
+    canComplete: boolean;
+  };
+  adminCommission?: number;
+}
+
+interface SessionCompletionAPIResponse {
+  status: string;
+  message: string;
+  data: SessionCompletionResponse;
+}
+
 // Types for API responses
 export interface AppointmentAction {
   joinMeetingLink?: string;
@@ -295,5 +314,43 @@ export async function downloadInvoice(
       message: errorMessage || "Failed to download invoice",
       data: undefined,
     };
+  }
+}
+
+
+export async function completeSession(
+  bookingId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<SessionCompletionResponse> | null> {
+  try {
+    const response = await Api.post<SessionCompletionAPIResponse>(
+      `/api/user/counselors/${bookingId}/complete`,
+      {}, // Empty body
+      config
+    );
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "Session completed successfully",
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
   }
 }
