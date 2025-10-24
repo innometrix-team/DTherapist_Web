@@ -74,7 +74,7 @@ export async function markNotificationAsReadApi(
 ): Promise<IAPIResult<null> | null> {
   try {
     const response = await Api.patch<APIMarkReadResponse>(
-      `/api/notifications/${notificationId}/read`,
+      `/api/admin/notifications/${notificationId}/read`,
       {},
       {
         ...config,
