@@ -11,7 +11,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Appointment } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import Api from "../../api/Api";
-import SessionCompletionModal from "../../components/appointment/SessionCompletionModal";
 
 // Token refresh API response interface
 interface TokenRefreshResponse {
@@ -133,7 +132,7 @@ interface AgoraState {
   agora?: {
     appId: string;
     channel: string;
-    token?: string;
+    token?: string; // Make token optional since we'll fetch it fresh
     uid?: number;
   };
   appointment?: Appointment;
@@ -148,7 +147,7 @@ interface RemoteUserState {
 
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
-  const { name, role } = useAuthStore();
+  const { name } = useAuthStore();
   const { state } = useLocation() as { state?: AgoraState };
   const displayName = name || "You";
 
@@ -171,22 +170,9 @@ const VideoCallPage: React.FC = () => {
   const [remoteUser, setRemoteUser] = useState<RemoteUserState | null>(null);
   const [isSwapped, setIsSwapped] = useState(false);
 
-  // Session completion states
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [hasLeftCall, setHasLeftCall] = useState(false);
-
   // Fixed containers - these never swap
   const mainVideoContainerRef = useRef<HTMLDivElement | null>(null);
   const pipVideoContainerRef = useRef<HTMLDivElement | null>(null);
-
-  // Determine user type based on role from auth store
-  const getUserType = useCallback((): "client" | "therapist" => {
-    // Assuming role can be 'user', 'client', 'therapist', 'service-provider', etc.
-    const therapistRoles = ["therapist", "service-provider", "counselor"];
-    return therapistRoles.includes(role?.toLowerCase() || "")
-      ? "therapist"
-      : "client";
-  }, [role]);
 
   useEffect(() => {
     function fetchIfNeeded() {
@@ -222,8 +208,10 @@ const VideoCallPage: React.FC = () => {
           }
         );
 
+        // Don't set token in state, just return the response
         return response.data || null;
       } catch (error: unknown) {
+        // Properly handle the error
         console.error(
           "Failed to fetch fresh token:",
           error instanceof Error ? error.message : "Unknown error"
@@ -345,12 +333,6 @@ const VideoCallPage: React.FC = () => {
         pipVideoContainerRef.current.innerHTML = "";
       }
       setRemoteUser(null);
-
-      // Auto-show completion modal when remote user leaves (if joined)
-      if (isJoined) {
-        setShowCompletionModal(true);
-        setHasLeftCall(true);
-      }
     };
 
     client.on("user-published", handleUserPublished);
@@ -362,7 +344,8 @@ const VideoCallPage: React.FC = () => {
       client.off("user-unpublished", handleUserUnpublished);
       client.off("user-left", handleUserLeft);
     };
-  }, [isJoined, state?.appointment?.fullName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createPreviewTracks = useCallback(async () => {
     try {
@@ -452,10 +435,6 @@ const VideoCallPage: React.FC = () => {
         pipVideoContainerRef.current.innerHTML = "";
 
       await client?.leave();
-
-      // Mark that user has left and show completion modal
-      setHasLeftCall(true);
-      setShowCompletionModal(true);
     } catch (err) {
       console.error("leave error", err);
     } finally {
@@ -470,21 +449,6 @@ const VideoCallPage: React.FC = () => {
       leave();
     };
   }, [leave]);
-
-  // Warn user before closing tab if they haven't confirmed completion
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isJoined || (hasLeftCall && showCompletionModal)) {
-        e.preventDefault();
-        e.returnValue =
-          "Are you sure you want to leave? Please confirm session completion.";
-        return "Are you sure you want to leave? Please confirm session completion.";
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isJoined, hasLeftCall, showCompletionModal]);
 
   const toggleMic = useCallback(async () => {
     const next = !isMicOn;
@@ -523,11 +487,12 @@ const VideoCallPage: React.FC = () => {
   const mainCameraOff = isSwapped ? !remoteUser?.hasVideo : !isCamOn;
   const pipCameraOff = isSwapped ? !isCamOn : !remoteUser?.hasVideo;
 
+  // Update the return JSX with the new fullscreen design
   return (
     <div className="fixed inset-0 bg-black z-[100]">
       {/* Main container - fills entire screen */}
       <div className="relative w-full h-full">
-        {/* Main Stage - fullscreen */}
+        {/* Main Stage -fullscreen */}
         <div className="absolute inset-0">
           <div
             className="absolute inset-0 transition-all duration-500 ease-in-out"
@@ -646,19 +611,6 @@ const VideoCallPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Session Completion Modal */}
-      {showCompletionModal && state?.appointment?.bookingId && (
-        <SessionCompletionModal
-          bookingId={state.appointment.bookingId}
-          isOpen={showCompletionModal}
-          userType={getUserType()}
-          onError={(error) => {
-            console.error("Completion error:", error);
-            // Optionally show a toast notification here
-          }}
-        />
-      )}
     </div>
   );
 };
