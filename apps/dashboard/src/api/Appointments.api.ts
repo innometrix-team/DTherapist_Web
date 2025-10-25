@@ -67,6 +67,57 @@ interface UserProfileAPIResponse {
   data: UserProfile[];
 }
 
+// Complete Session Response Types
+export interface CompleteSessionBooking {
+  agoraTokens: {
+    therapist: {
+      token: string;
+      expiresAt: number;
+    };
+    client: {
+      token: string;
+      expiresAt: number;
+    };
+  };
+  agoraUids: {
+    therapist: number;
+    client: number;
+  };
+  _id: string;
+  therapistId: string;
+  userId: string;
+  sessionType: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  therapistShare: number;
+  adminShare: number;
+  status: string;
+  canComplete: boolean;
+  chatId: string;
+  invoiceUrl: string;
+  invoiceDownloadUrl: string;
+  agoraChannel: string;
+  clientCompleted: boolean;
+  therapistCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export interface CompleteSessionResponse {
+  message: string;
+  booking: CompleteSessionBooking;
+  adminCommission: number;
+}
+
+interface CompleteSessionAPIResponse {
+  status: string;
+  message: string;
+  data?: CompleteSessionResponse;
+}
+
 // API Functions
 
 // Get counselor appointments with enhanced debugging
@@ -254,7 +305,7 @@ export async function getAppointmentsWithUser(
   }
 }
 
-// NEW: Download invoice PDF function
+// Download invoice PDF function
 export async function downloadInvoice(
   bookingId: string,
   config?: AxiosRequestConfig
@@ -295,5 +346,43 @@ export async function downloadInvoice(
       message: errorMessage || "Failed to download invoice",
       data: undefined,
     };
+  }
+}
+
+// NEW: Complete session function
+export async function completeSession(
+  bookingId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<CompleteSessionResponse> | null> {
+  try {
+    const response = await Api.patch<CompleteSessionAPIResponse>(
+      `/api/user/counselors/${bookingId}/complete`,
+      {},
+      config
+    );
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
   }
 }
