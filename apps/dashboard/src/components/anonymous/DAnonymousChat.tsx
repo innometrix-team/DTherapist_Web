@@ -15,7 +15,6 @@ import {
 } from "../../api/Groups.api";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import { formatMessageTime, groupMessagesByDate } from "../../utils/Date.utils";
-import { useAuthStore } from "../../store/auth/useAuthStore";
 import type { IMessage } from "../../api/Groups.api";
 
 const DateSeparator = ({ date }: { date: string }) => (
@@ -36,11 +35,13 @@ export default function DAnonymousChat() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const userId = useAuthStore((state) => state.id);
 
   const [joined, setJoined] = useState(false);
   const [replyingTo, setReplyingTo] = useState<IMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Track message IDs that we've sent locally
+  const [sentMessageIds, setSentMessageIds] = useState<Set<string>>(new Set());
 
   const joinAbortRef = useRef<AbortController | null>(null);
   const { mutateAsync: joinGroup, isPending: isJoining } = useMutation({
@@ -114,7 +115,17 @@ export default function DAnonymousChat() {
       (promise as any).abort = () => controller.abort();
       return promise;
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      // Track the message ID we just sent
+      const sentId = response?.data?._id;
+      if (typeof sentId === "string") {
+        setSentMessageIds(prev => {
+          const next = new Set(prev);
+          next.add(sentId);
+          return next;
+        });
+      }
+      
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
@@ -242,11 +253,13 @@ export default function DAnonymousChat() {
             <DateSeparator date={group.date} />
             <div className="space-y-4">
               {group.messages.map((msg, index) => {
-                // Check if message belongs to current user
-                // Use senderId field which is the actual field name in the API response
-                const isOwnMessage = userId && msg.senderId && msg.senderId === userId;
-                const repliedMessage = msg.replyTo; // Now it's already an object!
+                // WORKAROUND: Since backend isn't returning isOwnMessage properly,
+                // we check if this message ID is in our sentMessageIds set
+                const isOwnMessage = 
+                  msg.isOwnMessage === true || 
+                  sentMessageIds.has(msg._id);
                 
+                const repliedMessage = msg.replyTo;
 
                 return (
                   <div
@@ -263,7 +276,7 @@ export default function DAnonymousChat() {
                           : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                       }`}
                     >
-                      {/* Alias */}
+                      {/* Alias - only show for other people's messages */}
                       {!isOwnMessage && (
                         <div className="text-xs font-medium mb-1 text-primary">
                           {msg.alias || "Anonymous"}

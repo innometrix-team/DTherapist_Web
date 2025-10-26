@@ -34,10 +34,11 @@ export interface IMessage {
   _id: string;
   content: string;
   createdAt: string;
-  senderId: string; // Changed from userId to senderId to match actual API response
+  senderId: string;
   groupId: string;
   alias?: string;
-  replyTo?: IReplyTo | null; // Changed from string to IReplyTo object
+  replyTo?: IReplyTo | null;
+  isOwnMessage?: boolean; // Added isOwnMessage field
 }
 
 interface GroupMessagesAPIResponse {
@@ -52,10 +53,16 @@ interface ISendGroupMessageRequestData {
 }
 
 interface IMessageData {
+  _id: string;
   content: string;
   groupId: string;
+  userId: string;
+  alias?: string;
   createdAt: string;
+  updatedAt: string;
   replyTo?: string | null;
+  isOwnMessage?: boolean; // Added isOwnMessage field
+  __v?: number;
 }
 
 interface SendGroupMessageApiResponse {
