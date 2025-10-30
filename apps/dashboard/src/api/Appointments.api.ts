@@ -49,6 +49,26 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// Dispute types
+export interface DisputePayload {
+  reason: string;
+  description: string;
+  attachments?: string[];
+}
+
+export interface DisputeResponse {
+  status: string;
+  message: string;
+  data: {
+    disputeId: string;
+    bookingId: string;
+    reason: string;
+    description: string;
+    attachments: string[];
+    createdAt: string;
+  };
+}
+
 interface AppointmentsAPIResponse {
   status: string;
   message: string;
@@ -67,56 +87,6 @@ interface UserProfileAPIResponse {
   data: UserProfile[];
 }
 
-// Complete Session Response Types
-export interface CompleteSessionBooking {
-  agoraTokens: {
-    therapist: {
-      token: string;
-      expiresAt: number;
-    };
-    client: {
-      token: string;
-      expiresAt: number;
-    };
-  };
-  agoraUids: {
-    therapist: number;
-    client: number;
-  };
-  _id: string;
-  therapistId: string;
-  userId: string;
-  sessionType: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  price: number;
-  therapistShare: number;
-  adminShare: number;
-  status: string;
-  canComplete: boolean;
-  chatId: string;
-  invoiceUrl: string;
-  invoiceDownloadUrl: string;
-  agoraChannel: string;
-  clientCompleted: boolean;
-  therapistCompleted: boolean;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-}
-
-export interface CompleteSessionResponse {
-  message: string;
-  booking: CompleteSessionBooking;
-  adminCommission: number;
-}
-
-interface CompleteSessionAPIResponse {
-  status: string;
-  message: string;
-  data?: CompleteSessionResponse;
-}
 
 // API Functions
 
@@ -349,22 +319,23 @@ export async function downloadInvoice(
   }
 }
 
-// NEW: Complete session function
-export async function completeSession(
+// Submit dispute for appointment
+export async function submitDispute(
   bookingId: string,
+  disputeData: DisputePayload,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<CompleteSessionResponse> | null> {
+): Promise<IAPIResult<DisputeResponse['data']> | null> {
   try {
-    const response = await Api.patch<CompleteSessionAPIResponse>(
-      `/api/user/counselors/${bookingId}/complete`,
-      {},
+    const response = await Api.post<DisputeResponse>(
+      `/api/user/disputes/${bookingId}`,
+      disputeData,
       config
     );
     
     return Promise.resolve({
       code: response.status,
       status: response.data.status,
-      message: response.data.message ?? "success",
+      message: response.data.message ?? "Dispute submitted successfully",
       data: response.data.data
     });
   } catch (e) {

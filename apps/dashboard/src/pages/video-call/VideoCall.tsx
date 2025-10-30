@@ -8,10 +8,9 @@ import AgoraRTC, {
 } from "agora-rtc-sdk-ng";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Appointment, completeSession } from "../../api/Appointments.api";
+import { Appointment } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import Api from "../../api/Api";
-import SessionCompleteModal from "../../components/appointment/SessionCompleteModal";
 
 // Token refresh API response interface
 interface TokenRefreshResponse {
@@ -149,10 +148,9 @@ interface RemoteUserState {
 
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
-  const { name, role } = useAuthStore();
+  const { name } = useAuthStore();
   const { state } = useLocation() as { state?: AgoraState };
   const displayName = name || "You";
-  const isClient = role === "user";
 
   const [appId, setAppId] = useState<string | undefined>(state?.agora?.appId);
   const [channel, setChannel] = useState<string | undefined>(
@@ -162,10 +160,8 @@ const VideoCallPage: React.FC = () => {
 
   const [isLoadingToken, setIsLoadingToken] = useState(false);
 
-  // Session timer states
+  // Session timer states (removed modal-related states)
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [isCompletingSession, setIsCompletingSession] = useState(false);
   const timerIntervalRef = useRef<number | null>(null);
 
   // Agora client & tracks
@@ -187,89 +183,83 @@ const VideoCallPage: React.FC = () => {
   useEffect(() => {
     if (state?.appointment) {
       const appointment = state.appointment;
-      
+
       // Parse the session end time from the appointment time field
       // Format: "5:20 PM - 6:20 PM"
       const timeParts = appointment.time?.split(" - ");
-      
+
       if (timeParts && timeParts.length === 2) {
         const endTimeStr = timeParts[1]; // e.g., "6:20 PM"
         const dateStr = appointment.date; // e.g., "2025-10-25"
-        
+
         // Parse the end time
         const endDateTime = parseTimeToTimestamp(dateStr, endTimeStr);
-        
+
         if (endDateTime) {
           const currentTimestamp = Math.floor(Date.now() / 1000);
           const remainingSeconds = endDateTime - currentTimestamp;
-          
+
           if (remainingSeconds > 0) {
             setRemainingTime(remainingSeconds);
           } else {
             setRemainingTime(0);
-            // Show modal immediately if already expired
-            if (isClient) {
-              setShowCompleteModal(true);
-            }
           }
         }
       } else if (state?.appointment?.action?.agoraToken?.expiresAt) {
         // Fallback to expiresAt if time parsing fails
-        const expiresAtTimestamp = parseInt(state.appointment.action.agoraToken.expiresAt);
+        const expiresAtTimestamp = parseInt(
+          state.appointment.action.agoraToken.expiresAt
+        );
         const currentTimestamp = Math.floor(Date.now() / 1000);
         const remainingSeconds = expiresAtTimestamp - currentTimestamp;
-        
+
         if (remainingSeconds > 0) {
           setRemainingTime(remainingSeconds);
         } else {
           setRemainingTime(0);
-          if (isClient) {
-            setShowCompleteModal(true);
-          }
         }
       }
     }
-  }, [state, isClient]);
+  }, [state]);
 
   // Helper function to parse time string to Unix timestamp
-  const parseTimeToTimestamp = (dateStr: string, timeStr: string): number | null => {
+  const parseTimeToTimestamp = (
+    dateStr: string,
+    timeStr: string
+  ): number | null => {
     try {
       // Parse date (YYYY-MM-DD)
-      const [year, month, day] = dateStr.split('-').map(Number);
-      
+      const [year, month, day] = dateStr.split("-").map(Number);
+
       // Parse time (e.g., "6:20 PM")
       const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (!timeMatch) return null;
-      
+
       let hours = parseInt(timeMatch[1]);
       const minutes = parseInt(timeMatch[2]);
       const period = timeMatch[3].toUpperCase();
-      
+
       // Convert to 24-hour format
-      if (period === 'PM' && hours !== 12) {
+      if (period === "PM" && hours !== 12) {
         hours += 12;
-      } else if (period === 'AM' && hours === 12) {
+      } else if (period === "AM" && hours === 12) {
         hours = 0;
       }
-      
+
       // Create date object (assumes local timezone - WAT in your case)
       const date = new Date(year, month - 1, day, hours, minutes, 0);
-      
+
       // Return Unix timestamp in seconds
       return Math.floor(date.getTime() / 1000);
     } catch (e) {
-      console.error('Error parsing time:', e);
+      console.error("Error parsing time:", e);
       return null;
     }
   };
 
-  // Timer countdown effect - starts immediately when remainingTime is set
+  // Timer countdown effect - simplified without modal logic
   useEffect(() => {
     if (remainingTime === null || remainingTime <= 0) {
-      // Show modal if time is up
-      if (remainingTime === 0 && isClient && !showCompleteModal) {
-        setShowCompleteModal(true);
-      }
       return;
     }
 
@@ -278,10 +268,6 @@ const VideoCallPage: React.FC = () => {
         if (prev === null || prev <= 1) {
           if (timerIntervalRef.current) {
             clearInterval(timerIntervalRef.current);
-          }
-          // Show modal only for clients
-          if (isClient) {
-            setShowCompleteModal(true);
           }
           return 0;
         }
@@ -294,36 +280,15 @@ const VideoCallPage: React.FC = () => {
         clearInterval(timerIntervalRef.current);
       }
     };
-  }, [remainingTime, isClient, showCompleteModal]);
+  }, [remainingTime]);
 
   // Format time display
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  // Handle session completion
-  const handleCompleteSession = async () => {
-    if (!state?.appointment?.bookingId) {
-      console.error("No booking ID found");
-      return;
-    }
-
-    try {
-      setIsCompletingSession(true);
-      await completeSession(state.appointment.bookingId);
-      
-      // Leave the call first
-      await leave();
-      
-      // Navigate to dashboard
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      console.error("Failed to complete session:", error);
-      alert("Failed to complete session. Please try again.");
-      setIsCompletingSession(false);
-    }
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   useEffect(() => {
@@ -639,15 +604,6 @@ const VideoCallPage: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black z-[100]">
-      {/* Session Complete Modal - Only shown for clients */}
-      {isClient && (
-        <SessionCompleteModal
-          isOpen={showCompleteModal}
-          onConfirm={handleCompleteSession}
-          isLoading={isCompletingSession}
-        />
-      )}
-
       {/* Main container - fills entire screen */}
       <div className="relative w-full h-full">
         {/* Main Stage - fullscreen */}
@@ -786,7 +742,9 @@ const VideoCallPage: React.FC = () => {
                 >
                   {isLoadingToken ? "Getting Ready..." : "Join Call"}
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                    {isLoadingToken ? "Preparing connection..." : "Join the video call"}
+                    {isLoadingToken
+                      ? "Preparing connection..."
+                      : "Join the video call"}
                   </span>
                 </button>
               ) : (
@@ -841,4 +799,4 @@ const VideoCallPage: React.FC = () => {
   );
 };
 
-export default VideoCallPage
+export default VideoCallPage;

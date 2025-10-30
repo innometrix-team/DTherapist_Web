@@ -231,7 +231,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
     setActiveDropdown(activeDropdown === appointmentId ? null : appointmentId);
   };
 
-  // Updated handleActionClick with new invoice download logic
+  // Updated handleActionClick with dispute logic
   const handleActionClick = async (
     action: string,
     appointment: Appointment
@@ -273,6 +273,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
         break;
       case "reschedule":
         onReschedule?.(appointment.bookingId);
+        break;
+      case "dispute":
+        // Navigate to dispute page with appointment details
+        navigate(`/dispute/${appointment.bookingId}`, {
+          state: { appointment }
+        });
         break;
       case "downloadInvoice":
         try {
@@ -508,25 +514,36 @@ const SessionTable: React.FC<SessionTableProps> = ({
                               </button>
                             </>
                           ) : (
-                            <button
-                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() =>
-                                handleActionClick(
-                                  "downloadInvoice",
-                                  appointment
-                                )
-                              }
-                              disabled={
-                                downloadingInvoice === appointment.bookingId
-                              }
-                            >
-                              <WithdrawIcon className="w-4 h-4 mr-2" />
-                              <span>
-                                {downloadingInvoice === appointment.bookingId
-                                  ? "Downloading..."
-                                  : "Download Invoice"}
-                              </span>
-                            </button>
+                            <>
+                              <button
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() =>
+                                  handleActionClick(
+                                    "downloadInvoice",
+                                    appointment
+                                  )
+                                }
+                                disabled={
+                                  downloadingInvoice === appointment.bookingId
+                                }
+                              >
+                                <WithdrawIcon className="w-4 h-4 mr-2" />
+                                <span>
+                                  {downloadingInvoice === appointment.bookingId
+                                    ? "Downloading..."
+                                    : "Download Invoice"}
+                                </span>
+                              </button>
+                              <button
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
+                                onClick={() =>
+                                  handleActionClick("dispute", appointment)
+                                }
+                              >
+                                <ChatIcon className="w-4 h-4 mr-2" />
+                                <span>Dispute</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       )}
@@ -619,18 +636,27 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   </button>
                 </div>
               ) : (
-                <button
-                  className="flex items-center justify-center w-full px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() =>
-                    handleActionClick("downloadInvoice", appointment)
-                  }
-                  disabled={downloadingInvoice === appointment.bookingId}
-                >
-                  <WithdrawIcon className="w-4 h-4 mr-2" />
-                  {downloadingInvoice === appointment.bookingId
-                    ? "Downloading..."
-                    : "Download Invoice"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="flex items-center justify-center flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() =>
+                      handleActionClick("downloadInvoice", appointment)
+                    }
+                    disabled={downloadingInvoice === appointment.bookingId}
+                  >
+                    <WithdrawIcon className="w-4 h-4 mr-2" />
+                    {downloadingInvoice === appointment.bookingId
+                      ? "Downloading..."
+                      : "Invoice"}
+                  </button>
+                  <button
+                    className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
+                    onClick={() => handleActionClick("dispute", appointment)}
+                  >
+                    <ChatIcon className="w-4 h-4 mr-2" />
+                    Dispute
+                  </button>
+                </div>
               )}
             </div>
           </div>
