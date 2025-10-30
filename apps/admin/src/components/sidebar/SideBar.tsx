@@ -14,8 +14,10 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
       { to: "/user", label: "User" },
       { to: "/library", label: "Library" },
       { to: "/bookings", label: "Bookings" },
+      { to: "/disputes", label: "Disputes" },
       { to: "/danonymous", label: "DAnonymous" },
       { to: "/transaction", label: "Transaction" },
+      
     ],
   },
 };
