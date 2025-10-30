@@ -49,6 +49,26 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+// Dispute types
+export interface DisputePayload {
+  reason: string;
+  description: string;
+  attachments?: string[];
+}
+
+export interface DisputeResponse {
+  status: string;
+  message: string;
+  data: {
+    disputeId: string;
+    bookingId: string;
+    reason: string;
+    description: string;
+    attachments: string[];
+    createdAt: string;
+  };
+}
+
 interface AppointmentsAPIResponse {
   status: string;
   message: string;
@@ -66,6 +86,7 @@ interface UserProfileAPIResponse {
   message: string;
   data: UserProfile[];
 }
+
 
 // API Functions
 
@@ -254,7 +275,7 @@ export async function getAppointmentsWithUser(
   }
 }
 
-// NEW: Download invoice PDF function
+// Download invoice PDF function
 export async function downloadInvoice(
   bookingId: string,
   config?: AxiosRequestConfig
@@ -295,5 +316,44 @@ export async function downloadInvoice(
       message: errorMessage || "Failed to download invoice",
       data: undefined,
     };
+  }
+}
+
+// Submit dispute for appointment
+export async function submitDispute(
+  bookingId: string,
+  disputeData: DisputePayload,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<DisputeResponse['data']> | null> {
+  try {
+    const response = await Api.post<DisputeResponse>(
+      `/api/user/disputes/${bookingId}`,
+      disputeData,
+      config
+    );
+    
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "Dispute submitted successfully",
+      data: response.data.data
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
   }
 }

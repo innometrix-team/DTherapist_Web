@@ -22,6 +22,7 @@ import TermsAndConditions from "./pages/Terms&Condition/Terms&Condition";
 import ChatWrapper from "./pages/ChatWrapper/ChatWrapper";
 import { Toaster } from "react-hot-toast";
 import VideoCallPage from "./pages/video-call/VideoCall";
+import DisputePage from "./components/appointment/Dispute";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="chat/:chatId" element={<ChatWrapper />} />
           <Route path="appointments/chat/:chatId" element={<ChatWrapper />} />
+          <Route path="dispute/:bookingId" element={<DisputePage />} />
           <Route path="/video/:bookingId" element={<VideoCallPage />} />
         </Route>
 

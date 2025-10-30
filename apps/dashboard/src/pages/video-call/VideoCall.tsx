@@ -42,13 +42,13 @@ const MicIcon = ({ muted }: { muted: boolean }) => (
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M5.586 15H4a1 1 0 01-1-1v-3a1 1 0 011-1h1m0 0V7a3 3 0 116 0v3m0 0a3 3 0 01-3 3m0 0h2l3 7h0a2 2 0 01-2 2H9a2 2 0 01-2-2v0l3-7z"
+          d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
         />
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M3 3l18 18"
+          d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
         />
       </>
     ) : (
@@ -132,10 +132,11 @@ interface AgoraState {
   agora?: {
     appId: string;
     channel: string;
-    token?: string; // Make token optional since we'll fetch it fresh
+    token?: string;
     uid?: number;
   };
   appointment?: Appointment;
+  sessionDuration?: number; // Duration in minutes
 }
 
 interface RemoteUserState {
@@ -159,6 +160,10 @@ const VideoCallPage: React.FC = () => {
 
   const [isLoadingToken, setIsLoadingToken] = useState(false);
 
+  // Session timer states (removed modal-related states)
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
+
   // Agora client & tracks
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -173,6 +178,118 @@ const VideoCallPage: React.FC = () => {
   // Fixed containers - these never swap
   const mainVideoContainerRef = useRef<HTMLDivElement | null>(null);
   const pipVideoContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Calculate session duration from appointment time
+  useEffect(() => {
+    if (state?.appointment) {
+      const appointment = state.appointment;
+
+      // Parse the session end time from the appointment time field
+      // Format: "5:20 PM - 6:20 PM"
+      const timeParts = appointment.time?.split(" - ");
+
+      if (timeParts && timeParts.length === 2) {
+        const endTimeStr = timeParts[1]; // e.g., "6:20 PM"
+        const dateStr = appointment.date; // e.g., "2025-10-25"
+
+        // Parse the end time
+        const endDateTime = parseTimeToTimestamp(dateStr, endTimeStr);
+
+        if (endDateTime) {
+          const currentTimestamp = Math.floor(Date.now() / 1000);
+          const remainingSeconds = endDateTime - currentTimestamp;
+
+          if (remainingSeconds > 0) {
+            setRemainingTime(remainingSeconds);
+          } else {
+            setRemainingTime(0);
+          }
+        }
+      } else if (state?.appointment?.action?.agoraToken?.expiresAt) {
+        // Fallback to expiresAt if time parsing fails
+        const expiresAtTimestamp = parseInt(
+          state.appointment.action.agoraToken.expiresAt
+        );
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        const remainingSeconds = expiresAtTimestamp - currentTimestamp;
+
+        if (remainingSeconds > 0) {
+          setRemainingTime(remainingSeconds);
+        } else {
+          setRemainingTime(0);
+        }
+      }
+    }
+  }, [state]);
+
+  // Helper function to parse time string to Unix timestamp
+  const parseTimeToTimestamp = (
+    dateStr: string,
+    timeStr: string
+  ): number | null => {
+    try {
+      // Parse date (YYYY-MM-DD)
+      const [year, month, day] = dateStr.split("-").map(Number);
+
+      // Parse time (e.g., "6:20 PM")
+      const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) return null;
+
+      let hours = parseInt(timeMatch[1]);
+      const minutes = parseInt(timeMatch[2]);
+      const period = timeMatch[3].toUpperCase();
+
+      // Convert to 24-hour format
+      if (period === "PM" && hours !== 12) {
+        hours += 12;
+      } else if (period === "AM" && hours === 12) {
+        hours = 0;
+      }
+
+      // Create date object (assumes local timezone - WAT in your case)
+      const date = new Date(year, month - 1, day, hours, minutes, 0);
+
+      // Return Unix timestamp in seconds
+      return Math.floor(date.getTime() / 1000);
+    } catch (e) {
+      console.error("Error parsing time:", e);
+      return null;
+    }
+  };
+
+  // Timer countdown effect - simplified without modal logic
+  useEffect(() => {
+    if (remainingTime === null || remainingTime <= 0) {
+      return;
+    }
+
+    timerIntervalRef.current = window.setInterval(() => {
+      setRemainingTime((prev) => {
+        if (prev === null || prev <= 1) {
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [remainingTime]);
+
+  // Format time display
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     function fetchIfNeeded() {
@@ -208,10 +325,8 @@ const VideoCallPage: React.FC = () => {
           }
         );
 
-        // Don't set token in state, just return the response
         return response.data || null;
       } catch (error: unknown) {
-        // Properly handle the error
         console.error(
           "Failed to fetch fresh token:",
           error instanceof Error ? error.message : "Unknown error"
@@ -487,12 +602,11 @@ const VideoCallPage: React.FC = () => {
   const mainCameraOff = isSwapped ? !remoteUser?.hasVideo : !isCamOn;
   const pipCameraOff = isSwapped ? !isCamOn : !remoteUser?.hasVideo;
 
-  // Update the return JSX with the new fullscreen design
   return (
     <div className="fixed inset-0 bg-black z-[100]">
       {/* Main container - fills entire screen */}
       <div className="relative w-full h-full">
-        {/* Main Stage -fullscreen */}
+        {/* Main Stage - fullscreen */}
         <div className="absolute inset-0">
           <div
             className="absolute inset-0 transition-all duration-500 ease-in-out"
@@ -507,17 +621,63 @@ const VideoCallPage: React.FC = () => {
             </div>
           )}
 
-          {/* Top bar with back button and title */}
+          {/* Top bar with back button, title, and timer */}
           <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent flex items-center justify-between z-[101]">
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-2 group relative"
+              title="Go back"
             >
               ← Back
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                Go back
+              </span>
             </button>
             <h1 className="text-xl font-semibold text-white">
               Therapy Session
             </h1>
+            {/* Timer Display */}
+            <div className="flex items-center gap-2">
+              {remainingTime !== null && remainingTime > 0 && (
+                <div
+                  className={`px-4 py-2 rounded-full font-mono text-sm font-semibold group relative ${
+                    remainingTime <= 300
+                      ? "bg-red-500/90 text-white animate-pulse"
+                      : remainingTime <= 600
+                      ? "bg-yellow-500/90 text-white"
+                      : "bg-gray-800/80 text-white"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    {formatTime(remainingTime)}
+                  </span>
+                  <span className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                    Time remaining in session
+                  </span>
+                </div>
+              )}
+              {remainingTime === 0 && (
+                <div className="px-4 py-2 bg-red-500 rounded-full text-white text-sm font-semibold group relative">
+                  Time's Up
+                  <span className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                    Session has ended
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Name label */}
@@ -532,6 +692,7 @@ const VideoCallPage: React.FC = () => {
               <div
                 className="relative w-48 h-36 bg-gray-900 rounded-xl overflow-hidden border border-gray-700 shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105"
                 onClick={swapViews}
+                title="Click to swap views"
               >
                 {/* Add swap icon overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -560,6 +721,11 @@ const VideoCallPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Tooltip */}
+                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                  Click to swap views
+                </span>
               </div>
             </div>
           )}
@@ -571,39 +737,57 @@ const VideoCallPage: React.FC = () => {
                 <button
                   onClick={join}
                   disabled={isLoadingToken}
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2"
+                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2 group relative"
+                  title="Join the video call"
                 >
                   {isLoadingToken ? "Getting Ready..." : "Join Call"}
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                    {isLoadingToken
+                      ? "Preparing connection..."
+                      : "Join the video call"}
+                  </span>
                 </button>
               ) : (
                 <>
                   <button
                     onClick={toggleMic}
-                    className={`p-4 rounded-full transition-all duration-200 ${
+                    className={`p-4 rounded-full transition-all duration-200 group relative ${
                       isMicOn
                         ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
                         : "bg-red-500 hover:bg-red-600 text-white"
                     }`}
+                    title={isMicOn ? "Mute microphone" : "Unmute microphone"}
                   >
                     <MicIcon muted={!isMicOn} />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      {isMicOn ? "Mute microphone" : "Unmute microphone"}
+                    </span>
                   </button>
 
                   <button
                     onClick={toggleCam}
-                    className={`p-4 rounded-full transition-all duration-200 ${
+                    className={`p-4 rounded-full transition-all duration-200 group relative ${
                       isCamOn
                         ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
                         : "bg-red-500 hover:bg-red-600 text-white"
                     }`}
+                    title={isCamOn ? "Turn off camera" : "Turn on camera"}
                   >
                     <VideoIcon disabled={!isCamOn} />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      {isCamOn ? "Turn off camera" : "Turn on camera"}
+                    </span>
                   </button>
 
                   <button
                     onClick={leave}
-                    className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200"
+                    className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 group relative"
+                    title="Leave call"
                   >
                     <PhoneIcon />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      Leave call
+                    </span>
                   </button>
                 </>
               )}
