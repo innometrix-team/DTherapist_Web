@@ -5,7 +5,9 @@ export type NavLabel =
   | "Transaction" 
   | "Library"
   | "Bookings"
+  | "Disputes"
   | "DAnonymous"
+
 ;
 
 export interface NavItem {

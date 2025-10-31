@@ -3,7 +3,8 @@ import {
     BooksIcon,
     CounselorIcon,
     TransactionIcon,
-    MenuIcon
+    MenuIcon,
+    TimerIcon,
   } from "../../assets/icons";
 import { NavLabel } from "../layout/types";
 
@@ -12,6 +13,7 @@ export const ICONS: Record<NavLabel, React.FC<React.SVGProps<SVGSVGElement>>> = 
     Library: BooksIcon,
     User: CounselorIcon,
     Bookings: BooksIcon,
+    Disputes: TimerIcon,
     Transaction: TransactionIcon,
     DAnonymous: MenuIcon,
   };

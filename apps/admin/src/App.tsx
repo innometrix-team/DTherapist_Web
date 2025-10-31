@@ -12,6 +12,7 @@ import Book from "./pages/Bookings/Bookings";
 import DAnonymous from "./pages/DAnonymous/DAnonymous";
 import UserDetail from "./pages/UserDetail/UserDetail";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import DisputesPage from "./pages/Dispute/Dispute";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="bookings" element={<Book />} />
           <Route path="transaction" element={<Transaction />} />
           <Route path="danonymous" element={<DAnonymous />} />
+          <Route path="/disputes/*" element={<DisputesPage />} />
         </Route>
 
         {/* Public Routes */}
