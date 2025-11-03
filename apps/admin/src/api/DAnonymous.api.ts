@@ -7,22 +7,22 @@ export interface IDAnonymousGroup {
   name: string;
   description?: string;
   image: string;
-  createdAt: string; // Changed from createdDate to createdAt
-  updatedAt: string; // Added updatedAt to match API response
-  __v?: number; // Added version field from MongoDB
-  membersCount?: number; // Optional field for UI display
+  createdAt: string;
+  updatedAt: string;
+  __v?: number;
+  membersCount?: number;
 }
 
 export interface IDAnonymousGroupCreateData {
   name: string;
   description: string;
-  image?: string; // Make image optional since it might be uploaded separately
+  image?: string;
 }
 
 export interface IDAnonymousGroupEditData {
   name: string;
   description: string;
-  image?: string; // Optional for image updates
+  image?: string;
 }
 
 export interface IImageUploadResponse {
@@ -167,16 +167,16 @@ export async function createDAnonymousGroupApi(
   }
 }
 
-// Edit group
+// Edit group - UPDATED TO USE PUT METHOD AND /edit/ ENDPOINT
 export async function editDAnonymousGroupApi(
   groupId: string,
   groupData: IDAnonymousGroupEditData,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<Record<string, unknown>> | null> {
   try {
-    const endpoint = `/api/DAnonymous/${groupId}`;
+    const endpoint = `/api/DAnonymous/edit/${groupId}`;
     
-    const response = await Api.patch<GenericAPIResponse>(endpoint, groupData, {
+    const response = await Api.put<GenericAPIResponse>(endpoint, groupData, {
       ...config,
     });
     
