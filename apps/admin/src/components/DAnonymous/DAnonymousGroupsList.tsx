@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Users, Calendar, Trash2 } from "lucide-react";
+import { Search, Users, Calendar, Trash2, Edit } from "lucide-react";
 import { 
   getDAnonymousGroupsApi, 
-  deleteDAnonymousGroupApi 
+  deleteDAnonymousGroupApi,
+  IDAnonymousGroup
 } from "../../api/DAnonymous.api";
 import { useAuthStore } from "../../Store/auth/useAuthStore";
+import EditDAnonymousGroupModal from "./EditDAnonymousGroupModal";
 
 const DAnonymousGroupsList: React.FC = () => {
   const queryClient = useQueryClient();
@@ -15,6 +17,7 @@ const DAnonymousGroupsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingGroup, setEditingGroup] = useState<IDAnonymousGroup | null>(null);
 
   // Check if user is admin
   const isAdmin = role === "admin";
@@ -43,8 +46,8 @@ const DAnonymousGroupsList: React.FC = () => {
     },
     retry: 3,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: isAdmin, // Only run query if user is admin
+    staleTime: 5 * 60 * 1000,
+    enabled: isAdmin,
   });
 
   // Delete group mutation
@@ -93,13 +96,14 @@ const DAnonymousGroupsList: React.FC = () => {
     }
   };
 
-  
-
-  // Handle navigation to view group
-
   // Handle delete group
   const handleDeleteGroup = (groupId: string) => {
     setDeleteConfirmId(groupId);
+  };
+
+  // Handle edit group
+  const handleEditGroup = (group: IDAnonymousGroup) => {
+    setEditingGroup(group);
   };
 
   // Confirm delete
@@ -199,8 +203,6 @@ const DAnonymousGroupsList: React.FC = () => {
           <span className="text-gray-600 text-sm">
             Groups: <span className="font-semibold">{filteredGroups.length.toLocaleString()}</span>
           </span>
-
-         
         </div>
       </div>
 
@@ -269,14 +271,25 @@ const DAnonymousGroupsList: React.FC = () => {
                   />
                 </div>
 
-                {/* Delete Button */}
-                <div className="absolute top-3 right-3">
+                {/* Action Buttons */}
+                <div className="absolute top-3 right-3 flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditGroup(group);
+                    }}
+                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-sm"
+                    title="Edit group"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteGroup(group._id);
                     }}
                     className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-sm"
+                    title="Delete group"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -299,14 +312,11 @@ const DAnonymousGroupsList: React.FC = () => {
 
                 {/* Stats */}
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                 
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1" />
                     <span>{formatDate(group.createdAt)}</span>
                   </div>
                 </div>
-
-                
               </div>
             </div>
           ))}
@@ -339,6 +349,14 @@ const DAnonymousGroupsList: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingGroup && (
+        <EditDAnonymousGroupModal
+          group={editingGroup}
+          onClose={() => setEditingGroup(null)}
+        />
       )}
     </div>
   );
