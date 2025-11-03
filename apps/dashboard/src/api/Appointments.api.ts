@@ -322,14 +322,22 @@ export async function downloadInvoice(
 // Submit dispute for appointment
 export async function submitDispute(
   bookingId: string,
-  disputeData: DisputePayload,
+  disputeData: DisputePayload | FormData,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<DisputeResponse['data']> | null> {
   try {
     const response = await Api.post<DisputeResponse>(
       `/api/user/disputes/${bookingId}`,
       disputeData,
-      config
+      {
+        ...config,
+        headers: {
+          ...(disputeData instanceof FormData && {
+            'Content-Type': 'multipart/form-data',
+          }),
+          ...config?.headers,
+        },
+      }
     );
     
     return Promise.resolve({
