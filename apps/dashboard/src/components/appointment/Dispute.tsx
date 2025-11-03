@@ -7,13 +7,22 @@ import { submitDispute, Appointment } from "../../api/Appointments.api";
 interface DisputeFormData {
   reason: string;
   description: string;
-  attachments: string[];
+  attachments: File[];
 }
 
 const DISPUTE_REASONS = [
   "Therapist did not show up",
   "Inappropriate behavior",
   "Other",
+];
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "application/pdf",
 ];
 
 const DisputePage: React.FC = () => {
@@ -30,16 +39,26 @@ const DisputePage: React.FC = () => {
     attachments: [],
   });
 
-  const [attachmentInput, setAttachmentInput] = useState("");
-  const [errors, setErrors] = useState<Partial<DisputeFormData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof DisputeFormData, string>>>({});
 
   // Mutation for submitting dispute
   const disputeMutation = useMutation({
-    mutationFn: (data: DisputeFormData) => {
+    mutationFn: async (data: DisputeFormData) => {
       if (!bookingId) {
         throw new Error("Booking ID is required");
       }
-      return submitDispute(bookingId, data);
+      
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append("reason", data.reason);
+      formDataToSend.append("description", data.description);
+      
+      // Append each file
+      data.attachments.forEach((file) => {
+        formDataToSend.append("attachments", file);
+      });
+      
+      return submitDispute(bookingId, formDataToSend);
     },
     onSuccess: () => {
       toast.success("Dispute submitted successfully");
@@ -62,7 +81,7 @@ const DisputePage: React.FC = () => {
   });
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<DisputeFormData> = {};
+    const newErrors: Partial<Record<keyof DisputeFormData, string>> = {};
 
     if (!formData.reason) {
       newErrors.reason = "Please select a reason";
@@ -86,16 +105,43 @@ const DisputePage: React.FC = () => {
     disputeMutation.mutate(formData);
   };
 
-  const handleAddAttachment = () => {
-    if (attachmentInput.trim() && isValidUrl(attachmentInput.trim())) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validate files
+    const invalidFiles: string[] = [];
+    const validFiles: File[] = [];
+
+    files.forEach((file) => {
+      // Check file type
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        invalidFiles.push(`${file.name} (unsupported file type)`);
+        return;
+      }
+
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        invalidFiles.push(`${file.name} (exceeds 5MB)`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    if (invalidFiles.length > 0) {
+      toast.error(`Invalid files: ${invalidFiles.join(", ")}`);
+    }
+
+    if (validFiles.length > 0) {
       setFormData({
         ...formData,
-        attachments: [...formData.attachments, attachmentInput.trim()],
+        attachments: [...formData.attachments, ...validFiles],
       });
-      setAttachmentInput("");
-    } else {
-      toast.error("Please enter a valid URL");
+      toast.success(`${validFiles.length} file(s) added`);
     }
+
+    // Reset input
+    e.target.value = "";
   };
 
   const handleRemoveAttachment = (index: number) => {
@@ -103,15 +149,50 @@ const DisputePage: React.FC = () => {
       ...formData,
       attachments: formData.attachments.filter((_, i) => i !== index),
     });
+    toast.success("File removed");
   };
 
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith("image/")) {
+      return (
+        <svg
+          className="w-5 h-5 text-blue-500 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      );
     }
+    return (
+      <svg
+        className="w-5 h-5 text-red-500 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+        />
+      </svg>
+    );
   };
 
   if (!bookingId) {
@@ -258,64 +339,76 @@ const DisputePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Attachments */}
+            {/* File Attachments */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Attachments (Optional)
               </label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="url"
-                  value={attachmentInput}
-                  onChange={(e) => setAttachmentInput(e.target.value)}
-                  placeholder="Enter image URL (e.g., https://example.com/screenshot.png)"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddAttachment();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddAttachment}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Add
-                </button>
+              <p className="text-xs text-gray-500 mb-3">
+                Upload images or PDF files (max 5MB per file). Supported formats: JPG, PNG, GIF, PDF
+              </p>
+              
+              {/* File Input */}
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg
+                      className="w-8 h-8 mb-2 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="mb-1 text-sm text-gray-500">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG, GIF or PDF (MAX. 5MB)
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.gif,.pdf"
+                    onChange={handleFileChange}
+                  />
+                </label>
               </div>
 
               {/* Attachments List */}
               {formData.attachments.length > 0 && (
-                <div className="space-y-2">
-                  {formData.attachments.map((url, index) => (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Attached Files ({formData.attachments.length})
+                  </p>
+                  {formData.attachments.map((file, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                     >
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <svg
-                          className="w-5 h-5 text-gray-400 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                          />
-                        </svg>
-                        <span className="text-sm text-gray-600 truncate">
-                          {url}
-                        </span>
+                        {getFileIcon(file.type)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate font-medium">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(file.size)}
+                          </p>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveAttachment(index)}
-                        className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                        className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Remove file"
                       >
                         <svg
                           className="w-5 h-5"
@@ -327,7 +420,7 @@ const DisputePage: React.FC = () => {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                           />
                         </svg>
                       </button>
