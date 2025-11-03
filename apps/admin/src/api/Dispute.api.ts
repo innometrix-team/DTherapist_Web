@@ -35,14 +35,14 @@ export interface IUserDetails {
 }
 
 export interface IResolution {
-  action: "refund" | "reject" | "other";
+  action: "refund" | "release" | "none";
   notes: string;
   resolvedBy?: string;
   resolvedAt?: string;
 }
 
 export interface IResolveDisputeData {
-  action: "refund" | "reject" | "other";
+  action: "refund" | "release" | "none";
   notes: string;
 }
 

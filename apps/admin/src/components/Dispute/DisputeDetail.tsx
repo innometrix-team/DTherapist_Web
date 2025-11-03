@@ -27,7 +27,7 @@ const DisputeDetail: React.FC = () => {
   const queryClient = useQueryClient();
   const { role } = useAuthStore();
 
-  const [selectedAction, setSelectedAction] = useState<"refund" | "reject" | "other">("refund");
+  const [selectedAction, setSelectedAction] = useState<"refund" | "release" | "none">("refund");
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [isResolving, setIsResolving] = useState(false);
 
@@ -423,13 +423,13 @@ const DisputeDetail: React.FC = () => {
                       </label>
                       <select
                         value={selectedAction}
-                        onChange={(e) => setSelectedAction(e.target.value as "refund" | "reject" | "other")}
+                        onChange={(e) => setSelectedAction(e.target.value as "refund" | "release" | "none")}
                         disabled={isResolving}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                       >
                         <option value="refund">Refund Client</option>
-                        <option value="reject">Reject Dispute</option>
-                        <option value="other">Other Action</option>
+                        <option value="release">Reject Dispute</option>
+                        <option value="none">Other Action</option>
                       </select>
                     </div>
 
