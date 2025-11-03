@@ -534,15 +534,17 @@ const SessionTable: React.FC<SessionTableProps> = ({
                                     : "Download Invoice"}
                                 </span>
                               </button>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
-                                onClick={() =>
-                                  handleActionClick("dispute", appointment)
-                                }
-                              >
-                                <ChatIcon className="w-4 h-4 mr-2" />
-                                <span>Dispute</span>
-                              </button>
+                              {!isCounselor && (
+                                <button
+                                  className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
+                                  onClick={() =>
+                                    handleActionClick("dispute", appointment)
+                                  }
+                                >
+                                  <ChatIcon className="w-4 h-4 mr-2" />
+                                  <span>Dispute</span>
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -649,13 +651,15 @@ const SessionTable: React.FC<SessionTableProps> = ({
                       ? "Downloading..."
                       : "Invoice"}
                   </button>
-                  <button
-                    className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
-                    onClick={() => handleActionClick("dispute", appointment)}
-                  >
-                    <ChatIcon className="w-4 h-4 mr-2" />
-                    Dispute
-                  </button>
+                  {!isCounselor && (
+                    <button
+                      className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
+                      onClick={() => handleActionClick("dispute", appointment)}
+                    >
+                      <ChatIcon className="w-4 h-4 mr-2" />
+                      Dispute
+                    </button>
+                  )}
                 </div>
               )}
             </div>
