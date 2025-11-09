@@ -118,7 +118,13 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ className = '' 
                 <strong>Governing Law:</strong> {GENERAL_TERMS.governingLaw}
               </p>
               <p className="leading-relaxed font-medium text-blue-800">
-                {GENERAL_TERMS.note}
+                {GENERAL_TERMS.clientNote}
+              </p>
+              <p className="leading-relaxed font-medium text-blue-800">
+                {GENERAL_TERMS.counselorNote}
+              </p>
+              <p className="leading-relaxed font-medium text-blue-800">
+                {GENERAL_TERMS.arbitration}
               </p>
               <p className="text-sm text-gray-600 mt-4">
                 {GENERAL_TERMS.exceptions}
