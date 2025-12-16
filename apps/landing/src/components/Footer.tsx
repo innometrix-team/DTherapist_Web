@@ -50,7 +50,8 @@ const Footer = () => {
       </div>
 
       <div className="text-center mt-10 text-sm text-gray-300">
-        &copy; {new Date().getFullYear()} DTherapist. All rights reserved.
+        &copy; {new Date().getFullYear()} Innometrix Technology Limited. All rights reserved.
+        <p>DTherapist is solely owned by Innometrix Technology Limited</p>
       </div>
     </footer>
   );
