@@ -35,7 +35,7 @@ const Index: React.FC = () => {
         buttonText={false}
         showDownloadButtons={true}
         iosUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/phone%20image.png?updatedAt=1756725017436"
-        androidUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/phone%20image.png?updatedAt=1756725017436"
+        androidUrl="https://play.google.com/store/apps/details?id=com.dtherapistmobile.dtherapistmobile&pcampaignid=web_share"
       />
 
      

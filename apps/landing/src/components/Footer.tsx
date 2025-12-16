@@ -40,7 +40,7 @@ const Footer = () => {
             <a href="#">
               <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053' alt="Download on iOS" className="w-28" />
             </a>
-            <a href="#">
+            <a href="https://play.google.com/store/apps/details?id=com.dtherapistmobile.dtherapistmobile&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
               <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/playstore.png?updatedAt=1746020196102' alt="Download on Android" className="w-28" />
             </a>
           </div>
