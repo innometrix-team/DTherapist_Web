@@ -30,7 +30,6 @@ const DisputePage: React.FC = () => {
   const location = useLocation();
   const { bookingId } = useParams<{ bookingId: string }>();
   
-  // Get appointment data from route state
   const appointment = location.state?.appointment as Appointment | undefined;
 
   const [formData, setFormData] = useState<DisputeFormData>({
@@ -41,6 +40,16 @@ const DisputePage: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<Record<keyof DisputeFormData, string>>>({});
 
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   // Mutation for submitting dispute
   const disputeMutation = useMutation({
     mutationFn: async (data: DisputeFormData) => {
@@ -48,17 +57,24 @@ const DisputePage: React.FC = () => {
         throw new Error("Booking ID is required");
       }
       
-      // Create FormData for file upload
-      const formDataToSend = new FormData();
-      formDataToSend.append("reason", data.reason);
-      formDataToSend.append("description", data.description);
+      // Convert files to base64 strings
+      const attachmentPromises = data.attachments.map(file => fileToBase64(file));
+      const attachmentBase64 = await Promise.all(attachmentPromises);
       
-      // Append each file
-      data.attachments.forEach((file) => {
-        formDataToSend.append("attachments", file);
+      // Create JSON payload
+      const payload = {
+        reason: data.reason,
+        description: data.description,
+        attachments: attachmentBase64,
+      };
+
+      console.log('Sending JSON payload:', {
+        reason: payload.reason,
+        description: payload.description,
+        attachmentsCount: payload.attachments.length
       });
       
-      return submitDispute(bookingId, formDataToSend);
+      return submitDispute(bookingId, payload);
     },
     onSuccess: () => {
       toast.success("Dispute submitted successfully");
@@ -108,18 +124,15 @@ const DisputePage: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
-    // Validate files
     const invalidFiles: string[] = [];
     const validFiles: File[] = [];
 
     files.forEach((file) => {
-      // Check file type
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
         invalidFiles.push(`${file.name} (unsupported file type)`);
         return;
       }
 
-      // Check file size
       if (file.size > MAX_FILE_SIZE) {
         invalidFiles.push(`${file.name} (exceeds 5MB)`);
         return;
@@ -140,7 +153,6 @@ const DisputePage: React.FC = () => {
       toast.success(`${validFiles.length} file(s) added`);
     }
 
-    // Reset input
     e.target.value = "";
   };
 

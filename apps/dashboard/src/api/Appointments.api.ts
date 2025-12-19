@@ -319,10 +319,9 @@ export async function downloadInvoice(
   }
 }
 
-// Submit dispute for appointment
 export async function submitDispute(
   bookingId: string,
-  disputeData: DisputePayload | FormData,
+  disputeData: DisputePayload,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<DisputeResponse['data']> | null> {
   try {
@@ -332,20 +331,18 @@ export async function submitDispute(
       {
         ...config,
         headers: {
-          ...(disputeData instanceof FormData && {
-            'Content-Type': 'multipart/form-data',
-          }),
+          'Content-Type': 'application/json',
           ...config?.headers,
         },
       }
     );
-    
-    return Promise.resolve({
+
+    return {
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "Dispute submitted successfully",
-      data: response.data.data
-    });
+      data: response.data.data,
+    };
   } catch (e) {
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
@@ -355,11 +352,10 @@ export async function submitDispute(
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
+
     return Promise.reject({
       code: statusCode,
-      status,
+      status: "error",
       message: errorMessage,
       data: undefined,
     });
