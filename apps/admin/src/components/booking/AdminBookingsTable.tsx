@@ -70,7 +70,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
       setActiveCancelId(null);
       refetch();
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to cancel booking"),
+    onError: (e) => toast.error(e?.message || "Failed to cancel booking"),
   });
 
   const { mutate: rescheduleBooking, isPending: rescheduling } = useMutation({
@@ -96,7 +96,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
       setRescheduleForm({ date: "", startTime: "", endTime: "" });
       refetch();
     },
-    onError: (e: any) =>
+    onError: (e) =>
       toast.error(e?.message || "Failed to reschedule booking"),
   });
 
@@ -372,6 +372,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
             <div className="block sm:hidden space-y-4">
               {bookings
                 .filter((booking) => booking && booking._id)
+                .reverse()
                 .map((booking) => (
                   <div
                     key={booking._id}
@@ -510,6 +511,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
                 <tbody className="divide-y divide-gray-200">
                   {bookings
                     .filter((booking) => booking && booking._id)
+                    .reverse()
                     .map((booking) => (
                       <tr key={booking._id} className="hover:bg-gray-50">
                         <td className="py-4 px-6">
