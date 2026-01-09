@@ -23,7 +23,7 @@ const Navbar: React.FC = () => {
         {/* Desktop Links */}
         <ul className="hidden md:flex gap-6 text-sm font-medium">
           <li>
-            <Link to="/" className="hover:text-primary">
+            <Link to="https://dtherapist.com/" className="hover:text-primary">
               Home
             </Link>
           </li>
@@ -78,7 +78,7 @@ const Navbar: React.FC = () => {
           }`}
         >
           <div className="flex flex-col p-6 gap-6 text-sm font-medium">
-            <Link to="/" className="hover:text-primary" onClick={toggleMenu}>
+            <Link to="https://dtherapist.com/" className="hover:text-primary" onClick={toggleMenu}>
               Home
             </Link>
             <Link
