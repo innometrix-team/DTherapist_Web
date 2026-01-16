@@ -9,7 +9,6 @@ import {
   Appointment,
   UserDashboardData,
 } from "../../api/Appointments.api";
-import DashboardApi from "../../api/Dashboard.api";
 import {
   ChevronDownIcon,
   MeetingIcon,
@@ -30,14 +29,12 @@ interface SessionTableProps {
   type: "upcoming" | "passed";
   onReschedule?: (appointmentId: string) => void;
   onDownloadInvoice?: (appointmentId: string) => void;
-  dataSource?: "dashboard" | "appointments"; // New prop to determine data source
 }
 
 const SessionTable: React.FC<SessionTableProps> = ({
   type,
   onReschedule,
   onDownloadInvoice,
-  dataSource = "appointments", // Default to appointments API
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -53,37 +50,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
   // Determine if user is counselor
   const isCounselor = role === "counselor";
 
-  // Dashboard API queries
-  const {
-    data: dashboardData,
-    isLoading: dashboardLoading,
-    error: dashboardError,
-    refetch: refetchDashboard,
-  } = useQuery({
-    queryKey: ["dashboard-data", isCounselor ? "service-provider" : "user"],
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return await DashboardApi(isCounselor ? "service-provider" : "user", {
-        signal: controller.signal,
-      });
-    },
-    retry: (failureCount, error: unknown) => {
-      // Don't retry if the request was aborted
-      const queryError = error as QueryError;
-      if (
-        queryError?.name === "AbortError" ||
-        queryError?.code === "ERR_CANCELED"
-      ) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    refetchOnWindowFocus: false,
-    enabled: dataSource === "dashboard" && !!role,
-  });
-
-  // Appointments API queries (existing logic with improved error handling)
+  // Appointments API queries
   const {
     data: counselorData,
     isLoading: counselorLoading,
@@ -108,7 +75,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
       return failureCount < 2;
     },
     refetchOnWindowFocus: false,
-    enabled: dataSource === "appointments" && isCounselor && !!role,
+    enabled: isCounselor && !!role,
   });
 
   const {
@@ -135,50 +102,27 @@ const SessionTable: React.FC<SessionTableProps> = ({
       return failureCount < 2;
     },
     refetchOnWindowFocus: false,
-    enabled: dataSource === "appointments" && !isCounselor && !!role,
+    enabled: !isCounselor && !!role,
   });
 
   // Process appointments data
   useEffect(() => {
     let appointmentsList: Appointment[] = [];
 
-    if (dataSource === "dashboard") {
-      // Handle dashboard data
-      if (dashboardData && dashboardData.data) {
-        // Transform dashboard appointments to match Appointment interface
-        const dashboardAppointments =
-          dashboardData.data.upcomingAppointments.map((appointment) => ({
-            bookingId: appointment._id,
-            fullName: appointment.fullname,
-            profilePicture: appointment.profilePicture,
-            date: appointment.date,
-            time: appointment.time,
-            type: appointment.type,
-            chatId: null, // Dashboard API doesn't provide chatId
-            status: "upcoming" as const, // Dashboard only shows upcoming
-            action: {
-              joinMeetingLink: appointment.joinLink,
-              invoiceDownloadLink: undefined, // Changed from null to undefined
-            },
-          }));
-        appointmentsList = dashboardAppointments;
+    // Handle appointments API data
+    if (isCounselor) {
+      if (counselorData && counselorData.data) {
+        appointmentsList = Array.isArray(counselorData.data)
+          ? counselorData.data
+          : [];
       }
     } else {
-      // Handle appointments API data (existing logic)
-      if (isCounselor) {
-        if (counselorData && counselorData.data) {
-          appointmentsList = Array.isArray(counselorData.data)
-            ? counselorData.data
-            : [];
-        }
-      } else {
-        if (userData && userData.data) {
-          if (Array.isArray(userData.data)) {
-            appointmentsList = userData.data;
-          } else {
-            const dashboardData = userData.data as UserDashboardData;
-            appointmentsList = dashboardData.upcomingAppointments || [];
-          }
+      if (userData && userData.data) {
+        if (Array.isArray(userData.data)) {
+          appointmentsList = userData.data;
+        } else {
+          const dashboardData = userData.data as UserDashboardData;
+          appointmentsList = dashboardData.upcomingAppointments || [];
         }
       }
     }
@@ -203,15 +147,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
     });
 
     setAppointments(filteredAppointments);
-  }, [
-    counselorData,
-    userData,
-    dashboardData,
-    type,
-    isCounselor,
-    role,
-    dataSource,
-  ]);
+  }, [counselorData, userData, type, isCounselor, role]);
 
   useEffect(() => {
     return () => {
@@ -277,7 +213,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
       case "dispute":
         // Navigate to dispute page with appointment details
         navigate(`/dispute/${appointment.bookingId}`, {
-          state: { appointment }
+          state: { appointment },
         });
         break;
       case "downloadInvoice":
@@ -317,13 +253,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Determine loading state based on data source
-  const isLoading =
-    dataSource === "dashboard"
-      ? dashboardLoading
-      : isCounselor
-      ? counselorLoading
-      : userLoading;
+  // Determine loading state
+  const isLoading = isCounselor ? counselorLoading : userLoading;
 
   if (isLoading) {
     return (
@@ -335,20 +266,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Determine error state and refetch function based on data source
-  const error =
-    dataSource === "dashboard"
-      ? dashboardError
-      : isCounselor
-      ? counselorError
-      : userError;
-
-  const refetch =
-    dataSource === "dashboard"
-      ? refetchDashboard
-      : isCounselor
-      ? refetchCounselor
-      : refetchUser;
+  // Determine error state and refetch function
+  const error = isCounselor ? counselorError : userError;
+  const refetch = isCounselor ? refetchCounselor : refetchUser;
 
   // Improved error handling - don't show error for aborted requests
   if (error) {

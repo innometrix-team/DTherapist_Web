@@ -64,7 +64,6 @@ const Dashboard: React.FC = () => {
           <div className="p-6">
             <SessionTable 
               type="upcoming"
-              dataSource="dashboard"
               onReschedule={handleReschedule}
               onDownloadInvoice={handleDownloadInvoice}
             />
