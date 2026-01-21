@@ -168,7 +168,7 @@ const StatChart: React.FC = () => {
     Math.round(statisticsData.data.reduce((sum, item) => sum + item.withdrawals, 0) / 12) : 0;
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border">
+    <div className="bg-white rounded-lg p-6 border border-stone-200">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
