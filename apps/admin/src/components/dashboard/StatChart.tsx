@@ -16,13 +16,14 @@ interface StatisticsData {
 }
 
 const StatChart: React.FC = () => {
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const [statisticsData, setStatisticsData] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const { role } = useAuthStore();
 
-  const years = [2023, 2024, 2025];
+  const years = [ currentYear - 4,currentYear - 3,currentYear - 2, currentYear - 1, currentYear];
   const isAdmin = role === "admin";
 
   // Query to fetch admin dashboard data
