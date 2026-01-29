@@ -55,6 +55,10 @@ export const welcomeFeatures: WelcomeFeature[] = [
     title: 'Synergy Circle',
     description: 'Forging collective growth where everyone looks out for one another.'
   },
+  {    icon: <FaSmile size={24} className="text-primary" />,
+    title: 'Later-Life Readiness Therapy',
+    description: 'Helping individuals age gracefully with emotional support and purposeful living.'
+  }
 ];
 
 
@@ -334,6 +338,33 @@ Forget the traditional image of solitary therapy sessions. Synergy Circles foste
       'Schedule Regular Check-ins: Determine the frequency and format of check-ins',
       'Be Patient and Supportive: Remember that progress is not always linear. Be patient, supportive, and understanding.',
     ]
-  }
-};
+  },
 
+  'Later-Life Readiness Therapy': {
+    overview: 'We help individuals age gracefully and intentionally by providing accessible, culturally sensitive, and professional counselling tailored to later-life transitions.',
+    whatWeOffer: [ 
+      'Prepare individuals emotionally for aging before challenges arise from about 50 years',
+      'Support mental well-being during physical and lifestyle changes',
+      'Reduce loneliness and social isolation',
+      'Promote healthy coping with illness, loss, and uncertainty',
+      'Encourage purpose, self-worth, and fulfillment beyond youth and productivity',
+      'Offer professional support through secure, convenient online sessions'
+    ],
+    whoCanBenefit: [
+      'People aged 50+ who are experiencing stress, anxiety, or depression',
+      'Individuals coping with retirement, health issues, or loss of loved ones',
+      'Those feeling isolated or lacking purpose in later life',
+      'Caregivers seeking support for their own well-being',
+      'Africans and Nigerians living abroad seeking culturally informed support',
+      'Anyone who wants to age with dignity, confidence, and peace of mind'
+    ],
+    approaches: [
+      'Emotional & Mental Wellness for Aging: Techniques to manage anxiety, depression, and stress related to aging',
+      'Loneliness & Social Connection Support: Strategies to build and maintain meaningful relationships',
+      'Health-Related Emotional Support: Coping mechanisms for chronic illness, disability, and health changes',
+      'Life Transitions & Identity Counseling: Guidance on retirement, loss of roles, and redefining purpose',
+      'Grief, Loss & Adjustment Counselling: Support for bereavement and adapting to life changes',
+      'Purpose, Meaning & Legacy Work: Helping individuals find fulfillment and leave a lasting impact'
+    ],
+  },
+  };
