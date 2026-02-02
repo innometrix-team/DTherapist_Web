@@ -25,3 +25,4 @@ export {default as ChatIcon} from "./chat.svg?react";
 export {default as RescheduleIcon} from "./reschedule.svg?react";
 export {default as UserIcon} from "./user.svg?react";
 export { default as ChevronDownIcon } from "./ChevronDown.svg?react";
+export { default as DownloadIcon } from "./download.svg?react";
