@@ -9,6 +9,48 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
+// Password strength checker
+const calculatePasswordStrength = (password: string): { score: number; level: "weak" | "fair" | "good" | "strong"; feedback: string[] } => {
+  let score = 0;
+  const feedback: string[] = [];
+
+  if (password.length >= 8) score++;
+  else feedback.push("Use at least 8 characters");
+
+  if (password.length >= 12) score++;
+  else if (password.length >= 8) feedback.push("Longer passwords are stronger");
+
+  if (/[a-z]/.test(password)) score++;
+  else feedback.push("Add lowercase letters");
+
+  if (/[A-Z]/.test(password)) score++;
+  else feedback.push("Add uppercase letters");
+
+  if (/[0-9]/.test(password)) score++;
+  else feedback.push("Add numbers");
+
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+  else feedback.push("Add special characters (!@#$%^&*)");
+
+  const levels: ("weak" | "fair" | "good" | "strong")[] = ["weak", "weak", "fair", "good", "strong", "strong"];
+  return {
+    score,
+    level: levels[Math.min(score, 5)] as "weak" | "fair" | "good" | "strong",
+    feedback: feedback.slice(0, 2),
+  };
+};
+
+const passwordSchema = z.string().min(8, "Password must be at least 8 characters").refine(
+  (password) => /[a-z]/.test(password),
+  "Password must contain lowercase letters"
+).refine(
+  (password) => /[A-Z]/.test(password),
+  "Password must contain uppercase letters"
+).refine(
+  (password) => /[0-9]/.test(password),
+  "Password must contain numbers"
+);
+
 const signupSchema = z.object({
   fullName: z
     .string()
@@ -20,7 +62,7 @@ const signupSchema = z.object({
     .string()
     .email("Invalid email address")
     .transform((val) => val.toLowerCase()),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: passwordSchema,
   role: z.enum(["client", "therapist"], {
     errorMap: () => ({ message: "Please select a role" }),
   }),
@@ -36,9 +78,13 @@ function SignUpForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    watch,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
+  const password = watch("password");
+  const passwordStrength = password ? calculatePasswordStrength(password) : null;
+  
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
@@ -134,19 +180,20 @@ function SignUpForm() {
             <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
           )}
         </div>
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            {...register("password")}
-            className="w-full border border-gray-300 rounded px-4 py-2 pr-10"
-          />
-          <button
-            type="button"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          >
+        <div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              {...register("password")}
+              className="w-full border border-gray-300 rounded px-4 py-2 pr-12"
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
+            >
             {showPassword ? (
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.05 5.14-6.53" />
@@ -161,6 +208,66 @@ function SignUpForm() {
               </svg>
             )}
           </button>
+          </div>
+          
+          {/* Password Strength Indicator */}
+          {password && (
+            <div className="mt-2 space-y-2">
+              {/* Strength Bar */}
+              <div className="flex gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className={`h-2 flex-1 rounded ${
+                      i < passwordStrength!.score
+                        ? passwordStrength!.level === "weak"
+                          ? "bg-red-500"
+                          : passwordStrength!.level === "fair"
+                            ? "bg-yellow-500"
+                            : passwordStrength!.level === "good"
+                              ? "bg-blue-500"
+                              : "bg-green-500"
+                        : "bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+              
+              {/* Strength Label */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium capitalize">
+                  Strength: <span className={
+                    passwordStrength!.level === "weak"
+                      ? "text-red-600"
+                      : passwordStrength!.level === "fair"
+                        ? "text-yellow-600"
+                        : passwordStrength!.level === "good"
+                          ? "text-blue-600"
+                          : "text-green-600"
+                  }>
+                    {passwordStrength!.level}
+                  </span>
+                </span>
+                {passwordStrength!.level === "strong" && (
+                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              
+              {/* Feedback Tips */}
+              {passwordStrength!.feedback.length > 0 && (
+                <div className="space-y-1">
+                  {passwordStrength!.feedback.map((tip, idx) => (
+                    <p key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                      <span>•</span> {tip}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
           {errors.password && (
             <p className="text-red-600 text-sm mt-1">
               {errors.password.message}
@@ -173,7 +280,7 @@ function SignUpForm() {
             className="w-full border border-gray-300 rounded px-4 py-2"
           >
             <option value="">Register as</option>
-            <option value="client">Client</option>
+            <option value="client">User</option>
             <option value="therapist">Counselor</option>
           </select>
           {errors.role && (
