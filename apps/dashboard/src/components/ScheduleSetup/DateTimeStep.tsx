@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { CancelIcon, CopyIcon, AddIcon } from "../../assets/icons";
 import { MeetingPreference } from "./schedule.types";
-
+import { useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { CreatePricingApi, CreateScheduleApi, IPricingRequestData, IScheduleRequestData } from "../../api/Schedule.api";
 
 const dayLabels = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"];
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const timeZones = [
   "West African Time (WAT)",
@@ -25,8 +28,16 @@ interface Props {
   meetingPreference: MeetingPreference;
   selectedTimeZone: string;
   onTimeZoneChange: (timezone: string) => void;
+  pricing: {
+    inPerson: number;
+    video: number;
+  };
+  onPricingChange: (pricing: { inPerson: number; video: number }) => void;
+  scheduleData?: IScheduleRequestData[];
   onNext: () => void;
   onBack: () => void;
+  onSuccess?: () => void;
+  onReset?: () => void;
 }
 
 const DateTimeStep: React.FC<Props> = ({ 
@@ -35,8 +46,13 @@ const DateTimeStep: React.FC<Props> = ({
   meetingPreference,
   selectedTimeZone,
   onTimeZoneChange,
+  pricing,
+  onPricingChange,
+  scheduleData,
   onNext, 
-  onBack 
+  onBack,
+  onSuccess,
+  onReset
 }) => {
   // Initialize from props.value if available
   const [availability, setAvailability] = useState<Slot[][]>(() => {
@@ -121,33 +137,7 @@ const DateTimeStep: React.FC<Props> = ({
     onChange(availabilityString);
   };
 
-  const handleNext = () => {
-    // Validate that at least one day has at least one time slot
-    const hasAvailability = availability.some(daySlots => daySlots.length > 0);
-    if (!hasAvailability) {
-      alert("Please set availability for at least one day with a time slot.");
-      return;
-    }
 
-    // Additional validation: check that all selected time slots have valid times
-    const hasValidTimes = availability.every(daySlots => 
-      daySlots.every(slot => {
-        if (!slot.startTime || !slot.endTime) return false;
-        // End time is automatically set to 1 hour after start, so just check they exist
-        return true;
-      })
-    );
-
-    if (!hasValidTimes) {
-      alert("Please ensure all time slots have valid start and end times.");
-      return;
-    }
-
-    onNext();
-  };
-
-  // Check if at least one day has availability
-  const hasAvailability = availability.some(daySlots => daySlots.length > 0);
 
   // Get available modes based on meeting preference
   const getAvailableModes = () => {
@@ -172,140 +162,452 @@ const DateTimeStep: React.FC<Props> = ({
   };
 
   const availableModes = getAvailableModes();
+  const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const { mutateAsync: handleScheduleSubmit, isPending: isSchedulePending } = useMutation({
+    mutationFn: (data: IScheduleRequestData[]) => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return CreateScheduleApi(data, { signal: controller.signal });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const { mutateAsync: handlePricingSubmit, isPending: isPricingPending } = useMutation({
+    mutationFn: (data: IPricingRequestData) => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      return CreatePricingApi(data, { signal: controller.signal });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleSaveClick = () => {
+    // Validate availability
+    const hasAvail = availability.some(daySlots => daySlots.length > 0);
+    if (!hasAvail) {
+      toast.error("Please set availability for at least one day with a time slot.");
+      return;
+    }
+
+    // Validate pricing
+    if (pricing.inPerson <= 0 || pricing.video <= 0) {
+      toast.error("Please enter valid pricing for both video and in-person sessions");
+      return;
+    }
+
+    setShowModal(true);
+  };
+
+  const handleConfirm = async () => {
+    try {
+      // Submit schedule first
+      if (scheduleData) {
+        await handleScheduleSubmit(scheduleData);
+      }
+      
+      // Then submit pricing
+      await handlePricingSubmit({
+        videoPrice: pricing.video,
+        inPersonPrice: pricing.inPerson,
+      });
+
+      toast.success("Schedule and pricing saved successfully!");
+      setShowModal(false);
+      
+      if (onReset) onReset();
+      if (onSuccess) onSuccess();
+      if (onNext) onNext();
+    } catch (error) {
+      console.error("Failed to save schedule and pricing:", error);
+    }
+  };
+
+  const handleCancel = () => {
+    setShowModal(false);
+  };
+
+  const isPending = isPricingPending || isSchedulePending;
+
+  React.useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  const selectedDaySlots = selectedDayIdx !== null ? availability[selectedDayIdx] : [];
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-1">
-        When are you available to meet with people?
-      </h1>
-      <p className="text-sm text-gray-600 mb-8">
-        Select the days and times when you're available to meet with clients. You need to set availability for at least one day.
-      </p>
-
-      <div className="mb-6 flex items-center">
-        <div className="flex items-center">
-          <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <select
-            value={selectedTimeZone}
-            onChange={(e) => onTimeZoneChange(e.target.value)}
-            className="border-none bg-transparent focus:outline-none text-gray-700 pr-8"
-          >
-            {timeZones.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
-            ))}
-          </select>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            Set Your Schedule & Pricing
+          </h1>
+          <p className="text-lg text-gray-600 leading-relaxed">
+            Configure your availability and set your session rates for clients.
+          </p>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        {dayLabels.map((dayLabel, index) => (
-          <div key={index} className="flex items-start">
-            <button
-              onClick={() => toggleDay(index)}
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold mr-4 transition ${
-                availability[index].length
-                  ? "bg-blue-700 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
+        {/* Timezone Card */}
+        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-8 shadow-sm hover:shadow-md transition-shadow">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-semibold text-gray-700">Time Zone</span>
+            <select
+              value={selectedTimeZone}
+              onChange={(e) => onTimeZoneChange(e.target.value)}
+              className="ml-auto border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 px-4 py-2 hover:border-gray-400 transition"
             >
-              {dayLabel}
-            </button>
+              {timeZones.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
-            {availability[index].length === 0 ? (
-              <div className="flex items-center">
-                <span className="text-gray-500 font-medium">Unavailable</span>
-                <button className="ml-2 text-gray-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Days List */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900 text-lg">Available Days</h3>
+                <p className="text-sm text-gray-600 mt-1">Click a day to manage</p>
               </div>
-            ) : (
-              <div className="flex-1 space-y-2">
-                {availability[index].map((slot, slotIdx) => (
-                  <div key={slotIdx} className="flex items-center gap-4">
-                    <input
-                      type="time"
-                      value={slot.startTime}
-                      onChange={(e) => updateSlot(index, slotIdx, "startTime", e.target.value)}
-                      className="border rounded px-3 py-2 w-24"
-                    />
-                    <span className="text-gray-500">-</span>
-                    <input
-                      type="time"
-                      value={slot.endTime}
-                      onChange={(e) => updateSlot(index, slotIdx, "endTime", e.target.value)}
-                      className="border rounded px-3 py-2 w-24 bg-gray-100 cursor-not-allowed"
-                      disabled
-                    />
-                    {availableModes.length > 1 && (
-                      <select
-                        value={slot.mode}
-                        onChange={(e) => updateSlot(index, slotIdx, "mode", e.target.value)}
-                        className="border rounded px-3 py-2"
+              <div className="divide-y divide-gray-200">
+                {dayLabels.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      if (availability[index].length === 0) {
+                        // Auto-add default slot if day is empty
+                        toggleDay(index);
+                        setTimeout(() => setSelectedDayIdx(index), 0);
+                      } else {
+                        setSelectedDayIdx(index);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-4 transition-colors ${
+                      selectedDayIdx === index
+                        ? "bg-blue-50 border-l-4 border-blue-600"
+                        : "bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{dayNames[index]}</p>
+                        <p className="text-sm text-gray-500">
+                          {availability[index].length > 0 
+                            ? `${availability[index].length} slot${availability[index].length !== 1 ? 's' : ''}`
+                            : 'Click to add'
+                          }
+                        </p>
+                      </div>
+                      {availability[index].length > 0 ? (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="p-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600 font-medium">
+                    {availability.filter(slots => slots.length > 0).length} of 7 days
+                  </span>
+                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 transition-all"
+                      style={{ width: `${(availability.filter(slots => slots.length > 0).length / 7) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: Time Slots Editor */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Time Slots Card */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              {selectedDayIdx !== null ? (
+                <>
+                  <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">
+                          {dayNames[selectedDayIdx]}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">{selectedDaySlots.length} time slot{selectedDaySlots.length !== 1 ? 's' : ''}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleDay(selectedDayIdx)}
+                        className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg transition font-medium text-sm"
                       >
-                        {availableModes.map((mode) => (
-                          <option key={mode.value} value={mode.value}>
-                            {mode.label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => removeSlot(index, slotIdx)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Remove slot"
-                      >
-                        <CancelIcon className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => copySlot(index, slotIdx)}
-                        className="text-gray-600 hover:text-black"
-                        title="Copy slot"
-                      >
-                        <CopyIcon className="w-4 h-4" />
+                        Remove Day
                       </button>
                     </div>
                   </div>
-                ))}
-                
-                <button
-                  onClick={() => addSlot(index)}
-                  className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline"
-                >
-                  <AddIcon className="w-4 h-4" />
-                  Add Time
-                </button>
+
+                  <div className="p-6 space-y-3">
+                    {selectedDaySlots.map((slot, slotIdx) => (
+                      <div key={slotIdx} className="flex items-center gap-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <div className="flex items-center gap-3 flex-1">
+                          <input
+                            type="time"
+                            value={slot.startTime}
+                            onChange={(e) => updateSlot(selectedDayIdx, slotIdx, "startTime", e.target.value)}
+                            className="border border-gray-300 rounded-lg px-3 py-2 w-28 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-700 bg-white"
+                          />
+                          <span className="text-gray-400 font-semibold">−</span>
+                          <input
+                            type="time"
+                            value={slot.endTime}
+                            onChange={(e) => updateSlot(selectedDayIdx, slotIdx, "endTime", e.target.value)}
+                            className="border border-gray-300 rounded-lg px-3 py-2 w-28 bg-gray-200 text-gray-700 font-medium cursor-not-allowed"
+                            disabled
+                            title="End time is automatically set to 1 hour after start time"
+                          />
+                          {availableModes.length > 1 && (
+                            <select
+                              value={slot.mode}
+                              onChange={(e) => updateSlot(selectedDayIdx, slotIdx, "mode", e.target.value)}
+                              className="border border-gray-300 rounded-lg px-3 py-2 ml-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 bg-white font-medium"
+                            >
+                              {availableModes.map((mode) => (
+                                <option key={mode.value} value={mode.value}>
+                                  {mode.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => copySlot(selectedDayIdx, slotIdx)}
+                            className="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"
+                            title="Duplicate this time slot"
+                          >
+                            <CopyIcon className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => removeSlot(selectedDayIdx, slotIdx)}
+                            className="p-2 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
+                            title="Delete this time slot"
+                          >
+                            <CancelIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={() => addSlot(selectedDayIdx)}
+                      className="w-full mt-4 py-2 px-4 text-blue-600 hover:bg-blue-50 rounded-lg transition font-semibold flex items-center justify-center gap-2 border border-blue-200 hover:border-blue-300"
+                    >
+                      <AddIcon className="w-4 h-4" />
+                      Add Another Time Slot
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <p className="text-gray-600 font-medium">Select a day to edit time slots</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pricing Card */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900 text-lg">Session Pricing</h3>
+                <p className="text-sm text-gray-600 mt-1">Set hourly rates for your sessions</p>
               </div>
-            )}
+
+              <div className="p-6 space-y-6">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-medium text-gray-700">Video Call</label>
+                    {pricing.video > 0 && <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Set</span>}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={pricing.video || ''}
+                      onChange={(e) =>
+                        onPricingChange({ ...pricing, video: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="Enter amount (e.g., 5000)"
+                      min="0"
+                      step="100"
+                      className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
+                        pricing.video > 0
+                          ? 'border-green-300 focus:ring-green-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                      ₦/hr
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-medium text-gray-700">In-Person Session</label>
+                    {pricing.inPerson > 0 && <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Set</span>}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={pricing.inPerson || ''}
+                      onChange={(e) =>
+                        onPricingChange({ ...pricing, inPerson: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="Enter amount (e.g., 7500)"
+                      min="0"
+                      step="100"
+                      className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
+                        pricing.inPerson > 0
+                          ? 'border-green-300 focus:ring-green-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                      ₦/hr
+                    </span>
+                  </div>
+                </div>
+
+                {/* Completion Checklist */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-6">
+                  <p className="text-sm font-semibold text-gray-900 mb-3">Setup Requirements:</p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm">
+                      <svg className={`w-5 h-5 ${availability.some(slots => slots.length > 0) ? 'text-green-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={availability.some(slots => slots.length > 0) ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                        At least one day with availability
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <svg className={`w-5 h-5 ${pricing.video > 0 ? 'text-green-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={pricing.video > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                        Video call pricing set
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <svg className={`w-5 h-5 ${pricing.inPerson > 0 ? 'text-green-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={pricing.inPerson > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                        In-person pricing set
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
-        ))}
+        </div>
+
+        {/* Navigation & Actions */}
+        <div className="flex justify-between gap-4 mt-12">
+          <button
+            onClick={onBack}
+            disabled={isPending}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 transition disabled:opacity-50"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <button
+            onClick={handleSaveClick}
+            disabled={!availability.some(daySlots => daySlots.length > 0) || pricing.inPerson <= 0 || pricing.video <= 0 || isPending}
+            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+          >
+            {isPending ? "Saving..." : "Complete Setup"}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex justify-between mt-10">
-        <button
-          onClick={onBack}
-          className="flex items-center text-blue-700 font-medium"
-        >
-          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!hasAvailability}
-          className="bg-blue-700 text-white px-6 py-2 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Continue
-        </button>
-      </div>
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Confirm Setup</h3>
+            <p className="text-gray-600 mb-6">
+              Review your schedule and pricing before confirming.
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-700 font-medium">Video Sessions:</span>
+                <span className="font-bold text-gray-900">₦{pricing.video}/hr</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700 font-medium">In-Person Sessions:</span>
+                <span className="font-bold text-gray-900">₦{pricing.inPerson}/hr</span>
+              </div>
+              <div className="border-t border-gray-200 pt-3 flex justify-between">
+                <span className="text-gray-700 font-medium">Days Available:</span>
+                <span className="font-bold text-gray-900">
+                  {availability.filter(slots => slots.length > 0).length}/7
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={handleCancel}
+                disabled={isPending}
+                className="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={isPending}
+                className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
+              >
+                {isPending ? "Saving..." : "Confirm & Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
