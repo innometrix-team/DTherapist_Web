@@ -1,40 +1,20 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import {
-  getCounselorAppointments,
-  getUserAppointments,
-  downloadInvoice,
-  Appointment,
-  UserDashboardData,
-} from "../../api/Appointments.api";
-import {
-  ChevronDownIcon,
-  MeetingIcon,
-  ChatIcon,
-  RescheduleIcon,
-  WithdrawIcon,
-} from "../../assets/icons";
-import { useAuthStore } from "../../store/auth/useAuthStore";
-
-// Define error types
-interface QueryError {
-  name?: string;
-  code?: string;
-  message?: string;
-}
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Session } from './types';
+import { UserIcon, ChevronDownIcon, MeetingIcon, ChatIcon, RescheduleIcon } from '../../assets/icons';
 
 interface SessionTableProps {
-  type: "upcoming" | "passed";
-  onReschedule?: (appointmentId: string) => void;
-  onDownloadInvoice?: (appointmentId: string) => void;
+  sessions: Session[];
+  type: 'upcoming' | 'passed';
+  onReschedule?: (sessionId: string) => void;
+  onScheduleAgain?: (sessionId: string) => void;
 }
 
-const SessionTable: React.FC<SessionTableProps> = ({
-  type,
-  onReschedule,
-  onDownloadInvoice,
+const SessionTable: React.FC<SessionTableProps> = ({ 
+  sessions, 
+  type, 
+  onReschedule, 
+  onScheduleAgain 
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -42,80 +22,10 @@ const SessionTable: React.FC<SessionTableProps> = ({
     null
   );
   const navigate = useNavigate();
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Get user role from auth store
-  const { role } = useAuthStore();
-
-  // Determine if user is counselor
-  const isCounselor = role === "counselor";
-
-  // Appointments API queries
-  const {
-    data: counselorData,
-    isLoading: counselorLoading,
-    error: counselorError,
-    refetch: refetchCounselor,
-  } = useQuery({
-    queryKey: ["counselor-appointments"],
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return await getCounselorAppointments({ signal: controller.signal });
-    },
-    retry: (failureCount, error: unknown) => {
-      // Don't retry if the request was aborted
-      const queryError = error as QueryError;
-      if (
-        queryError?.name === "AbortError" ||
-        queryError?.code === "ERR_CANCELED"
-      ) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    refetchOnWindowFocus: false,
-    enabled: isCounselor && !!role,
-  });
-
-  const {
-    data: userData,
-    isLoading: userLoading,
-    error: userError,
-    refetch: refetchUser,
-  } = useQuery({
-    queryKey: ["user-appointments"],
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return await getUserAppointments({ signal: controller.signal });
-    },
-    retry: (failureCount, error: unknown) => {
-      // Don't retry if the request was aborted
-      const queryError = error as QueryError;
-      if (
-        queryError?.name === "AbortError" ||
-        queryError?.code === "ERR_CANCELED"
-      ) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    refetchOnWindowFocus: false,
-    enabled: !isCounselor && !!role,
-  });
-
-  // Process appointments data
-  useEffect(() => {
-    let appointmentsList: Appointment[] = [];
-
-    // Handle appointments API data
-    if (isCounselor) {
-      if (counselorData && counselorData.data) {
-        appointmentsList = Array.isArray(counselorData.data)
-          ? counselorData.data
-          : [];
-      }
+  const toggleDropdown = (sessionId: string) => {
+    if (activeDropdown === sessionId) {
+      setActiveDropdown(null);
     } else {
       if (userData && userData.data) {
         if (Array.isArray(userData.data)) {
@@ -207,101 +117,30 @@ const SessionTable: React.FC<SessionTableProps> = ({
           navigate(`chat/${appointment.bookingId}`);
         }
         break;
-      case "reschedule":
-        onReschedule?.(appointment.bookingId);
+      case 'viewNotes':
+        navigate(`/session-notes/${sessionId}`);
         break;
-      case "dispute":
-        // Navigate to dispute page with appointment details
-        navigate(`/dispute/${appointment.bookingId}`, {
-          state: { appointment },
-        });
-        break;
-      case "downloadInvoice":
-        try {
-          setDownloadingInvoice(appointment.bookingId);
-
-          // Use the new API endpoint instead of the link
-          await downloadInvoice(appointment.bookingId);
-
-          toast.success("Invoice downloaded successfully");
-
-          // Call the optional callback if provided
-          if (onDownloadInvoice) {
-            onDownloadInvoice(appointment.bookingId);
-          }
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "Failed to download invoice";
-          toast.error(errorMessage);
-        } finally {
-          setDownloadingInvoice(null);
+      case 'scheduleAgain':
+        if (onScheduleAgain) {
+          onScheduleAgain(sessionId);
         }
+        break;
+      default:
         break;
     }
   };
 
-  // Don't render if no role
-  if (!role) {
-    return (
-      <div className="text-center py-8 px-4 text-gray-500">
-        <div className="text-sm sm:text-base">
-          Please log in to view appointments.
-        </div>
-      </div>
-    );
-  }
+  // Updated to navigate with session data
+  const navigateToProfile = (session: Session) => {
+    // Navigate to client details with session ID and pass session data via state
+    navigate(`/appointments/client-details/${session.id}`, { 
+      state: { 
+        sessionData: session 
+      } 
+    });
+  };
 
-  // Determine loading state
-  const isLoading = isCounselor ? counselorLoading : userLoading;
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-8 px-4 text-gray-500">
-        <div className="text-sm sm:text-base">
-          Loading {type} appointments...
-        </div>
-      </div>
-    );
-  }
-
-  // Determine error state and refetch function
-  const error = isCounselor ? counselorError : userError;
-  const refetch = isCounselor ? refetchCounselor : refetchUser;
-
-  // Improved error handling - don't show error for aborted requests
-  if (error) {
-    // Check if it's an AbortError or network cancellation
-    const queryError = error as QueryError;
-    const isAbortError =
-      queryError?.name === "AbortError" ||
-      queryError?.code === "ERR_CANCELED" ||
-      queryError?.message?.includes("canceled") ||
-      queryError?.message?.includes("aborted");
-
-    if (!isAbortError) {
-      return (
-        <div className="text-center py-8 px-4 text-red-500">
-          <div className="text-sm sm:text-base mb-4">
-            Failed to load appointments
-          </div>
-          <div className="text-xs text-gray-600 mb-4">
-            Error: {error instanceof Error ? error.message : "Unknown error"}
-          </div>
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
-  }
-
-  // Empty state with more debugging info
-  if (appointments.length === 0) {
+  if (sessions.length === 0) {
     return (
       <div className="text-center py-8 px-4 text-gray-500">
         <div className="text-sm sm:text-base mb-2">
@@ -312,281 +151,119 @@ const SessionTable: React.FC<SessionTableProps> = ({
   }
 
   return (
-    <>
-      {/* Desktop Table View */}
-      <div className="hidden md:block w-full overflow-x-auto rounded-lg shadow-sm">
-        <table className="w-full border-collapse bg-white">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Name
-              </th>
-              <th
-                scope="col"
-                className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Date
-              </th>
-              <th
-                scope="col"
-                className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Time
-              </th>
-              <th
-                scope="col"
-                className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Type
-              </th>
-              <th
-                scope="col"
-                className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {appointments.map((appointment) => (
-              <tr
-                key={appointment.bookingId}
-                className="hover:bg-gray-50 transition-colors"
-              >
-                <td className="px-3 lg:px-6 py-4">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={appointment.profilePicture}
-                      alt={appointment.fullName}
-                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "/default-avatar.png";
-                      }}
-                    />
-                    <div>
-                      <span className="font-medium text-sm lg:text-base text-gray-900">
-                        {appointment.fullName}
-                      </span>
-                      <div className="text-xs text-gray-400">
-                        Status: {appointment.status}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
-                  {new Date(
-                    appointment.date + "T00:00:00"
-                  ).toLocaleDateString()}
-                </td>
-                <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
-                  {appointment.time}
-                </td>
-                <td className="px-3 lg:px-6 py-4">
-                  <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-xs lg:text-sm whitespace-nowrap font-medium">
-                    {appointment.type}
+    <div className="w-full overflow-x-auto rounded-lg">
+      <table className="w-full border-collapse">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Name
+            </th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Date
+            </th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Time
+            </th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Type
+            </th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {sessions.map((session) => (
+            <tr key={session.id} className="hover:bg-gray-50">
+              <td className="px-4 py-4">
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src={session.clientImage} 
+                    alt={session.clientName} 
+                    className="w-8 h-8 rounded-full flex-shrink-0"
+                  />
+                  <span className="font-medium text-sm">
+                    {session.clientName}
                   </span>
-                </td>
-                <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <button
-                        className="flex items-center space-x-1 px-2 lg:px-3 py-1 text-gray-600 hover:text-gray-900 rounded transition-colors"
-                        onClick={() => toggleDropdown(appointment.bookingId)}
-                      >
-                        <span className="text-xs lg:text-sm">Actions</span>
-                        <ChevronDownIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                      </button>
-
-                      {activeDropdown === appointment.bookingId && (
-                        <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                          {type === "upcoming" ? (
-                            <>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                                onClick={() =>
-                                  handleActionClick("startMeeting", appointment)
-                                }
-                              >
-                                <MeetingIcon className="w-4 h-4 mr-2" />
-                                <span>Start Meeting</span>
-                              </button>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                                onClick={() =>
-                                  handleActionClick("chat", appointment)
-                                }
-                              >
-                                <ChatIcon className="w-4 h-4 mr-2" />
-                                <span>Chat</span>
-                              </button>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                                onClick={() =>
-                                  handleActionClick("reschedule", appointment)
-                                }
-                              >
-                                <RescheduleIcon className="w-4 h-4 mr-2" />
-                                <span>Reschedule</span>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() =>
-                                  handleActionClick(
-                                    "downloadInvoice",
-                                    appointment
-                                  )
-                                }
-                                disabled={
-                                  downloadingInvoice === appointment.bookingId
-                                }
-                              >
-                                <WithdrawIcon className="w-4 h-4 mr-2" />
-                                <span>
-                                  {downloadingInvoice === appointment.bookingId
-                                    ? "Downloading..."
-                                    : "Download Invoice"}
-                                </span>
-                              </button>
-                              {!isCounselor && (
-                                <button
-                                  className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
-                                  onClick={() =>
-                                    handleActionClick("dispute", appointment)
-                                  }
-                                >
-                                  <ChatIcon className="w-4 h-4 mr-2" />
-                                  <span>Dispute</span>
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
-        {appointments.map((appointment) => (
-          <div
-            key={appointment.bookingId}
-            className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={appointment.profilePicture}
-                  alt={appointment.fullName}
-                  className="w-10 h-10 rounded-full flex-shrink-0"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/default-avatar.png";
-                  }}
-                />
-                <div>
-                  <h3 className="font-medium text-gray-900 text-sm">
-                    {appointment.fullName}
-                  </h3>
-                  <span className="inline-block px-2 py-1 rounded-full bg-blue-100 text-primary text-xs font-medium mt-1">
-                    {appointment.type}
-                  </span>
-                  <div className="text-xs text-gray-400">
-                    Status: {appointment.status}
-                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
-              <div>
-                <span className="text-gray-500 block text-xs uppercase tracking-wider font-medium mb-1">
-                  Date
+              </td>
+              <td className="px-4 py-4 text-sm whitespace-nowrap">
+                {session.date}
+              </td>
+              <td className="px-4 py-4 text-sm whitespace-nowrap">
+                {session.time} <span className="text-gray-500 hidden sm:inline">{session.timeZone}</span>
+              </td>
+              <td className="px-4 py-4">
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-sm whitespace-nowrap">
+                  {session.type}
                 </span>
-                <span className="text-gray-900 font-medium">
-                  {new Date(
-                    appointment.date + "T00:00:00"
-                  ).toLocaleDateString()}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500 block text-xs uppercase tracking-wider font-medium mb-1">
-                  Time
-                </span>
-                <span className="text-gray-900 font-medium">
-                  {appointment.time}
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-3 z-30">
-              {type === "upcoming" ? (
-                <div className="flex flex-wrap gap-2 z-40">
-                  <button
-                    className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() =>
-                      handleActionClick("startMeeting", appointment)
-                    }
-                  >
-                    <MeetingIcon className="w-4 h-4 mr-1" />
-                    <span className="truncate">Meeting</span>
-                  </button>
-                  <button
-                    className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() => handleActionClick("chat", appointment)}
-                  >
-                    <ChatIcon className="w-4 h-4 mr-1" />
-                    <span className="truncate">Chat</span>
-                  </button>
-                  <button
-                    className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() => handleActionClick("reschedule", appointment)}
-                  >
-                    <RescheduleIcon className="w-4 h-4 mr-1" />
-                    <span className="truncate">Reschedule</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    className="flex items-center justify-center flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() =>
-                      handleActionClick("downloadInvoice", appointment)
-                    }
-                    disabled={downloadingInvoice === appointment.bookingId}
-                  >
-                    <WithdrawIcon className="w-4 h-4 mr-2" />
-                    {downloadingInvoice === appointment.bookingId
-                      ? "Downloading..."
-                      : "Invoice"}
-                  </button>
-                  {!isCounselor && (
-                    <button
-                      className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
-                      onClick={() => handleActionClick("dispute", appointment)}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-2">
+                  <div className="relative">
+                    <button 
+                      className="flex items-center space-x-1 px-3 py-1 text-gray-600 hover:text-gray-900"
+                      onClick={() => toggleDropdown(session.id)}
                     >
-                      <ChatIcon className="w-4 h-4 mr-2" />
-                      Dispute
+                      <span className="hidden sm:inline">Action</span>
+                      <span className="sm:hidden">⋯</span>
+                      <ChevronDownIcon className="w-4 h-4 hidden sm:block" />
                     </button>
-                  )}
+                    
+                    {/* Action Dropdown */}
+                    {activeDropdown === session.id && (
+                      <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                        {type === 'upcoming' ? (
+                          <>
+                            <button 
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                              onClick={() => handleActionClick('startMeeting', session.id)}
+                            >
+                              <MeetingIcon className="w-4 h-4 mr-2" />
+                              <span>Start Meeting</span>
+                            </button>
+                            <button 
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                              onClick={() => handleActionClick('chat', session.id)}
+                            >
+                              <ChatIcon className="w-4 h-4 mr-2" />
+                              <span>Chat</span>
+                            </button>
+                            <button 
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                              onClick={() => handleActionClick('reschedule', session.id)}
+                            >
+                              <RescheduleIcon className="w-4 h-4 mr-2" />
+                              <span>Reschedule</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button 
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50"
+                              onClick={() => handleActionClick('scheduleAgain', session.id)}
+                            >
+                              <RescheduleIcon className="w-4 h-4 mr-2" />
+                              <span>Schedule Again</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    onClick={() => navigateToProfile(session)}
+                  >
+                    <UserIcon className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
