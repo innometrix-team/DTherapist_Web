@@ -62,6 +62,10 @@ const signupSchema = z.object({
     .string()
     .email("Invalid email address")
     .transform((val) => val.toLowerCase()),
+  phoneNumber: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .regex(/^[0-9+\-\s()]+$/, "Phone number contains invalid characters"),
   password: passwordSchema,
   role: z.enum(["client", "therapist"], {
     errorMap: () => ({ message: "Please select a role" }),
@@ -135,7 +139,7 @@ function SignUpForm() {
         fullName: data.fullName,
         password: data.password,
         role: data.role,
-        phoneNumber: "0900000000",
+        phoneNumber: data.phoneNumber,
       });
     },
     [handleSignup, isPending, isSubmitting]
@@ -178,6 +182,17 @@ function SignUpForm() {
           />
           {errors.email && (
             <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+        <div>
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            {...register("phoneNumber")}
+            className="w-full border border-gray-300 rounded px-4 py-2"
+          />
+          {errors.phoneNumber && (
+            <p className="text-red-600 text-sm mt-1">{errors.phoneNumber.message}</p>
           )}
         </div>
         <div>
