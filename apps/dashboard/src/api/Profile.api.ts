@@ -13,6 +13,7 @@ export interface IProfile {
   experience?: number;
   country?: string;
   gender?: string;
+  phoneNumber?: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -29,6 +30,7 @@ interface UserProfileAPIResponse {
     email: string;
     bio?: string;
     country?: string;
+    phoneNumber?: string
     createdAt: string;
     updatedAt: string;
     __v: number;
