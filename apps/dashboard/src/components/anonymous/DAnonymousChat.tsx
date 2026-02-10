@@ -383,7 +383,7 @@ export default function DAnonymousChat() {
                     <div
                       className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
                         isOwnMessage
-                          ? "bg-blue-500 text-white rounded-br-md"
+                          ? "bg-primary text-white rounded-br-md"
                           : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                       }`}
                     >
@@ -443,7 +443,7 @@ export default function DAnonymousChat() {
                               }}
                               className={`p-1 rounded opacity-100 transition-opacity ${
                                 isOwnMessage
-                                  ? "hover:bg-blue-600 text-blue-100"
+                                  ? "hover:bg-primary text-blue-100"
                                   : "hover:bg-gray-100 text-gray-500"
                               }`}
                               title="Message options"
@@ -517,7 +517,7 @@ export default function DAnonymousChat() {
                             onClick={() => handleReply(msg)}
                             className={`p-1 rounded opacity-100 transition-opacity ${
                               isOwnMessage
-                                ? "hover:bg-blue-600 text-blue-100"
+                                ? "hover:bg-primary text-blue-100"
                                 : "hover:bg-gray-100 text-gray-500"
                             }`}
                             title="Reply to message"
@@ -541,19 +541,19 @@ export default function DAnonymousChat() {
         <div className="bg-blue-50 border-t border-blue-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
-              <Reply size={16} className="text-blue-500 flex-shrink-0" />
+              <Reply size={16} className="text-primary flex-shrink-0" />
               <div className="text-sm min-w-0 flex-1">
-                <span className="font-medium text-blue-700 block">
+                <span className="font-medium text-darkerb block">
                   Replying to {replyingTo.alias || "Anonymous"}
                 </span>
-                <div className="text-blue-600 truncate">
+                <div className="text-primary truncate">
                   {replyingTo.content}
                 </div>
               </div>
             </div>
             <button
               onClick={cancelReply}
-              className="text-blue-500 hover:text-blue-700 flex-shrink-0 ml-2"
+              className="text-primary hover:text-darkerb flex-shrink-0 ml-2"
             >
               <X size={18} />
             </button>
