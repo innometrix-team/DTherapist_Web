@@ -12,4 +12,14 @@ export default defineConfig({
         svgo: false,
       }
     })],
+    build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        vendor: ['react', 'react-dom'],
+        // Split large libraries into separate chunks
+      }
+    }
+  }
+},
 });
