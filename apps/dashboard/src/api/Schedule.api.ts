@@ -18,6 +18,8 @@ export interface IScheduleRequestData {
 export interface IPricingRequestData {
   videoPrice: number;
   inPersonPrice: number;
+  groupVideoPrice: number;
+   "allowGroupVideo": boolean,
 }
 
 interface IScheduleResponseData {

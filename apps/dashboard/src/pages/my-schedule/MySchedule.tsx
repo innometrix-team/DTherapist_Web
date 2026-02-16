@@ -19,7 +19,7 @@ const MySchedule: React.FC = () => {
   const [meetingPreference, setMeetingPreference] = useState<MeetingPreference | null>(null);
   const [dateTime, setDateTime] = useState('');
   const [selectedTimeZone, setSelectedTimeZone] = useState("West African Time (WAT)");
-  const [pricing, setPricing] = useState({ inPerson: 0, video: 0 });
+  const [pricing, setPricing] = useState({ inPerson: 0, video: 0, group: 0 });
 
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   
@@ -55,6 +55,9 @@ const MySchedule: React.FC = () => {
             case 'in-person':
               meetingType = 'in-person';
               break;
+            case 'group':
+              meetingType = 'group';
+              break;
             case 'both':
               meetingType = 'video'; // Default to video when both are selected
               break;
@@ -64,6 +67,8 @@ const MySchedule: React.FC = () => {
                 meetingType = 'video';
               } else if (meetingPreference === 'In-person') {
                 meetingType = 'in-person';
+              } else if (meetingPreference === 'Team Session') {
+                meetingType = 'group';
               } else {
                 meetingType = 'video';
               }
@@ -101,7 +106,7 @@ const MySchedule: React.FC = () => {
     setMeetingPreference(null);
     setDateTime('');
     setSelectedTimeZone("West African Time (WAT)");
-    setPricing({ inPerson: 0, video: 0 });
+    setPricing({ inPerson: 0, video: 0, group: 0 });
     setCreateStep(1);
   };
 
@@ -109,7 +114,7 @@ const MySchedule: React.FC = () => {
     <div className="bg-white min-h-screen">
       {/* Menu Screen */}
       {step === "menu" && (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+        <div className="min-h-screen bg-linear-to-b from-gray-50 to-white p-8">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="mb-12 text-center">

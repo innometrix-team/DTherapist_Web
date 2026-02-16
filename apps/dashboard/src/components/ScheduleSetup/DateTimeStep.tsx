@@ -31,8 +31,9 @@ interface Props {
   pricing: {
     inPerson: number;
     video: number;
+    group: number;
   };
-  onPricingChange: (pricing: { inPerson: number; video: number }) => void;
+  onPricingChange: (pricing: { inPerson: number; video: number; group: number }) => void;
   scheduleData?: IScheduleRequestData[];
   onNext: () => void;
   onBack: () => void;
@@ -70,7 +71,8 @@ const DateTimeStep: React.FC<Props> = ({
     } else {
       // Set default mode based on meeting preference
       const defaultMode = meetingPreference === 'Both' ? 'both' : 
-                         meetingPreference === 'Video Session' ? 'video' : 'in-person';
+                         meetingPreference === 'Video Session' ? 'video' : 
+                         meetingPreference === 'Team Session' ? 'group' : 'in-person';
       updated[index] = [{ startTime: "09:00", endTime: "10:00", mode: defaultMode }];
     }
     setAvailability(updated);
@@ -107,7 +109,8 @@ const DateTimeStep: React.FC<Props> = ({
     const updated = [...availability];
     // Set default mode based on meeting preference
     const defaultMode = meetingPreference === 'Both' ? 'both' : 
-                       meetingPreference === 'Video Session' ? 'video' : 'in-person';
+                       meetingPreference === 'Video Session' ? 'video' : 
+                       meetingPreference === 'Team Session' ? 'group' : 'in-person';
     updated[dayIndex].push({ startTime: "09:00", endTime: "10:00", mode: defaultMode });
     setAvailability(updated);
     
@@ -137,8 +140,6 @@ const DateTimeStep: React.FC<Props> = ({
     onChange(availabilityString);
   };
 
-
-
   // Get available modes based on meeting preference
   const getAvailableModes = () => {
     switch (meetingPreference) {
@@ -146,17 +147,21 @@ const DateTimeStep: React.FC<Props> = ({
         return [{ value: 'in-person', label: 'In-Person' }];
       case 'Video Session':
         return [{ value: 'video', label: 'Video' }];
+      case 'Team Session':
+        return [{ value: 'group', label: 'Group' }];
       case 'Both':
         return [
           { value: 'in-person', label: 'In-Person' },
           { value: 'video', label: 'Video' },
-          { value: 'both', label: 'Both' }
+          { value: 'group', label: 'Group' },
+          { value: 'both', label: 'All Types' }
         ];
       default:
         return [
           { value: 'in-person', label: 'In-Person' },
           { value: 'video', label: 'Video' },
-          { value: 'both', label: 'Both' }
+          { value: 'group', label: 'Team Session' },
+          { value: 'both', label: 'All Types' }
         ];
     }
   };
@@ -197,8 +202,8 @@ const DateTimeStep: React.FC<Props> = ({
     }
 
     // Validate pricing
-    if (pricing.inPerson <= 0 || pricing.video <= 0) {
-      toast.error("Please enter valid pricing for both video and in-person sessions");
+    if (pricing.inPerson <= 0 || pricing.video <= 0 || pricing.group <= 0) {
+      toast.error("Please enter valid pricing for all session types (video, in-person, and group)");
       return;
     }
 
@@ -216,6 +221,8 @@ const DateTimeStep: React.FC<Props> = ({
       await handlePricingSubmit({
         videoPrice: pricing.video,
         inPersonPrice: pricing.inPerson,
+        groupVideoPrice: pricing.group,
+        allowGroupVideo: meetingPreference === 'Team Session' 
       });
 
       toast.success("Schedule and pricing saved successfully!");
@@ -244,7 +251,7 @@ const DateTimeStep: React.FC<Props> = ({
   const selectedDaySlots = selectedDayIdx !== null ? availability[selectedDayIdx] : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+    <div className="min-h-screen bg-linear-to-b from-gray-50 to-white p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-10">
@@ -259,7 +266,7 @@ const DateTimeStep: React.FC<Props> = ({
         {/* Timezone Card */}
         <div className="bg-white rounded-lg border border-gray-200 p-5 mb-8 shadow-sm hover:shadow-md transition-shadow">
           <label className="flex items-center gap-3 cursor-pointer">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="font-semibold text-gray-700">Time Zone</span>
@@ -503,6 +510,34 @@ const DateTimeStep: React.FC<Props> = ({
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-medium text-gray-700">Team session</label>
+                    {pricing.group > 0 && <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Set</span>}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={pricing.group || ''}
+                      onChange={(e) =>
+                        onPricingChange({ ...pricing, group: parseFloat(e.target.value) || 0 })
+                      }
+                      placeholder="Enter amount (e.g., 3000)"
+                      min="0"
+                      step="100"
+                      className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
+                        pricing.group > 0
+                          ? 'border-green-300 focus:ring-green-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                      ₦/hr
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Per person pricing for Team sessions</p>
+                </div>
+
                 {/* Completion Checklist */}
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-6">
                   <p className="text-sm font-semibold text-gray-900 mb-3">Setup Requirements:</p>
@@ -531,6 +566,14 @@ const DateTimeStep: React.FC<Props> = ({
                         In-person pricing set
                       </span>
                     </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <svg className={`w-5 h-5 ${pricing.group > 0 ? 'text-green-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={pricing.group > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                        Team session pricing set
+                      </span>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -552,8 +595,8 @@ const DateTimeStep: React.FC<Props> = ({
           </button>
           <button
             onClick={handleSaveClick}
-            disabled={!availability.some(daySlots => daySlots.length > 0) || pricing.inPerson <= 0 || pricing.video <= 0 || isPending}
-            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            disabled={!availability.some(daySlots => daySlots.length > 0) || pricing.inPerson <= 0 || pricing.video <= 0 || pricing.group <= 0 || isPending}
+            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             {isPending ? "Saving..." : "Complete Setup"}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -581,6 +624,10 @@ const DateTimeStep: React.FC<Props> = ({
                 <span className="text-gray-700 font-medium">In-Person Sessions:</span>
                 <span className="font-bold text-gray-900">₦{pricing.inPerson}/hr</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700 font-medium">Team sessions:</span>
+                <span className="font-bold text-gray-900">₦{pricing.group}/hr </span>
+              </div>
               <div className="border-t border-gray-200 pt-3 flex justify-between">
                 <span className="text-gray-700 font-medium">Days Available:</span>
                 <span className="font-bold text-gray-900">
@@ -600,7 +647,7 @@ const DateTimeStep: React.FC<Props> = ({
               <button
                 onClick={handleConfirm}
                 disabled={isPending}
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
+                className="px-6 py-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
               >
                 {isPending ? "Saving..." : "Confirm & Save"}
               </button>

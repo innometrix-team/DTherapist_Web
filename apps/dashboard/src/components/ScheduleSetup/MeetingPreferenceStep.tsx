@@ -1,6 +1,6 @@
 import React, { JSX } from 'react';
 import { MeetingPreference } from './schedule.types';
-import {  MeetingIcon, RescheduleIcon } from '../../assets/icons';
+import { MeetingIcon, RescheduleIcon } from '../../assets/icons';
 
 interface Props {
   value: MeetingPreference;
@@ -9,14 +9,22 @@ interface Props {
   onBack: () => void;
 }
 
+// Icon component for Team session
+const GroupIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
 const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
   const options: { label: MeetingPreference; icon: JSX.Element }[] = [
     { label: 'In-person', icon: <RescheduleIcon className='fill-current' /> },
     { label: 'Video Session', icon: <MeetingIcon className='fill-current'/> },
+    { label: 'Team Session', icon: <GroupIcon className='fill-current'/> },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+    <div className="min-h-screen bg-linear-to-b from-gray-50 to-white p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-10">
@@ -72,7 +80,7 @@ const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext, onBac
           <button
             onClick={onNext}
             disabled={!value}
-            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             Continue
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
