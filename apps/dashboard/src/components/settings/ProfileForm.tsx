@@ -4,6 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SubmitHandler } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { genderOptions } from "../../constant/settings.constants";
 import { FaTrash } from "react-icons/fa";
@@ -12,6 +13,7 @@ import ProfileUpdateApi, {
   IProfileUpdateData,
 } from "../../api/ProfileUpdate.api";
 import ProfileApi from "../../api/Profile.api"; // Import the profile fetching API
+import DeleteAccountApi from "../../api/DeleteAccount.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 // Base schema for common fields (removed email)
@@ -22,6 +24,7 @@ const baseSchema = z.object({
     .refine((val) => val.trim().split(/\s+/).length >= 2, {
       message: "Please enter your full name",
     }),
+  phoneNumber: z.string().regex(/^[\d\s\-+()]+$/, "Please enter a valid phone number"),
   country: z.string().min(2, "Country is required"),
 });
 
@@ -45,9 +48,14 @@ type CounselorFormData = z.infer<typeof counselorSchema>;
 type ProfileFormData = UserFormData | CounselorFormData;
 
 const ProfileForm: React.FC = () => {
+  const navigate = useNavigate();
   const { role, setAuth } = useAuthStore();
   const auth = useAuthStore((state) => state);
   const isCounselor = role === "counselor";
+
+  // State for delete account modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const deleteAbortControllerRef = useRef<AbortController | null>(null);
 
   // Use appropriate schema based on role
   const schema = isCounselor ? counselorSchema : userSchema;
@@ -62,6 +70,7 @@ const ProfileForm: React.FC = () => {
     defaultValues: isCounselor
       ? {
           fullName: "",
+          phoneNumber: "",
           bio: "",
           specialization: "",
           experience: 0,
@@ -70,6 +79,7 @@ const ProfileForm: React.FC = () => {
         }
       : {
           fullName: "",
+          phoneNumber: "",
           bio: "",
           country: "",
         },
@@ -95,8 +105,10 @@ const ProfileForm: React.FC = () => {
       
       // Set form values (removed email)
       setValue("fullName", profile.fullName || "");
+      setValue("phoneNumber", profile.phoneNumber || "");
       setValue("bio", profile.bio || "");
       setValue("country", profile.country || "");
+
 
       // Set counselor-specific fields if user is counselor
       if (isCounselor) {
@@ -146,12 +158,14 @@ const ProfileForm: React.FC = () => {
         specialization,
         experience,
         gender,
+        phoneNumber,
         profilePicture,
         token,
       } = result.data;
 
       // Update form with returned data
       setValue("fullName", fullName);
+      setValue("phoneNumber", phoneNumber ?? "");
       setValue("bio", bio);
       setValue("country", country);
 
@@ -200,6 +214,45 @@ const ProfileForm: React.FC = () => {
       } else {
         toast.error("Failed to update profile. Please try again.");
       }
+    },
+  });
+
+  // Delete account mutation
+  const { mutateAsync: handleDeleteAccount, isPending: isDeletePending } = useMutation({
+    mutationFn: () => {
+      const controller = new AbortController();
+      deleteAbortControllerRef.current = controller;
+      return DeleteAccountApi({ signal: controller.signal });
+    },
+    onSuccess: (result) => {
+      if (!result) {
+        return;
+      }
+
+      toast.success(result.message || "Account deleted successfully");
+      
+      // Clear auth store
+      setAuth({
+        role: "counselor", // Default to counselor or user as needed
+        token: "",
+        id: "",
+        email: "",
+      });
+
+      // Redirect to login page
+      setTimeout(() => {
+        navigate("/login");
+      }, 1000);
+    },
+    onError: (error) => {
+      if (error && typeof error === "object" && "message" in error) {
+        toast.error(
+          error.message || "Failed to delete account. Please try again."
+        );
+      } else {
+        toast.error("Failed to delete account. Please try again.");
+      }
+      setShowDeleteModal(false);
     },
   });
 
@@ -263,6 +316,7 @@ const ProfileForm: React.FC = () => {
       // Prepare update data - removed email
       const updateData: IProfileUpdateData = {
         fullName: data.fullName,
+        phoneNumber: data.phoneNumber,
         bio: data.bio,
         country: data.country,
         profilePicture: profileImage || undefined,
@@ -284,6 +338,7 @@ const ProfileForm: React.FC = () => {
     return () => {
       // Cleanup on component unmount
       abortControllerRef.current?.abort();
+      deleteAbortControllerRef.current?.abort();
       // Only clean up blob URLs, not server URLs
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
@@ -384,6 +439,28 @@ const ProfileForm: React.FC = () => {
           {errors.fullName && (
             <p className="text-red-600 text-sm mt-1">
               {errors.fullName.message}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Phone Number */}
+      <div className={formGroupStyle}>
+        <label htmlFor="phoneNumber" className={labelStyle}>
+          Phone Number
+        </label>
+        <div className="flex flex-col w-full max-w-full md:max-w-md">
+          <input
+            id="phoneNumber"
+            type="tel"
+            placeholder="Enter phone number"
+            {...register("phoneNumber")}
+            disabled={isPending || isSubmitting}
+            className={inputStyle}
+          />
+          {errors.phoneNumber && (
+            <p className="text-red-600 text-sm mt-1">
+              {errors.phoneNumber.message}
             </p>
           )}
         </div>
@@ -519,6 +596,86 @@ const ProfileForm: React.FC = () => {
           {isSubmitting || isPending ? "Updating..." : "Update Profile"}
         </button>
       </div>
+
+      {/* Delete Account Section */}
+      <div className="mt-12 pt-8 border-t border-red-200">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-red-600">Danger Zone</h3>
+          <p className="text-sm text-gray-600">
+            Permanently delete your account and all associated data. This action cannot be undone.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={isDeletePending}
+            className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          >
+            {isDeletePending ? "Deleting..." : "Delete Account"}
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-150 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                Delete Account?
+              </h2>
+              <p className="text-gray-600 text-sm">
+                This action cannot be undone. Deleting your account will:
+              </p>
+            </div>
+
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-start gap-2">
+                <span className="text-red-600 font-bold mt-0.5">•</span>
+                <span>Permanently delete your profile and personal information</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-600 font-bold mt-0.5">•</span>
+                <span>Cancel all active appointments and bookings</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-600 font-bold mt-0.5">•</span>
+                <span>Remove all chat history and messages</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-600 font-bold mt-0.5">•</span>
+                <span>Delete your wallet and transaction history</span>
+              </li>
+            </ul>
+
+            <div className="bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-sm font-medium text-red-800">
+                Are you absolutely sure? click "DELETE" to confirm.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeletePending}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleDeleteAccount();
+                }}
+                disabled={isDeletePending}
+                className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {isDeletePending ? "Deleting..." : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 };

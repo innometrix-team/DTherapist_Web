@@ -7,6 +7,7 @@ export interface IProfileUpdateData {
   specialization?: string;
   experience?: number;
   country: string;
+  phoneNumber?: string;
   gender?: string;
   profilePicture?: File;
 }
@@ -25,6 +26,7 @@ interface IResponseData {
   specialization?: string;
   experience?: number;
   country: string;
+  phoneNumber: string;
   gender?: string;
   profilePicture?: string;
   updatedAt: string;

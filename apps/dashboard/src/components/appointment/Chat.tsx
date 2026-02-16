@@ -182,7 +182,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: sendChatMessage,
+    mutationFn: (data: Parameters<typeof sendChatMessage>[0]) => sendChatMessage(data),
     onSuccess: (response, variables) => {
       if (response?.data) {
         // Set chatId if we don't have it yet
@@ -490,14 +490,14 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
                 <div
                   key={msg._id + index} // Use _id for key
                   className={`flex ${
-                    msg.userId === currentUserId
+                    msg._id === currentUserId
                       ? "justify-end"
                       : "justify-start"
                   }`}
                 >
                   <div
                     className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
-                      msg.userId === currentUserId
+                      msg._id === currentUserId
                         ? "bg-primary text-white rounded-br-md"
                         : "bg-white text-gray-800 rounded-bl-md shadow-sm"
                     }`}
@@ -507,7 +507,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
                     </p>
                     <div
                       className={`text-xs mt-2 ${
-                        msg.userId === currentUserId
+                        msg._id === currentUserId
                           ? "text-blue-100"
                           : "text-gray-500"
                       }`}
