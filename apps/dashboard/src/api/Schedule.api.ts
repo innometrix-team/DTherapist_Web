@@ -12,6 +12,7 @@ export interface IScheduleRequestData {
   meetingType: string;
   timezone: string;
   isAvailable: boolean;
+  allowGroupBooking: boolean;
   slots: IScheduleSlot[];
 }
 
@@ -19,7 +20,7 @@ export interface IPricingRequestData {
   videoPrice: number;
   inPersonPrice: number;
   groupVideoPrice: number;
-   "allowGroupVideo": boolean,
+  allowGroupVideo: boolean;
 }
 
 interface IScheduleResponseData {
@@ -38,68 +39,60 @@ interface APIResponse<T> {
 
 // Schedule API function
 export async function CreateScheduleApi(
-  data: IScheduleRequestData[], 
+  data: IScheduleRequestData[],
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<IScheduleResponseData> | null> {
   try {
-    const response = await Api.post<APIResponse<IScheduleResponseData>>('/api/schedule', data, {
-      ...config,
-    });
+    const response = await Api.post<APIResponse<IScheduleResponseData>>(
+      "/api/schedule",
+      data,
+      { ...config }
+    );
     return Promise.resolve({
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "Schedule created successfully",
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+    if (axios.isCancel(e)) return Promise.resolve(null);
 
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
   }
 }
 
 // Pricing API function
 export async function CreatePricingApi(
-  data: IPricingRequestData, 
+  data: IPricingRequestData,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<IPricingResponseData> | null> {
   try {
-    const response = await Api.post<APIResponse<IPricingResponseData>>('/api/schedule/pricing', data, {
-      ...config,
-    });
+    const response = await Api.post<APIResponse<IPricingResponseData>>(
+      "/api/schedule/pricing",
+      data,
+      { ...config }
+    );
     return Promise.resolve({
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "Pricing updated successfully",
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+    if (axios.isCancel(e)) return Promise.resolve(null);
 
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
   }
 }
