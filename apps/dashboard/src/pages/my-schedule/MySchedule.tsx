@@ -117,17 +117,17 @@ const MySchedule: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <button
                 onClick={() => { setStep("create"); setCreateStep(1); }}
-                className="bg-white border-2 border-blue-200 rounded-xl p-8 hover:shadow-lg hover:border-blue-400 transition text-left group"
+                className="bg-white border-2 border-blue-200 rounded-xl p-8 hover:shadow-lg hover:border-primary transition text-left group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <svg className="w-12 h-12 text-blue-600 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 text-primary group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">New</span>
+                  <span className="px-3 py-1 bg-blue-100 text-primary text-xs font-semibold rounded-full">New</span>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Create Schedule</h3>
                 <p className="text-gray-600 mb-4">Set up your availability and pricing from scratch</p>
-                <span className="text-blue-600 font-semibold flex items-center gap-2">
+                <span className="text-primary font-semibold flex items-center gap-2">
                   Get Started
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -137,17 +137,17 @@ const MySchedule: React.FC = () => {
 
               <button
                 onClick={() => setStep("view")}
-                className="bg-white border-2 border-green-200 rounded-xl p-8 hover:shadow-lg hover:border-green-400 transition text-left group"
+                className="bg-white border-2 border-blue-200 rounded-xl p-8 hover:shadow-lg hover:border-primary transition text-left group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <svg className="w-12 h-12 text-green-600 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 text-primary group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m7 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Manage</span>
+                  <span className="px-3 py-1 bg-green-100 text-primary text-xs font-semibold rounded-full">Manage</span>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">View &amp; Edit</h3>
                 <p className="text-gray-600 mb-4">Update or modify your existing schedule</p>
-                <span className="text-green-600 font-semibold flex items-center gap-2">
+                <span className="text-primary font-semibold flex items-center gap-2">
                   View Schedule
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -157,17 +157,17 @@ const MySchedule: React.FC = () => {
 
               <button
                 onClick={() => setStep("pricing")}
-                className="bg-white border-2 border-purple-200 rounded-xl p-8 hover:shadow-lg hover:border-purple-400 transition text-left group"
+                className="bg-white border-2 border-blue-200 rounded-xl p-8 hover:shadow-lg hover:border-primary transition text-left group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <svg className="w-12 h-12 text-purple-600 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 text-primary group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">Pricing</span>
+                  <span className="px-3 py-1 bg-purple-100 text-primary text-xs font-semibold rounded-full">Pricing</span>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Update Pricing</h3>
                 <p className="text-gray-600 mb-4">Adjust your session rates independently</p>
-                <span className="text-purple-600 font-semibold flex items-center gap-2">
+                <span className="text-primary font-semibold flex items-center gap-2">
                   Edit Pricing
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
