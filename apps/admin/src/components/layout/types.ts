@@ -7,6 +7,8 @@ export type NavLabel =
   | "Bookings"
   | "Disputes"
   | "DAnonymous"
+  | "Moderation"
+  | "Feedback"
 
 ;
 
