@@ -29,7 +29,7 @@ const PromoCard: React.FC<PromoConfig> = ({ title, subtitle, ctaLabel }) => {
           {ctaLabel} <CounselorIcon className="ml-2" />
         </button>
       </div>
-      <div className="h-38 lg:h-full aspect-[140/154] relative">
+      <div className="h-38 lg:h-full aspect-140/154 relative">
         <img
           src="/images/promo-illustration1.png"
           alt=""

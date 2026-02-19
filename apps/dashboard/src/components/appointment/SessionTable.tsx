@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   getCounselorAppointments,
@@ -17,13 +16,7 @@ import {
   WithdrawIcon,
 } from "../../assets/icons";
 import { useAuthStore } from "../../store/auth/useAuthStore";
-
-// Define error types
-interface QueryError {
-  name?: string;
-  code?: string;
-  message?: string;
-}
+import { getCached, setCache } from "../../utils/AppointmentsCache.utils";
 
 interface SessionTableProps {
   type: "upcoming" | "passed";
@@ -31,152 +24,209 @@ interface SessionTableProps {
   onDownloadInvoice?: (appointmentId: string) => void;
 }
 
+type FetchState = "idle" | "loading" | "success" | "error";
+
 const SessionTable: React.FC<SessionTableProps> = ({
   type,
   onReschedule,
   onDownloadInvoice,
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>("idle");
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(
-    null
+    null,
   );
+  // True while a background refresh is running but we already have cached data showing
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const navigate = useNavigate();
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Get user role from auth store
   const { role } = useAuthStore();
-
-  // Determine if user is counselor
   const isCounselor = role === "counselor";
 
-  // Appointments API queries
-  const {
-    data: counselorData,
-    isLoading: counselorLoading,
-    error: counselorError,
-    refetch: refetchCounselor,
-  } = useQuery({
-    queryKey: ["counselor-appointments"],
-    queryFn: async () => {
+  // Cache key is per-role so counselor and user data never mix
+  const cacheKey = isCounselor ? "counselor-appointments" : "user-appointments";
+
+  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  /**
+   * Parse raw API result into a flat, deduplicated Appointment[].
+   */
+  const parseAppointments = (data: unknown): Appointment[] => {
+    if (!data) return [];
+
+    if (Array.isArray(data)) return data as Appointment[];
+
+    // Dashboard object shape
+    const d = data as UserDashboardData & {
+      passedAppointments?: Appointment[];
+      previousAppointments?: Appointment[];
+      allAppointments?: Appointment[];
+    };
+
+    const merged = [
+      ...(d.upcomingAppointments || []),
+      ...(d.passedAppointments || []),
+      ...(d.previousAppointments || []),
+      ...(d.allAppointments || []),
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((appt) => {
+      if (!appt?.bookingId || seen.has(appt.bookingId)) return false;
+      seen.add(appt.bookingId);
+      return true;
+    });
+  };
+
+  /**
+   * Fetch appointments from the network and update cache + state.
+   * @param background - if true, we already have cached data showing so don't
+   *                     show the full loading spinner; show a subtle refresh indicator instead.
+   */
+  const fetchFromNetwork = useCallback(
+    async (background = false) => {
+      if (!role) return;
+
+      abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      return await getCounselorAppointments({ signal: controller.signal });
-    },
-    retry: (failureCount, error: unknown) => {
-      // Don't retry if the request was aborted
-      const queryError = error as QueryError;
-      if (
-        queryError?.name === "AbortError" ||
-        queryError?.code === "ERR_CANCELED"
-      ) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    refetchOnWindowFocus: false,
-    enabled: isCounselor && !!role,
-  });
 
-  const {
-    data: userData,
-    isLoading: userLoading,
-    error: userError,
-    refetch: refetchUser,
-  } = useQuery({
-    queryKey: ["user-appointments"],
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      return await getUserAppointments({ signal: controller.signal });
-    },
-    retry: (failureCount, error: unknown) => {
-      // Don't retry if the request was aborted
-      const queryError = error as QueryError;
-      if (
-        queryError?.name === "AbortError" ||
-        queryError?.code === "ERR_CANCELED"
-      ) {
-        return false;
+      if (background) {
+        setIsRefreshing(true);
+      } else {
+        setFetchState("loading");
+        setFetchError(null);
       }
-      return failureCount < 2;
-    },
-    refetchOnWindowFocus: false,
-    enabled: !isCounselor && !!role,
-  });
 
-  // Process appointments data
-  useEffect(() => {
-    let appointmentsList: Appointment[] = [];
-
-    // Handle appointments API data
-    if (isCounselor) {
-      if (counselorData && counselorData.data) {
-        appointmentsList = Array.isArray(counselorData.data)
-          ? counselorData.data
-          : [];
-      }
-    } else {
-      if (userData && userData.data) {
-        if (Array.isArray(userData.data)) {
-          appointmentsList = userData.data;
+      try {
+        let result;
+        if (isCounselor) {
+          result = await getCounselorAppointments({
+            signal: controller.signal,
+          });
         } else {
-          const dashboardData = userData.data as UserDashboardData;
-          appointmentsList = dashboardData.upcomingAppointments || [];
+          result = await getUserAppointments({ signal: controller.signal });
+        }
+
+        // null = request was cancelled, bail silently
+        if (!result) return;
+
+        const parsed = parseAppointments(result.data);
+
+        if (isMountedRef.current && !controller.signal.aborted) {
+          setCache(cacheKey, parsed);
+          setAllAppointments(parsed);
+          setFetchState("success");
+        }
+      } catch (error: unknown) {
+        const isAbort =
+          (error as { name?: string })?.name === "AbortError" ||
+          (error as { code?: string })?.code === "ERR_CANCELED" ||
+          (error as { message?: string })?.message?.includes("canceled") ||
+          (error as { message?: string })?.message?.includes("aborted");
+
+        if (isAbort) return;
+
+        if (isMountedRef.current) {
+          // If we already have data showing, don't replace it with an error screen
+          // — just show a toast so the user knows the refresh failed
+          if (background) {
+            toast.error(
+              "Could not refresh appointments. Showing last known data.",
+            );
+          } else {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to load appointments";
+            setFetchError(message);
+            setFetchState("error");
+          }
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsRefreshing(false);
         }
       }
-    }
+    },
+    [role, isCounselor, cacheKey],
+  );
 
-    // Filter appointments based on type and status
-    const filteredAppointments = appointmentsList.filter((appointment) => {
-      if (!appointment) return false;
+  /**
+   * Main load function called on mount.
+   * 1. If there is fresh cached data → show it immediately, then kick off a
+   *    silent background refresh so the data stays up-to-date.
+   * 2. If there is no cache (or it expired) → show spinner and fetch normally.
+   */
+  const loadAppointments = useCallback(
+    async (forceRefresh = false) => {
+      if (!role) return;
 
-      let shouldInclude = false;
-
-      if (type === "upcoming") {
-        // Include appointments with 'upcoming' or 'confirmed' status
-        shouldInclude =
-          appointment.status === "upcoming" ||
-          appointment.status === "confirmed";
-      } else {
-        // Include appointments with 'passed' status
-        shouldInclude = appointment.status === "passed";
+      if (!forceRefresh) {
+        const cached = getCached(cacheKey);
+        if (cached) {
+          // Paint the screen instantly with cached data
+          setAllAppointments(cached);
+          setFetchState("success");
+          // Then silently refresh in the background
+          fetchFromNetwork(true);
+          return;
+        }
       }
 
-      return shouldInclude;
-    });
+      // No cache or forced refresh — full loading fetch
+      fetchFromNetwork(false);
+    },
+    [role, cacheKey, fetchFromNetwork],
+  );
 
-    setAppointments(filteredAppointments);
-  }, [counselorData, userData, type, isCounselor, role]);
-
+  // Load on mount / when role changes
   useEffect(() => {
+    if (role) {
+      loadAppointments();
+    }
+  }, [role, loadAppointments]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      // Clean up abort controller on unmount
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
     };
   }, []);
 
-  // Clean up dropdown when component unmounts or type changes
+  // Switching tabs only closes the dropdown — data stays, no re-fetch
   useEffect(() => {
     setActiveDropdown(null);
   }, [type]);
+
+  // Filter in-memory list for the current tab
+  const appointments = allAppointments.filter((appointment) => {
+    if (!appointment) return false;
+    if (type === "upcoming") {
+      return (
+        appointment.status === "upcoming" || appointment.status === "confirmed"
+      );
+    }
+    return appointment.status === "passed";
+  });
 
   const toggleDropdown = (appointmentId: string) => {
     setActiveDropdown(activeDropdown === appointmentId ? null : appointmentId);
   };
 
-  // Updated handleActionClick with dispute logic
   const handleActionClick = async (
     action: string,
-    appointment: Appointment
+    appointment: Appointment,
   ) => {
     setActiveDropdown(null);
 
     switch (action) {
       case "startMeeting": {
-        // Prefer Agora if channel & token are available
         const appId = import.meta.env.VITE_AGORA_APP_ID;
         const channel = appointment.action.agoraChannel;
         const token = appointment.action.agoraToken?.token;
@@ -195,46 +245,37 @@ const SessionTable: React.FC<SessionTableProps> = ({
             },
           });
         } else if (appointment.action?.joinMeetingLink) {
-          // Fallback to external meeting link (legacy Zoom)
           window.open(appointment.action.joinMeetingLink, "_blank");
         }
         break;
       }
+
       case "chat":
-        if (appointment.chatId) {
-          navigate(`chat/${appointment.chatId}`);
-        } else {
-          navigate(`chat/${appointment.bookingId}`);
-        }
+        navigate(`chat/${appointment.chatId ?? appointment.bookingId}`);
         break;
+
       case "reschedule":
         onReschedule?.(appointment.bookingId);
         break;
+
       case "dispute":
-        // Navigate to dispute page with appointment details
         navigate(`/dispute/${appointment.bookingId}`, {
           state: { appointment },
         });
         break;
+
       case "downloadInvoice":
         try {
           setDownloadingInvoice(appointment.bookingId);
-
-          // Use the new API endpoint instead of the link
           await downloadInvoice(appointment.bookingId);
-
           toast.success("Invoice downloaded successfully");
-
-          // Call the optional callback if provided
-          if (onDownloadInvoice) {
-            onDownloadInvoice(appointment.bookingId);
-          }
+          onDownloadInvoice?.(appointment.bookingId);
         } catch (error: unknown) {
-          const errorMessage =
+          toast.error(
             error instanceof Error
               ? error.message
-              : "Failed to download invoice";
-          toast.error(errorMessage);
+              : "Failed to download invoice",
+          );
         } finally {
           setDownloadingInvoice(null);
         }
@@ -242,7 +283,6 @@ const SessionTable: React.FC<SessionTableProps> = ({
     }
   };
 
-  // Don't render if no role
   if (!role) {
     return (
       <div className="text-center py-8 px-4 text-gray-500">
@@ -253,10 +293,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Determine loading state
-  const isLoading = isCounselor ? counselorLoading : userLoading;
-
-  if (isLoading) {
+  // Full-page spinner only on the very first load (no cached data available)
+  if (fetchState === "loading") {
     return (
       <div className="text-center py-8 px-4 text-gray-500">
         <div className="text-sm sm:text-base">
@@ -266,53 +304,46 @@ const SessionTable: React.FC<SessionTableProps> = ({
     );
   }
 
-  // Determine error state and refetch function
-  const error = isCounselor ? counselorError : userError;
-  const refetch = isCounselor ? refetchCounselor : refetchUser;
-
-  // Improved error handling - don't show error for aborted requests
-  if (error) {
-    // Check if it's an AbortError or network cancellation
-    const queryError = error as QueryError;
-    const isAbortError =
-      queryError?.name === "AbortError" ||
-      queryError?.code === "ERR_CANCELED" ||
-      queryError?.message?.includes("canceled") ||
-      queryError?.message?.includes("aborted");
-
-    if (!isAbortError) {
-      return (
-        <div className="text-center py-8 px-4 text-red-500">
-          <div className="text-sm sm:text-base mb-4">
-            Failed to load appointments
-          </div>
-          <div className="text-xs text-gray-600 mb-4">
-            Error: {error instanceof Error ? error.message : "Unknown error"}
-          </div>
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
-          >
-            Try Again
-          </button>
+  if (fetchState === "error" && fetchError) {
+    return (
+      <div className="text-center py-8 px-4 text-red-500">
+        <div className="text-sm sm:text-base mb-4">
+          Failed to load appointments
         </div>
-      );
-    }
+        <div className="text-xs text-gray-600 mb-4">Error: {fetchError}</div>
+        <button
+          onClick={() => loadAppointments(true)}
+          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
   }
 
-  // Empty state with more debugging info
-  if (appointments.length === 0) {
+  if (fetchState === "success" && appointments.length === 0) {
     return (
       <div className="text-center py-8 px-4 text-gray-500">
-        <div className="text-sm sm:text-base mb-2">
+        <div className="text-sm sm:text-base">
           No {type} appointments to display.
         </div>
       </div>
     );
   }
 
+  if (appointments.length === 0) return null;
+
   return (
     <>
+      {/* Subtle background-refresh indicator */}
+      {isRefreshing && (
+        <div className="flex items-center justify-end px-2 pb-2">
+          <span className="text-xs text-gray-400 animate-pulse">
+            Refreshing...
+          </span>
+        </div>
+      )}
+
       {/* Desktop Table View */}
       <div className="hidden md:block w-full overflow-x-auto rounded-lg shadow-sm">
         <table className="w-full border-collapse bg-white">
@@ -359,12 +390,12 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 <td className="px-3 lg:px-6 py-4">
                   <div className="flex items-center space-x-3">
                     <img
-                      src={appointment.profilePicture}
+                      src={appointment.profilePicture || "https://placehold.net/avatar-4.png"}
                       alt={appointment.fullName}
-                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex-shrink-0"
+                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-full shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
-                          "/default-avatar.png";
+                          "https://placehold.net/avatar-4.png";
                       }}
                     />
                     <div>
@@ -379,7 +410,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
                   {new Date(
-                    appointment.date + "T00:00:00"
+                    appointment.date + "T00:00:00",
                   ).toLocaleDateString()}
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap text-gray-700">
@@ -391,29 +422,29 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   </span>
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <button
-                        className="flex items-center space-x-1 px-2 lg:px-3 py-1 text-gray-600 hover:text-gray-900 rounded transition-colors"
-                        onClick={() => toggleDropdown(appointment.bookingId)}
-                      >
-                        <span className="text-xs lg:text-sm">Actions</span>
-                        <ChevronDownIcon className="w-3 h-3 lg:w-4 lg:h-4" />
-                      </button>
+                  <div className="relative">
+                    <button
+                      className="flex items-center space-x-1 px-2 lg:px-3 py-1 text-gray-600 hover:text-gray-900 rounded transition-colors"
+                      onClick={() => toggleDropdown(appointment.bookingId)}
+                    >
+                      <span className="text-xs lg:text-sm">Actions</span>
+                      <ChevronDownIcon className="w-3 h-3 lg:w-4 lg:h-4" />
+                    </button>
 
-                      {activeDropdown === appointment.bookingId && (
-                        <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                          {type === "upcoming" ? (
-                            <>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                                onClick={() =>
-                                  handleActionClick("startMeeting", appointment)
-                                }
-                              >
-                                <MeetingIcon className="w-4 h-4 mr-2" />
-                                <span>Start Meeting</span>
-                              </button>
+                    {activeDropdown === appointment.bookingId && (
+                      <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                        {type === "upcoming" ? (
+                          <>
+                            <button
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
+                              onClick={() =>
+                                handleActionClick("startMeeting", appointment)
+                              }
+                            >
+                              <MeetingIcon className="w-4 h-4 mr-2" />
+                              <span>Start Meeting</span>
+                            </button>
+                            {appointment.chatId && (
                               <button
                                 className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
                                 onClick={() =>
@@ -423,53 +454,53 @@ const SessionTable: React.FC<SessionTableProps> = ({
                                 <ChatIcon className="w-4 h-4 mr-2" />
                                 <span>Chat</span>
                               </button>
+                            )}
+                            <button
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
+                              onClick={() =>
+                                handleActionClick("reschedule", appointment)
+                              }
+                            >
+                              <RescheduleIcon className="w-4 h-4 mr-2" />
+                              <span>Reschedule</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() =>
+                                handleActionClick(
+                                  "downloadInvoice",
+                                  appointment,
+                                )
+                              }
+                              disabled={
+                                downloadingInvoice === appointment.bookingId
+                              }
+                            >
+                              <WithdrawIcon className="w-4 h-4 mr-2" />
+                              <span>
+                                {downloadingInvoice === appointment.bookingId
+                                  ? "Downloading..."
+                                  : "Download Invoice"}
+                              </span>
+                            </button>
+                            {!isCounselor && (
                               <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
+                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
                                 onClick={() =>
-                                  handleActionClick("reschedule", appointment)
+                                  handleActionClick("dispute", appointment)
                                 }
                               >
-                                <RescheduleIcon className="w-4 h-4 mr-2" />
-                                <span>Reschedule</span>
+                                <ChatIcon className="w-4 h-4 mr-2" />
+                                <span>Dispute</span>
                               </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() =>
-                                  handleActionClick(
-                                    "downloadInvoice",
-                                    appointment
-                                  )
-                                }
-                                disabled={
-                                  downloadingInvoice === appointment.bookingId
-                                }
-                              >
-                                <WithdrawIcon className="w-4 h-4 mr-2" />
-                                <span>
-                                  {downloadingInvoice === appointment.bookingId
-                                    ? "Downloading..."
-                                    : "Download Invoice"}
-                                </span>
-                              </button>
-                              {!isCounselor && (
-                                <button
-                                  className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
-                                  onClick={() =>
-                                    handleActionClick("dispute", appointment)
-                                  }
-                                >
-                                  <ChatIcon className="w-4 h-4 mr-2" />
-                                  <span>Dispute</span>
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -488,11 +519,11 @@ const SessionTable: React.FC<SessionTableProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">
                 <img
-                  src={appointment.profilePicture}
-                  alt={appointment.fullName}
-                  className="w-10 h-10 rounded-full flex-shrink-0"
+                  src={appointment.profilePicture || "https://placehold.net/avatar-4.png"}
+                  alt={appointment.fullName }
+                  className="w-10 h-10 rounded-full shrink-0"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/default-avatar.png";
+                    (e.target as HTMLImageElement).src = "https://placehold.net/avatar-4.png";
                   }}
                 />
                 <div>
@@ -516,7 +547,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 </span>
                 <span className="text-gray-900 font-medium">
                   {new Date(
-                    appointment.date + "T00:00:00"
+                    appointment.date + "T00:00:00",
                   ).toLocaleDateString()}
                 </span>
               </div>
@@ -530,9 +561,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-3 z-30">
+            <div className="border-t border-gray-100 pt-3">
               {type === "upcoming" ? (
-                <div className="flex flex-wrap gap-2 z-40">
+                <div className="flex flex-wrap gap-2">
                   <button
                     className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
                     onClick={() =>
@@ -542,13 +573,15 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     <MeetingIcon className="w-4 h-4 mr-1" />
                     <span className="truncate">Meeting</span>
                   </button>
-                  <button
-                    className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() => handleActionClick("chat", appointment)}
-                  >
-                    <ChatIcon className="w-4 h-4 mr-1" />
-                    <span className="truncate">Chat</span>
-                  </button>
+                  {appointment.chatId && (
+                    <button
+                      className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
+                      onClick={() => handleActionClick("chat", appointment)}
+                    >
+                      <ChatIcon className="w-4 h-4 mr-1" />
+                      <span className="truncate">Chat</span>
+                    </button>
+                  )}
                   <button
                     className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
                     onClick={() => handleActionClick("reschedule", appointment)}

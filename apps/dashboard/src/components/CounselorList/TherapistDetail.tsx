@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  Users,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTherapistDetailsApi } from "../../api/Therapist.api";
@@ -22,6 +23,9 @@ import createReviewApi, {
   getTherapistReviewsApi,
   IReviewRequest,
 } from "../../api/Review.api";
+import {
+  getTherapistScheduleApi,
+} from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
 
 interface TherapistDetailProps {
@@ -37,17 +41,12 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
 }) => {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
-  const [newReview, setNewReview] = useState({
-    rating: 0,
-    comment: "",
-    clientName: "",
-  });
+  const [newReview, setNewReview] = useState({ rating: 0, comment: "", clientName: "" });
   const [hoverRating, setHoverRating] = useState(0);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch therapist details
   const {
     data: therapistResponse,
     isLoading: therapistLoading,
@@ -57,31 +56,24 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const result = await getTherapistDetailsApi(therapistId, {
-        signal: controller.signal,
-      });
+      const result = await getTherapistDetailsApi(therapistId, { signal: controller.signal });
       if (!result) throw new Error("Request cancelled");
       return result;
     },
     enabled: !!therapistId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Handle image error with proper fallback
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
       const img = e.target as HTMLImageElement;
-      if (
-        img.src !==
-        "https://via.placeholder.com/200x200/e5e7eb/9ca3af?text=User"
-      ) {
-        img.src = "https://via.placeholder.com/200x200/e5e7eb/9ca3af?text=User";
+      if (img.src !== "https://placehold.net/avatar-4.png") {
+        img.src = "https://placehold.net/avatar-4.png";
       }
     },
     []
   );
 
-  // Fetch therapist reviews
   const {
     data: reviewsResponse,
     isLoading: reviewsLoading,
@@ -91,17 +83,38 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const result = await getTherapistReviewsApi(therapistId, {
+      const result = await getTherapistReviewsApi(therapistId, { signal: controller.signal });
+      if (!result) throw new Error("Request cancelled");
+      return result;
+    },
+    enabled: !!therapistId,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Fetch schedule to check if group booking is available
+  const { data: scheduleResponse } = useQuery({
+    queryKey: ["therapist-schedule", therapistId, "video"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const result = await getTherapistScheduleApi(therapistId, "video", {
         signal: controller.signal,
       });
       if (!result) throw new Error("Request cancelled");
       return result;
     },
     enabled: !!therapistId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Create review mutation
+  // Determine if any schedule slot has allowGroupBooking = true
+  const supportsGroupBooking = useMemo(() => {
+    const schedules = scheduleResponse?.data?.schedules || [];
+    return schedules.some(
+      (s) => s.isAvailable && s.allowGroupBooking === true
+    );
+  }, [scheduleResponse?.data?.schedules]);
+
   const { mutateAsync: createReview, isPending: creatingReview } = useMutation({
     mutationFn: (data: IReviewRequest) => {
       const controller = new AbortController();
@@ -112,7 +125,6 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
       toast.success("Review submitted successfully!");
       setNewReview({ rating: 0, comment: "", clientName: "" });
       setShowReviewForm(false);
-      // Refetch reviews after successful creation
       queryClient.invalidateQueries({ queryKey: ["reviews", therapistId] });
     },
     onError: (error) => {
@@ -120,103 +132,55 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     },
   });
 
-  // Cleanup abort controller on unmount
   useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
+    return () => { abortControllerRef.current?.abort(); };
   }, []);
 
   const therapist = therapistResponse?.data?.therapist;
 
-  // Wrap allReviews in useMemo to prevent unnecessary re-renders
   const allReviews = useMemo(() => {
     return reviewsResponse?.data?.reviews || [];
   }, [reviewsResponse?.data?.reviews]);
 
   const reviewStats = reviewsResponse?.data;
 
-  // Check if about text needs truncation
-  const aboutText = therapist?.about || 
+  const aboutText = therapist?.about ||
     "DTherapist is a platform that connects you with professional counselors and therapists to help you through your mental health journey.";
-  
-  // Split text into lines and check if it exceeds 4 lines
   const aboutLines = aboutText.split('\n');
-  const needsTruncation = aboutLines.length > 4 || aboutText.length > 300; // Rough estimate for 4 lines
-  
+  const needsTruncation = aboutLines.length > 4 || aboutText.length > 300;
+
   const getTruncatedAbout = () => {
     if (!needsTruncation) return aboutText;
-    
-    // If we have actual line breaks, use first 4 lines
-    if (aboutLines.length > 4) {
-      return aboutLines.slice(0, 4).join('\n');
-    }
-    
-    // Otherwise, truncate by character count (approximately 4 lines worth)
+    if (aboutLines.length > 4) return aboutLines.slice(0, 4).join('\n');
     return aboutText.substring(0, 300) + '...';
   };
 
   const displayAbout = isAboutExpanded ? aboutText : getTruncatedAbout();
 
-  // Debug logs for troubleshooting - Now allReviews is memoized
-  useEffect(() => {
-    console.log("Debug info:", {
-      therapistId,
-      therapist: therapist?.name,
-      reviewsResponse: reviewsResponse,
-      reviewsResponseData: reviewsResponse?.data,
-      allReviews,
-      reviewStats,
-      reviewsLength: allReviews.length,
-    });
-  }, [therapistId, therapist, reviewsResponse, allReviews, reviewStats]);
-
-  // Get the 5 most recent reviews and sort them by creation date - Now memoized
   const recentReviews = useMemo(() => {
     if (!allReviews || allReviews.length === 0) return [];
-
     return allReviews
       .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5);
   }, [allReviews]);
 
-  // Carousel navigation - Single review display
-  const reviewsPerPage = 1;
-
   const nextReviews = () => {
-    setCurrentReviewIndex((prev) =>
-      prev + 1 >= recentReviews.length ? 0 : prev + 1
-    );
+    setCurrentReviewIndex((prev) => prev + 1 >= recentReviews.length ? 0 : prev + 1);
   };
 
   const prevReviews = () => {
-    setCurrentReviewIndex((prev) =>
-      prev === 0 ? recentReviews.length - 1 : prev - 1
-    );
+    setCurrentReviewIndex((prev) => prev === 0 ? recentReviews.length - 1 : prev - 1);
   };
 
   const getCurrentReviews = useCallback(() => {
-    return recentReviews.slice(
-      currentReviewIndex,
-      currentReviewIndex + reviewsPerPage
-    );
-  }, [recentReviews, currentReviewIndex, reviewsPerPage]);
+    return recentReviews.slice(currentReviewIndex, currentReviewIndex + 1);
+  }, [recentReviews, currentReviewIndex]);
 
   const renderStars = (rating: number | null) => {
     const validRating = rating || 0;
     return Array.from({ length: 5 }, (_, i) => (
-      <span
-        key={i}
-        className={`text-lg ${
-          i < validRating ? "text-yellow-400" : "text-gray-300"
-        }`}
-      >
-        ★
-      </span>
+      <span key={i} className={`text-lg ${i < validRating ? "text-yellow-400" : "text-gray-300"}`}>★</span>
     ));
   };
 
@@ -235,48 +199,24 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
         onMouseLeave={() => onHover(0)}
         className="focus:outline-none"
       >
-        <Star
-          className={`w-6 h-6 ${
-            i < (hover || rating)
-              ? "fill-yellow-400 text-yellow-400"
-              : "text-gray-300"
-          } transition-colors`}
-        />
+        <Star className={`w-6 h-6 ${i < (hover || rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} transition-colors`} />
       </button>
     ));
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      newReview.rating === 0 ||
-      !newReview.comment.trim() ||
-      !newReview.clientName.trim()
-    ) {
+    if (newReview.rating === 0 || !newReview.comment.trim() || !newReview.clientName.trim()) {
       toast.error("Please fill in all fields and provide a rating");
       return;
     }
-
     try {
-      await createReview({
-        therapistId,
-        rating: newReview.rating,
-        comment: newReview.comment.trim(),
-      });
+      await createReview({ therapistId, rating: newReview.rating, comment: newReview.comment.trim() });
     } catch {
-      // Error is already handled in the mutation
+      // Error handled in mutation
     }
   };
 
-  const handleVideoBooking = () => {
-    onBookSession(therapistId, "video");
-  };
-
-  const handlePhysicalBooking = () => {
-    onBookSession(therapistId, "physical");
-  };
-
-  // Loading state
   if (therapistLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -288,19 +228,14 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     );
   }
 
-  // Error state
   if (therapistError || !therapist) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            {therapistError
-              ? "Failed to load therapist"
-              : "Therapist not found"}
+            {therapistError ? "Failed to load therapist" : "Therapist not found"}
           </h2>
-          <button onClick={onBack} className="text-blue-800 hover:text-primary">
-            Go back
-          </button>
+          <button onClick={onBack} className="text-blue-800 hover:text-primary">Go back</button>
         </div>
       </div>
     );
@@ -315,31 +250,22 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 ">
-      <div className="max-w-7xl m-auto ">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl m-auto">
         <div className="flex items-center mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
-          >
+          <button onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800">
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-xl font-semibold text-black">
-              Counselor Detail
-            </span>
+            <span className="text-xl font-semibold text-black">Counselor Detail</span>
           </button>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8">
-          {/* Left Column - Therapist Image and Buttons */}
-          <div className="lg:col-span-1 border border-gray-200 ">
+          {/* Left Column */}
+          <div className="lg:col-span-1 border border-gray-200">
             <div className="bg-white rounded-lg p-6 space-y-6">
-              {/* Therapist Image */}
               <div className="w-full">
                 <img
-                  src={
-                    therapist.profilePicture ||
-                    "https://via.placeholder.com/200x200/e5e7eb/9ca3af?text=User"
-                  }
+                  src={therapist.profilePicture || "https://via.placeholder.com/200x200/e5e7eb/9ca3af?text=User"}
                   alt={therapist.name}
                   className="w-full h-96 object-cover rounded-lg"
                   onError={handleImageError}
@@ -347,10 +273,9 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 />
               </div>
 
-              {/* Action Buttons */}
               <div className="space-y-4">
                 <button
-                  onClick={handleVideoBooking}
+                  onClick={() => onBookSession(therapistId, "video")}
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
                 >
                   <Video className="w-5 h-5" />
@@ -358,56 +283,48 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 </button>
 
                 <button
-                  onClick={handlePhysicalBooking}
+                  onClick={() => onBookSession(therapistId, "physical")}
                   className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
                 >
                   <MapPin className="w-5 h-5" />
                   <span>Book Physical Meetings</span>
                 </button>
+
+                {/* Only show Team Meeting button if the therapist supports group bookings */}
+                {supportsGroupBooking && (
+                  <button
+                    onClick={() => onBookSession(therapistId, "group")}
+                    className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
+                  >
+                    <Users className="w-5 h-5" />
+                    <span>Book Team Meeting</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Right Column - Therapist Details */}
+          {/* Right Column */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg p-8 border border-gray-200">
-              {/* Therapist Info */}
               <div className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                  {therapist.name}
-                </h1>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">{therapist.name}</h1>
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-gray-500">
-                    ({therapist.reviews?.totalReviews || allReviews.length}{" "}
-                    Reviews)
+                    ({therapist.reviews?.totalReviews || allReviews.length} Reviews)
                   </span>
                   <div className="flex">
-                    {renderStars(
-                      therapist.reviews?.averageRating ??
-                        reviewStats?.averageRating ??
-                        null
-                    )}
+                    {renderStars(therapist.reviews?.averageRating ?? reviewStats?.averageRating ?? null)}
                   </div>
                 </div>
-                <p className="text-gray-700 text-lg mb-2">
-                  {therapist.category}
-                </p>
-                <p className="text-gray-700 text-lg mb-2">
-                  {therapist.experience} years experience
-                </p>
+                <p className="text-gray-700 text-lg mb-2">{therapist.category}</p>
+                <p className="text-gray-700 text-lg mb-2">{therapist.experience} years experience</p>
               </div>
 
-              {/* About Section with Expand/Collapse */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  About Counselor
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">About Counselor</h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
-                  <div className="whitespace-pre-line">
-                    {displayAbout}
-                  </div>
-                  
-                  {/* Read More/Read Less Button */}
+                  <div className="whitespace-pre-line">{displayAbout}</div>
                   {needsTruncation && (
                     <button
                       onClick={() => setIsAboutExpanded(!isAboutExpanded)}
@@ -417,36 +334,24 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                     </button>
                   )}
                 </div>
-
-                {/* Specializations */}
-                {therapist.specializations &&
-                  therapist.specializations.length > 0 && (
-                    <div className="mt-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                        Specializations
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {therapist.specializations.map(
-                          (specialization, index) => (
-                            <span
-                              key={index}
-                              className="px-3 py-1 bg-blue-100 text-primary rounded-full text-sm font-medium"
-                            >
-                              {specialization}
-                            </span>
-                          )
-                        )}
-                      </div>
+                {therapist.specializations && therapist.specializations.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Specializations</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {therapist.specializations.map((specialization, index) => (
+                        <span key={index} className="px-3 py-1 bg-blue-100 text-primary rounded-full text-sm font-medium">
+                          {specialization}
+                        </span>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
               </div>
 
               {/* Reviews Section */}
               <div>
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Recent Reviews
-                  </h2>
+                  <h2 className="text-2xl font-bold text-gray-900">Recent Reviews</h2>
                   <button
                     onClick={() => setShowReviewForm(!showReviewForm)}
                     className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors font-medium"
@@ -455,65 +360,36 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   </button>
                 </div>
 
-                {/* Review Form */}
                 {showReviewForm && (
                   <div className="mb-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
-                    <h3 className="font-semibold text-gray-900 mb-4">
-                      Leave a Review
-                    </h3>
+                    <h3 className="font-semibold text-gray-900 mb-4">Leave a Review</h3>
                     <form onSubmit={handleSubmitReview} className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Your Name
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
                         <input
                           type="text"
                           value={newReview.clientName}
-                          onChange={(e) =>
-                            setNewReview({
-                              ...newReview,
-                              clientName: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary "
+                          onChange={(e) => setNewReview({ ...newReview, clientName: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="Enter your name"
                           required
                           disabled={creatingReview}
                         />
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Rating
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
                         <div className="flex items-center space-x-1">
-                          {renderInteractiveStars(
-                            newReview.rating,
-                            hoverRating,
-                            (rating) => setNewReview({ ...newReview, rating }),
-                            setHoverRating
-                          )}
+                          {renderInteractiveStars(newReview.rating, hoverRating, (rating) => setNewReview({ ...newReview, rating }), setHoverRating)}
                           <span className="ml-2 text-sm text-gray-600">
-                            {newReview.rating > 0 &&
-                              `${newReview.rating} star${
-                                newReview.rating > 1 ? "s" : ""
-                              }`}
+                            {newReview.rating > 0 && `${newReview.rating} star${newReview.rating > 1 ? "s" : ""}`}
                           </span>
                         </div>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Your Review
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
                         <textarea
                           value={newReview.comment}
-                          onChange={(e) =>
-                            setNewReview({
-                              ...newReview,
-                              comment: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                           rows={4}
                           placeholder="Share your experience with this therapist..."
@@ -521,16 +397,13 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                           disabled={creatingReview}
                         />
                       </div>
-
                       <div className="flex items-center space-x-3">
                         <button
                           type="submit"
                           disabled={creatingReview}
                           className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                          {creatingReview && (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          )}
+                          {creatingReview && <Loader2 className="w-4 h-4 animate-spin" />}
                           {creatingReview ? "Submitting..." : "Submit Review"}
                         </button>
                         <button
@@ -546,28 +419,18 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   </div>
                 )}
 
-                {/* Reviews Loading */}
                 {reviewsLoading && (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="ml-2 text-gray-600">
-                      Loading reviews...
-                    </span>
+                    <span className="ml-2 text-gray-600">Loading reviews...</span>
                   </div>
                 )}
 
-                {/* Reviews Error */}
                 {reviewsError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <p className="text-red-600">
-                      Failed to load reviews. Error: {reviewsError.message}
-                    </p>
+                    <p className="text-red-600">Failed to load reviews. Error: {reviewsError.message}</p>
                     <button
-                      onClick={() =>
-                        queryClient.invalidateQueries({
-                          queryKey: ["reviews", therapistId],
-                        })
-                      }
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ["reviews", therapistId] })}
                       className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                     >
                       Retry
@@ -579,18 +442,14 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   <>
                     {recentReviews.length > 0 ? (
                       <div className="relative">
-                        {/* Single Review Display - Testimonial Style */}
-                        <div className="bg-gray-100 rounded-2xl p-8 mb-6 min-h-[200px] flex flex-col justify-between">
+                        <div className="bg-gray-100 rounded-2xl p-8 mb-6 min-h-50 flex flex-col justify-between">
                           {getCurrentReviews().length > 0 && (
                             <>
-                              {/* Quote */}
                               <div className="mb-6">
                                 <p className="text-gray-700 text-lg leading-relaxed italic">
                                   "{getCurrentReviews()[0].comment}"
                                 </p>
                               </div>
-
-                              {/* Author and Rating */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
@@ -605,19 +464,13 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                                     </div>
                                   </div>
                                 </div>
-                                
-                                {/* Rating Stars */}
-                                <div className="flex">
-                                  {renderStars(getCurrentReviews()[0].rating)}
-                                </div>
+                                <div className="flex">{renderStars(getCurrentReviews()[0].rating)}</div>
                               </div>
                             </>
                           )}
                         </div>
 
-                        {/* Carousel Navigation */}
                         <div className="flex items-center justify-between">
-                          {/* Navigation Buttons */}
                           <div className="flex gap-3">
                             <button
                               onClick={prevReviews}
@@ -626,7 +479,6 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
-                            
                             <button
                               onClick={nextReviews}
                               disabled={currentReviewIndex + 1 >= recentReviews.length}
@@ -635,22 +487,15 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                               <ChevronRight className="w-5 h-5" />
                             </button>
                           </div>
-
-                          {/* Progress Bar and Counter */}
                           <div className="flex items-center gap-4">
-                            {/* Progress Bar */}
                             <div className="flex items-center gap-2">
                               <div className="w-24 h-2 bg-gray-300 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-green-600 rounded-full transition-all duration-300"
-                                  style={{ 
-                                    width: `${((currentReviewIndex + 1) / recentReviews.length) * 100}%` 
-                                  }}
+                                  style={{ width: `${((currentReviewIndex + 1) / recentReviews.length) * 100}%` }}
                                 />
                               </div>
                             </div>
-                            
-                            {/* Counter */}
                             <span className="text-gray-600 text-sm font-medium">
                               {currentReviewIndex + 1}/{recentReviews.length}
                             </span>
@@ -660,9 +505,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                     ) : (
                       <div className="text-center py-12 text-gray-500">
                         <p className="text-lg mb-2">No reviews yet</p>
-                        <p className="text-sm">
-                          Be the first to leave a review for this counselor!
-                        </p>
+                        <p className="text-sm">Be the first to leave a review for this counselor!</p>
                       </div>
                     )}
                   </>

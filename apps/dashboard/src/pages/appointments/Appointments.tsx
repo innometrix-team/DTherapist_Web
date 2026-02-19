@@ -218,7 +218,7 @@ const Appointments: React.FC = () => {
               "url(https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637)",
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white relative z-10 text-center">
             My Sessions
           </h1>
@@ -280,7 +280,7 @@ const Appointments: React.FC = () => {
 
       {/* Modal for Rescheduling with High Z-Index */}
       {isModalOpen && selectedSessionId && (
-        <div className="fixed inset-0 z-[9999]">
+        <div className="fixed inset-0 z-9999">
           <RescheduleSession
             sessionId={selectedSessionId}
             onClose={handleCloseModal}

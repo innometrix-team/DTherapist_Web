@@ -21,4 +21,4 @@ export interface Testimonial {
   date: string;
 }
 
-export type SessionType = 'video' | 'physical'
+export type SessionType = "video" | "physical" | "group";

@@ -12,6 +12,7 @@ export interface ITherapist {
   cost: {
     video: number;
     inPerson: number;
+    groupVideo: number;
   } | number | null; // Updated to handle both formats
   about?: string;
   specializations?: string[];
