@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
 
       {/* Reschedule Modal with High Z-Index */}
       {isRescheduleModalOpen && selectedSessionId && (
-        <div className="fixed inset-0 z-[9999]">
+        <div className="fixed inset-0 z-9999">
           <RescheduleSession 
             sessionId={selectedSessionId}
             onClose={handleCloseRescheduleModal}

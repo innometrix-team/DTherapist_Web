@@ -3,15 +3,15 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { BalanceConfig } from "../../pages/dashboard/types";
 import { TopUpIcon, WithdrawIcon, TimerIcon } from "../../assets/icons";
-import FundWalletApi, { 
-  IFundWalletRequest, 
-  getBanksApi, 
+import FundWalletApi, {
+  IFundWalletRequest,
+  getBanksApi,
   withdrawFundsApi,
   IBank,
-  IWithdrawRequest 
+  IWithdrawRequest,
 } from "../../api/FundWallet.api";
-import DashboardApi from "../../api/Dashboard.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { useDashboardData } from "../../hooks/useDashboardData";
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -23,62 +23,32 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [bankSearchTerm, setBankSearchTerm] = useState("");
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role, email } = useAuthStore(); // Get email directly from auth store
+  const { role, email } = useAuthStore();
 
-  // Determine user type based on role
-  const userType = role === "counselor" ? "service-provider" : "user";
+  // ── Shared dashboard data (single network call, shared with StatsGrid) ──
+  const { data: dashboardData, isLoading: isLoadingBalance, invalidate } = useDashboardData();
 
-  // Query to fetch banks list
-  const {
-    data: banksData,
-    isLoading: isLoadingBanks,
-  } = useQuery({
+  // ── Banks (counselors only) ──
+  const { data: banksData, isLoading: isLoadingBanks } = useQuery({
     queryKey: ["banks"],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
       const response = await getBanksApi({ signal: controller.signal });
       return response?.data || [];
     },
     retry: 3,
     refetchOnWindowFocus: false,
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours - banks don't change often
-    enabled: role === "counselor", // Only fetch banks for counselors
+    staleTime: 24 * 60 * 60 * 1000,
+    enabled: role === "counselor",
   });
 
-  // Filter banks based on search term
-  const filteredBanks = banksData?.filter(bank =>
-    bank.name.toLowerCase().includes(bankSearchTerm.toLowerCase())
-  ) || [];
+  const filteredBanks =
+    banksData?.filter((bank) =>
+      bank.name.toLowerCase().includes(bankSearchTerm.toLowerCase())
+    ) || [];
 
-  // Query to fetch current balance
-  const {
-    data: dashboardData,
-    isLoading: isLoadingBalance,
-    refetch: refetchBalance,
-  } = useQuery({
-    queryKey: ["dashboard", userType],
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      
-      const response = await DashboardApi(userType, { 
-        signal: controller.signal 
-      });
-      
-      if (!response?.data) {
-        throw new Error("No dashboard data received");
-      }
-      
-      return response.data;
-    },
-    retry: 3,
-    refetchOnWindowFocus: false,
-    staleTime: 30 * 1000, // 30 seconds
-  });
-
-  // Mutation for funding wallet
+  // ── Fund wallet ──
   const { mutateAsync: handleFundWallet, isPending: isFunding } = useMutation({
     mutationFn: (data: IFundWalletRequest) => {
       const controller = new AbortController();
@@ -91,9 +61,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
         toast.error("Failed to create payment link");
         return;
       }
-      // Store reference for payment verification
-      localStorage.setItem('paymentReference', responseData.reference);
-      // Redirect to Paystack payment page
+      localStorage.setItem("paymentReference", responseData.reference);
       window.location.href = responseData.authorization_url;
     },
     onError: (error) => {
@@ -101,7 +69,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     },
   });
 
-  // Enhanced mutation for withdrawal with better error handling
+  // ── Withdraw ──
   const { mutateAsync: handleWithdraw, isPending: isWithdrawing } = useMutation({
     mutationFn: (data: IWithdrawRequest) => {
       const controller = new AbortController();
@@ -115,60 +83,54 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       setAccountNumber("");
       setSelectedBank(null);
       setBankSearchTerm("");
-      refetchBalance(); // Refresh balance
+      invalidate(); // refresh shared cache
     },
-    onError: (error: { code?: number; message?: string; status?: string }) => {
-      // Enhanced error handling for better user experience
+    onError: (error: { code?: number; message?: string }) => {
       let errorMessage = "Failed to process withdrawal";
-      
-      // Check if it's a 400 status code (bad request)
       if (error.code === 400) {
-        errorMessage = "Invalid account number or bank details. Please verify your account information and try again.";
-      } 
-      // Check for specific error messages that indicate account/bank issues
-      else if (error.message) {
-        const message = error.message.toLowerCase();
-        if (message.includes("account") || message.includes("bank") || 
-            message.includes("invalid") || message.includes("400") ||
-            message.includes("failed with status code 400")) {
-          errorMessage = "Invalid account number or bank details. Please check your account information.";
-        } else if (message.includes("insufficient")) {
+        errorMessage =
+          "Invalid account number or bank details. Please verify your account information and try again.";
+      } else if (error.message) {
+        const msg = error.message.toLowerCase();
+        if (
+          msg.includes("account") ||
+          msg.includes("bank") ||
+          msg.includes("invalid") ||
+          msg.includes("400")
+        ) {
+          errorMessage =
+            "Invalid account number or bank details. Please check your account information.";
+        } else if (msg.includes("insufficient")) {
           errorMessage = "Insufficient funds for withdrawal.";
-        } else if (message.includes("network") || message.includes("timeout")) {
+        } else if (msg.includes("network") || msg.includes("timeout")) {
           errorMessage = "Network error. Please check your connection and try again.";
         } else {
           errorMessage = error.message;
         }
       }
-      
       toast.error(errorMessage);
     },
   });
 
+  // ── Handlers ──
   const handleTopUp = useCallback(async () => {
     if (!topUpAmount || isNaN(Number(topUpAmount)) || Number(topUpAmount) <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
-
-    // Check if user email is available from auth store
     if (!email) {
       toast.error("User email not found. Please login again.");
       return;
     }
-
-    if (isFunding) {
-      return;
-    }
-
+    if (isFunding) return;
     try {
       await handleFundWallet({
         amount: Number(topUpAmount),
-        email: email, // Use email from auth store
+        email,
         callback_url: `${window.location.origin}/dashboard?payment=success`,
       });
-    } catch  {
-      // Error is handled in onError callback
+    } catch {
+      // handled in onError
     }
   }, [topUpAmount, email, isFunding, handleFundWallet]);
 
@@ -177,41 +139,32 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       toast.error("Please enter a valid withdrawal amount");
       return;
     }
-
     if (!accountNumber || accountNumber.length < 10) {
       toast.error("Please enter a valid account number (minimum 10 digits)");
       return;
     }
-
     if (!selectedBank) {
       toast.error("Please select a bank");
       return;
     }
-
-    // Additional validation for account number format
     if (!/^\d{10}$/.test(accountNumber)) {
       toast.error("Account number must be exactly 10 digits");
       return;
     }
-
-    if (isWithdrawing) {
-      return;
-    }
-
+    if (isWithdrawing) return;
     try {
       await handleWithdraw({
         amount: Number(withdrawAmount),
-        accountNumber: accountNumber,
+        accountNumber,
         bankCode: selectedBank.code,
       });
     } catch {
-      // Error is handled in onError callback
+      // handled in onError
     }
   }, [withdrawAmount, accountNumber, selectedBank, isWithdrawing, handleWithdraw]);
 
   const handleTopUpClick = useCallback(() => {
     if (actions.includes("topUp")) {
-      // Check if user email is available from auth store
       if (!email) {
         toast.error("User email not found. Please login again.");
         return;
@@ -246,22 +199,18 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     setShowBankDropdown(false);
   }, []);
 
-  // Check for payment success and refetch balance
+  // ── Payment redirect handler ──
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment');
-    
-    if (paymentStatus === 'success') {
+    if (urlParams.get("payment") === "success") {
       toast.success("Payment successful! Your wallet has been funded.");
-      refetchBalance();
-      // Close the modal if it's open
+      invalidate();
       setShowTopUpModal(false);
       setTopUpAmount("");
-      // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      localStorage.removeItem('paymentReference');
+      localStorage.removeItem("paymentReference");
     }
-  }, [refetchBalance]);
+  }, [invalidate]);
 
   useEffect(() => {
     return () => {
@@ -269,9 +218,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     };
   }, []);
 
-  // Use live balance from API or fallback to prop
-  const currentBalance = dashboardData 
-    ? `₦${dashboardData.balance.toLocaleString()}` 
+  const currentBalance = dashboardData
+    ? `₦${dashboardData.balance.toLocaleString()}`
     : amount;
 
   return (
@@ -282,10 +230,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
           <div className="text-2xl font-bold">
             {isLoadingBalance ? "Loading..." : currentBalance}
           </div>
-
           <div className="space-x-4 space-y-2">
             {actions.includes("topUp") && (
-              <button 
+              <button
                 onClick={handleTopUpClick}
                 disabled={isFunding || isLoadingBalance}
                 className="bg-success border border-success px-5 py-2 rounded-lg text-xs inline-flex items-center space-x-2 font-bold disabled:opacity-50"
@@ -294,9 +241,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                 <span>{isFunding ? "Processing..." : "Top-up"}</span>
               </button>
             )}
-            {/* Only show withdraw button for counselors */}
             {actions.includes("withdraw") && role === "counselor" && (
-              <button 
+              <button
                 onClick={handleWithdrawClick}
                 disabled={isLoadingBalance || isWithdrawing}
                 className="border border-white px-5 py-2 rounded-lg text-xs inline-flex items-center space-x-2 font-bold disabled:opacity-50"
@@ -318,19 +264,14 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Fund Wallet</h3>
             <div className="space-y-4">
-              {/* Display user email (read-only) */}
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Email Address
-                </label>
+                <label className="block text-sm font-medium mb-2">Email Address</label>
                 <div className="w-full border border-gray-200 bg-gray-50 rounded px-4 py-2 text-gray-700">
                   {email || "No email found"}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Amount (₦)
-                </label>
+                <label className="block text-sm font-medium mb-2">Amount (₦)</label>
                 <input
                   type="number"
                   value={topUpAmount}
@@ -368,11 +309,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Withdraw Funds</h3>
             <div className="space-y-4">
-              {/* Withdrawal Amount */}
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Amount (₦)
-                </label>
+                <label className="block text-sm font-medium mb-2">Amount (₦)</label>
                 <input
                   type="number"
                   value={withdrawAmount}
@@ -383,18 +321,13 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                   autoFocus
                 />
               </div>
-
-              {/* Account Number */}
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Account Number
-                </label>
+                <label className="block text-sm font-medium mb-2">Account Number</label>
                 <input
                   type="text"
                   value={accountNumber}
                   onChange={(e) => {
-                    // Only allow digits and limit to 10 characters
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
                     setAccountNumber(value);
                   }}
                   placeholder="Enter 10-digit account number"
@@ -407,12 +340,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                   </p>
                 )}
               </div>
-
-              {/* Bank Selection */}
               <div className="relative">
-                <label className="block text-sm font-medium mb-2">
-                  Select Bank
-                </label>
+                <label className="block text-sm font-medium mb-2">Select Bank</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -420,9 +349,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                     onChange={(e) => {
                       setBankSearchTerm(e.target.value);
                       setShowBankDropdown(true);
-                      if (!e.target.value) {
-                        setSelectedBank(null);
-                      }
+                      if (!e.target.value) setSelectedBank(null);
                     }}
                     onFocus={() => setShowBankDropdown(true)}
                     placeholder="Search for a bank..."
@@ -435,8 +362,6 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                     </svg>
                   </div>
                 </div>
-
-                {/* Bank Dropdown */}
                 {showBankDropdown && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                     {isLoadingBanks ? (
@@ -460,8 +385,6 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                   </div>
                 )}
               </div>
-
-              {/* Selected Bank Display */}
               {selectedBank && (
                 <div className="bg-gray-50 border border-gray-200 rounded px-4 py-2">
                   <div className="text-sm font-medium text-gray-700">Selected Bank:</div>
@@ -469,14 +392,13 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
                   <div className="text-sm text-gray-500">{accountNumber}</div>
                 </div>
               )}
-
               <div className="flex space-x-4 pt-2">
                 <button
                   onClick={handleWithdrawSubmit}
                   disabled={
-                    isWithdrawing || 
-                    !withdrawAmount || 
-                    !accountNumber || 
+                    isWithdrawing ||
+                    !withdrawAmount ||
+                    !accountNumber ||
                     !selectedBank ||
                     accountNumber.length !== 10 ||
                     !/^\d{10}$/.test(accountNumber)
@@ -498,12 +420,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
         </div>
       )}
 
-      {/* Click outside to close bank dropdown */}
       {showBankDropdown && (
-        <div 
-          className="fixed inset-0 z-40"
-          onClick={() => setShowBankDropdown(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setShowBankDropdown(false)} />
       )}
     </>
   );

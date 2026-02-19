@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SessionType } from "./types";
-import { ChevronDown, User, Video, MapPin, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, User, Video, MapPin, Users, Loader2 } from "lucide-react";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import {
   getTherapistsApi,
   getCategoriesApi,
@@ -9,6 +9,7 @@ import {
   ITherapistListParams,
   convertCategoriesToObjects,
 } from "../../api/Therapist.api";
+import { getTherapistScheduleApi } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
 
 interface TherapistListProps {
@@ -16,18 +17,103 @@ interface TherapistListProps {
   onViewProfile: (therapistId: string) => void;
 }
 
+// Dropdown menu — receives supportsGroup as a plain boolean (no internal fetch)
+const TherapistDropdownMenu: React.FC<{
+  therapist: ITherapist;
+  supportsGroup: boolean;
+  dropdownPosition: { top?: string; bottom?: string };
+  onBook: (therapistId: string, sessionType: SessionType) => void;
+}> = ({ therapist, supportsGroup, dropdownPosition, onBook }) => (
+  <div
+    className="dropdown-menu absolute left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-300 z-50"
+    style={{
+      top: dropdownPosition.top,
+      bottom: dropdownPosition.bottom,
+      marginTop: dropdownPosition.bottom ? "0" : "0.5rem",
+      marginBottom: dropdownPosition.bottom ? "0.5rem" : "0",
+    }}
+  >
+    <button
+      onClick={() => onBook(therapist.userId, "video")}
+      className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm"
+    >
+      <Video className="w-4 h-4 text-primary" />
+      <span>Video Call</span>
+    </button>
+    <button
+      onClick={() => onBook(therapist.userId, "physical")}
+      className={`flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm ${supportsGroup ? "border-b border-gray-100" : ""}`}
+    >
+      <MapPin className="w-4 h-4 text-success" />
+      <span>Physical Meeting</span>
+    </button>
+    {supportsGroup && (
+      <button
+        onClick={() => onBook(therapist.userId, "group")}
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm"
+      >
+        <Users className="w-4 h-4 text-primary" />
+        <span>Team Meeting</span>
+      </button>
+    )}
+  </div>
+);
+
+const MobileTherapistDropdown: React.FC<{
+  therapist: ITherapist;
+  supportsGroup: boolean;
+  dropdownPosition: { top?: string; bottom?: string };
+  onBook: (therapistId: string, sessionType: SessionType) => void;
+}> = ({ therapist, supportsGroup, dropdownPosition, onBook }) => (
+  <div
+    className="dropdown-menu absolute left-0 w-full bg-white rounded-lg shadow-lg border z-50"
+    style={{
+      top: dropdownPosition.top,
+      bottom: dropdownPosition.bottom,
+      marginTop: dropdownPosition.bottom ? "0" : "0.5rem",
+      marginBottom: dropdownPosition.bottom ? "0.5rem" : "0",
+    }}
+  >
+    <button
+      onClick={() => onBook(therapist.userId, "video")}
+      className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm sm:text-base"
+    >
+      <Video className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+      <span>Video Call</span>
+    </button>
+    <button
+      onClick={() => onBook(therapist.userId, "physical")}
+      className={`flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm sm:text-base ${supportsGroup ? "border-b border-gray-100" : ""}`}
+    >
+      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+      <span>Physical Meeting</span>
+    </button>
+    {supportsGroup && (
+      <button
+        onClick={() => onBook(therapist.userId, "group")}
+        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm sm:text-base"
+      >
+        <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+        <span>Team Meeting</span>
+      </button>
+    )}
+  </div>
+);
+
 const TherapistList: React.FC<TherapistListProps> = ({
   onBookAppointment,
   onViewProfile,
 }) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top?: string; bottom?: string; left?: string; right?: string }>({});
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top?: string;
+    bottom?: string;
+  }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Helper function to trim text
   const trimText = (text: string, maxLength: number = 20): string => {
     if (!text) return "";
     return text.length > maxLength
@@ -38,36 +124,29 @@ const TherapistList: React.FC<TherapistListProps> = ({
   const toggleDropdown = (therapistId: string) => {
     setOpenDropdown((prev) => {
       const newValue = prev === therapistId ? null : therapistId;
-      
       if (newValue) {
-        // Calculate position after state update
         setTimeout(() => {
-          const button = document.querySelector(`[data-dropdown-id="${therapistId}"]`);
+          const button = document.querySelector(
+            `[data-dropdown-id="${therapistId}"]`
+          );
           if (button) {
             const rect = button.getBoundingClientRect();
-            const dropdownHeight = 120; // Approximate height of dropdown
+            const dropdownHeight = 160;
             const viewportHeight = window.innerHeight;
             const spaceBelow = viewportHeight - rect.bottom;
             const spaceAbove = rect.top;
-            
-            const position: { top?: string; bottom?: string; left?: string; right?: string } = {};
-            
-            // Check if there's enough space below
+            const position: { top?: string; bottom?: string } = {};
             if (spaceBelow >= dropdownHeight) {
-              position.top = '100%';
+              position.top = "100%";
             } else if (spaceAbove >= dropdownHeight) {
-              // Position above if not enough space below
-              position.bottom = '100%';
+              position.bottom = "100%";
             } else {
-              // Default to below if neither has enough space
-              position.top = '100%';
+              position.top = "100%";
             }
-            
             setDropdownPosition(position);
           }
         }, 0);
       }
-      
       return newValue;
     });
   };
@@ -88,17 +167,14 @@ const TherapistList: React.FC<TherapistListProps> = ({
         setOpenDropdown(null);
       }
     };
-
     if (openDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openDropdown]);
 
-  // Fetch categories
   const {
     data: categoriesResponse,
     isLoading: categoriesLoading,
@@ -115,7 +191,6 @@ const TherapistList: React.FC<TherapistListProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch therapists
   const {
     data: therapistsResponse,
     isLoading: therapistsLoading,
@@ -126,44 +201,66 @@ const TherapistList: React.FC<TherapistListProps> = ({
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-
-      const params: ITherapistListParams = {
-        page: currentPage,
-        limit: 10,
-      };
-
+      const params: ITherapistListParams = { page: currentPage, limit: 10 };
       if (selectedCategory && selectedCategory !== "all") {
         params.category = selectedCategory;
       }
-
       if (searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
-
-      const result = await getTherapistsApi(params, {
-        signal: controller.signal,
-      });
+      const result = await getTherapistsApi(params, { signal: controller.signal });
       if (!result) throw new Error("Request cancelled");
       return result;
     },
     staleTime: 2 * 60 * 1000,
   });
 
+  const therapists = useMemo(
+  () => therapistsResponse?.data?.therapists || [],
+  [therapistsResponse?.data?.therapists]
+);
+
+  // Prefetch all schedules for the current page of therapists in parallel
+  // so the "Team Meeting" option is ready before the dropdown opens
+  const scheduleQueries = useQueries({
+    queries: therapists.map((t: ITherapist) => ({
+      queryKey: ["therapist-schedule", t.userId, "video"],
+      queryFn: async () => {
+        const result = await getTherapistScheduleApi(t.userId, "video");
+        if (!result) throw new Error("Request cancelled");
+        return result;
+      },
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  // Build a map of therapistId -> supportsGroup for O(1) lookup in the render
+  const groupSupportMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    therapists.forEach((t: ITherapist, i: number) => {
+      const data = scheduleQueries[i]?.data;
+      const schedules = data?.data?.schedules || [];
+      map.set(t.userId, schedules.some((s) => s.isAvailable && s.allowGroupBooking === true));
+    });
+    return map;
+  }, [therapists, scheduleQueries]);
+
   const getCostDisplay = (
-    cost: { video: number; inPerson: number } | number | null
-  ): string => {
-    if (typeof cost === "number") {
-      return `₦${cost}.00/hr`;
-    }
-    if (typeof cost === "object" && cost !== null) {
-      if (cost.video === cost.inPerson) {
-        return `₦${cost.video}.00/hr`;
-      } else {
-        return `₦${cost.video}/₦${cost.inPerson}/hr`;
-      }
-    }
-    return "Contact for pricing";
-  };
+  cost: { video: number; inPerson: number; groupVideo?: number } | number | null
+): string => {
+  if (typeof cost === "number") return `₦${cost}.00/hr`;
+  if (typeof cost === "object" && cost !== null) {
+    const { video, inPerson, groupVideo } = cost;
+    const hasGroup = groupVideo !== undefined && groupVideo !== null;
+
+    if (video === inPerson && !hasGroup) return `₦${video}.00/hr`;
+    if (video === inPerson && hasGroup) return `₦${video}.00 ₦${groupVideo}/hr`;
+
+    if (!hasGroup) return `₦${video}/₦${inPerson}/hr`;
+    return `₦${video}/₦${inPerson} ₦${groupVideo}/hr`;
+  }
+  return "Contact for pricing";
+};
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -176,21 +273,15 @@ const TherapistList: React.FC<TherapistListProps> = ({
   }, []);
 
   useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
+    return () => { abortControllerRef.current?.abort(); };
   }, []);
 
   useEffect(() => {
-    if (categoriesError) {
-      toast.error("Failed to load categories");
-    }
+    if (categoriesError) toast.error("Failed to load categories");
   }, [categoriesError]);
 
   useEffect(() => {
-    if (therapistsError) {
-      toast.error("Failed to load therapists");
-    }
+    if (therapistsError) toast.error("Failed to load therapists");
   }, [therapistsError]);
 
   const renderStars = (rating: number | null) => {
@@ -198,9 +289,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     return Array.from({ length: 5 }, (_, i) => (
       <span
         key={i}
-        className={`text-sm lg:text-base ${
-          i < validRating ? "text-yellow-400" : "text-gray-300"
-        }`}
+        className={`text-sm lg:text-base ${i < validRating ? "text-yellow-400" : "text-gray-300"}`}
       >
         ★
       </span>
@@ -210,18 +299,17 @@ const TherapistList: React.FC<TherapistListProps> = ({
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
       const img = e.target as HTMLImageElement;
-      img.src = "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User";
+      img.src = "https://placehold.net/avatar-4.png";
     },
     []
   );
 
+  const totalPages = therapistsResponse?.data?.totalPages || 1;
+  const totalCount = therapistsResponse?.data?.totalCount || 0;
+
   const categories = categoriesResponse?.data?.categories
     ? convertCategoriesToObjects(categoriesResponse.data.categories)
     : [];
-
-  const therapists = therapistsResponse?.data?.therapists || [];
-  const totalPages = therapistsResponse?.data?.totalPages || 1;
-  const totalCount = therapistsResponse?.data?.totalCount || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -233,7 +321,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
             "url(https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637)",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
         <div className="absolute inset-0 flex items-center justify-center">
           <h1 className="text-white text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
             Our Counselors
@@ -245,7 +333,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
         {/* Search + Filters */}
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
-            <div className="relative w-full sm:w-auto sm:min-w-[180px]">
+            <div className="relative w-full sm:w-auto sm:min-w-45">
               <select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
@@ -311,10 +399,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
             </p>
             {(selectedCategory || searchQuery) && (
               <button
-                onClick={() => {
-                  setSelectedCategory("");
-                  setSearchQuery("");
-                }}
+                onClick={() => { setSelectedCategory(""); setSearchQuery(""); }}
                 className="mt-4 px-4 py-2 text-blue-600 hover:text-blue-800 transition-colors text-sm"
               >
                 Clear filters
@@ -330,27 +415,13 @@ const TherapistList: React.FC<TherapistListProps> = ({
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Names
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Reviews
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Experience
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cost
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Action
-                    </th>
-                    <th className="px-3 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Profile
-                    </th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Names</th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reviews</th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-3 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -359,16 +430,12 @@ const TherapistList: React.FC<TherapistListProps> = ({
                       key={therapist.userId}
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
-                      {/* Name */}
                       <td className="px-3 lg:px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={
-                              therapist.profilePicture ||
-                              "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User"
-                            }
+                            src={therapist.profilePicture || "https://via.placeholder.com/48x48/e5e7eb/9ca3af?text=User"}
                             alt={therapist.name}
-                            className="w-8 h-8 lg:w-12 lg:h-12 rounded-full object-cover flex-shrink-0"
+                            className="w-8 h-8 lg:w-12 lg:h-12 rounded-full object-cover shrink-0"
                             onError={handleImageError}
                           />
                           <span className="font-medium text-gray-900 text-sm lg:text-base">
@@ -376,30 +443,18 @@ const TherapistList: React.FC<TherapistListProps> = ({
                           </span>
                         </div>
                       </td>
-
-                      {/* Category */}
                       <td className="px-3 lg:px-6 py-4 text-gray-600 text-xs lg:text-sm">
                         {trimText(therapist.category, 20)}
                       </td>
-
-                      {/* Reviews */}
                       <td className="px-3 lg:px-6 py-4">
-                        <div className="flex">
-                          {renderStars(therapist.reviews.averageRating)}
-                        </div>
+                        <div className="flex">{renderStars(therapist.reviews.averageRating)}</div>
                       </td>
-
-                      {/* Experience */}
                       <td className="px-3 lg:px-6 py-4 text-gray-600 text-xs lg:text-sm">
                         {therapist.experience} years
                       </td>
-
-                      {/* Cost */}
                       <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 text-xs lg:text-sm">
                         {getCostDisplay(therapist.cost)}
                       </td>
-
-                      {/* Action */}
                       <td className="px-3 lg:px-6 py-4 relative dropdown-container">
                         <button
                           data-dropdown-id={therapist.userId}
@@ -408,47 +463,18 @@ const TherapistList: React.FC<TherapistListProps> = ({
                         >
                           <span className="whitespace-nowrap">Book</span>
                           <ChevronDown
-                            className={`w-3 h-3 lg:w-4 lg:h-4 flex-shrink-0 transition-transform ${
-                              openDropdown === therapist.userId
-                                ? "rotate-180"
-                                : ""
-                            }`}
+                            className={`w-3 h-3 lg:w-4 lg:h-4 shrink-0 transition-transform ${openDropdown === therapist.userId ? "rotate-180" : ""}`}
                           />
                         </button>
-
                         {openDropdown === therapist.userId && (
-                          <div 
-                            className="dropdown-menu absolute left-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-300 z-50"
-                            style={{
-                              top: dropdownPosition.top,
-                              bottom: dropdownPosition.bottom,
-                              marginTop: dropdownPosition.bottom ? '0' : '0.5rem',
-                              marginBottom: dropdownPosition.bottom ? '0.5rem' : '0'
-                            }}
-                          >
-                            <button
-                              onClick={() =>
-                                handleBooking(therapist.userId, "video")
-                              }
-                              className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm"
-                            >
-                              <Video className="w-4 h-4 text-primary" />
-                              <span>Video Call</span>
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleBooking(therapist.userId, "physical")
-                              }
-                              className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm"
-                            >
-                              <MapPin className="w-4 h-4 text-success" />
-                              <span>Physical Meeting</span>
-                            </button>
-                          </div>
+                          <TherapistDropdownMenu
+                            therapist={therapist}
+                            supportsGroup={groupSupportMap.get(therapist.userId) ?? false}
+                            dropdownPosition={dropdownPosition}
+                            onBook={handleBooking}
+                          />
                         )}
                       </td>
-
-                      {/* Profile */}
                       <td className="px-3 lg:px-6 py-4 text-center">
                         <button
                           onClick={() => onViewProfile(therapist.userId)}
@@ -473,12 +499,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <img
-                      src={
-                        therapist.profilePicture ||
-                        "https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User"
-                      }
+                      src={therapist.profilePicture || "https://via.placeholder.com/64x64/e5e7eb/9ca3af?text=User"}
                       alt={therapist.name}
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover flex-shrink-0"
+                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover shrink-0"
                       onError={handleImageError}
                     />
                     <div className="flex-1 min-w-0">
@@ -489,9 +512,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
                         {trimText(therapist.category, 30)}
                       </p>
                       <div className="flex items-center gap-3 sm:gap-4 mb-3 flex-wrap">
-                        <div className="flex">
-                          {renderStars(therapist.reviews.averageRating)}
-                        </div>
+                        <div className="flex">{renderStars(therapist.reviews.averageRating)}</div>
                         <span className="text-gray-600 text-xs sm:text-sm">
                           {therapist.experience} years
                         </span>
@@ -520,41 +541,16 @@ const TherapistList: React.FC<TherapistListProps> = ({
                     >
                       <span>Book Appointment</span>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
-                          openDropdown === therapist.userId ? "rotate-180" : ""
-                        }`}
+                        className={`w-4 h-4 transition-transform ${openDropdown === therapist.userId ? "rotate-180" : ""}`}
                       />
                     </button>
-
                     {openDropdown === therapist.userId && (
-                      <div 
-                        className="dropdown-menu absolute left-0 mt-2 w-full bg-white rounded-lg shadow-lg border z-50"
-                        style={{
-                          top: dropdownPosition.top,
-                          bottom: dropdownPosition.bottom,
-                          marginTop: dropdownPosition.bottom ? '0' : '0.5rem',
-                          marginBottom: dropdownPosition.bottom ? '0.5rem' : '0'
-                        }}
-                      >
-                        <button
-                          onClick={() =>
-                            handleBooking(therapist.userId, "video")
-                          }
-                          className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm sm:text-base"
-                        >
-                          <Video className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                          <span>Video Call</span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleBooking(therapist.userId, "physical")
-                          }
-                          className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm sm:text-base"
-                        >
-                          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
-                          <span>Physical Meeting</span>
-                        </button>
-                      </div>
+                      <MobileTherapistDropdown
+                        therapist={therapist}
+                        supportsGroup={groupSupportMap.get(therapist.userId) ?? false}
+                        dropdownPosition={dropdownPosition}
+                        onBook={handleBooking}
+                      />
                     )}
                   </div>
                 </div>
@@ -579,9 +575,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
                 pageNum === 1 ||
                 pageNum === totalPages ||
                 Math.abs(pageNum - currentPage) <= 1;
-
               if (!shouldShow && totalPages > 5) return null;
-
               return (
                 <button
                   key={pageNum}
