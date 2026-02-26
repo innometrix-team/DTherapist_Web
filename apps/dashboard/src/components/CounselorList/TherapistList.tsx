@@ -254,7 +254,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     const hasGroup = groupVideo !== undefined && groupVideo !== null;
 
     if (video === inPerson && !hasGroup) return `₦${video}.00/hr`;
-    if (video === inPerson && hasGroup) return `₦${video}.00 ₦${groupVideo}/hr`;
+    if (video === inPerson && hasGroup) return `₦${video}.00/₦${groupVideo}/hr`;
 
     if (!hasGroup) return `₦${video}/₦${inPerson}/hr`;
     return `₦${video}/₦${inPerson} ₦${groupVideo}/hr`;

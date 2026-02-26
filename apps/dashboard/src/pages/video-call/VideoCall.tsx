@@ -9,125 +9,12 @@ import AgoraRTC, {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Appointment } from "../../api/Appointments.api";
+import { fetchAgoraRtcToken } from "../../api/Agora.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
-import Api from "../../api/Api";
+import InCallChat from "../../components/VideoChat/inCallChat";
 
-// Token refresh API response interface
-interface TokenRefreshResponse {
-  uid: number;
-  token: string;
-  sessionName: string;
-  expiresAt: number;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const getInitials = (name?: string) => {
-  if (!name) return "You";
-  const parts = name.trim().split(/\s+/);
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-};
-
-const MicIcon = ({ muted }: { muted: boolean }) => (
-  <svg
-    className="w-5 h-5"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    {muted ? (
-      <>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-        />
-      </>
-    ) : (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-      />
-    )}
-  </svg>
-);
-
-const VideoIcon = ({ disabled }: { disabled: boolean }) => (
-  <svg
-    className="w-5 h-5"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    {disabled ? (
-      <>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M3 3l18 18"
-        />
-      </>
-    ) : (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-      />
-    )}
-  </svg>
-);
-
-const PhoneIcon = () => (
-  <svg
-    className="w-5 h-5"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 16.5v2.25A2.25 2.25 0 005.25 21h2.25m-7.5-4.5h7.5m-7.5 0V9.25A2.25 2.25 0 015.25 7h2.25m12 9.75h-7.5m7.5 0V9.25A2.25 2.25 0 0118.75 7h-2.25"
-    />
-  </svg>
-);
-
-const SwapIcon = () => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-    />
-  </svg>
-);
-
-// Types for the location.state payload we navigate with from SessionTable
 interface AgoraState {
   agora?: {
     appId: string;
@@ -136,7 +23,7 @@ interface AgoraState {
     uid?: number;
   };
   appointment?: Appointment;
-  sessionDuration?: number; // Duration in minutes
+  sessionDuration?: number;
 }
 
 interface RemoteUserState {
@@ -146,653 +33,967 @@ interface RemoteUserState {
   displayName?: string;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const getInitials = (name?: string) => {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+};
+
+/**
+ * Returns true when the viewport width is below the "md" Tailwind breakpoint
+ * (< 768 px). Re-evaluates on resize.
+ */
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+};
+
+/**
+ * Given the total number of tiles, return the number of CSS grid columns that
+ * produces the most balanced, square-ish layout.
+ *
+ *   1  →  1 col   (full screen)
+ *   2  →  2 cols  (side by side)
+ *   3  →  3 cols  (one row of 3)
+ *   4  →  2 cols  (2 × 2)
+ *   5  →  3 cols  (2 + 3)
+ *   6  →  3 cols  (2 × 3)
+ *   7+  → 4 cols
+ */
+const gridColumns = (total: number): number => {
+  if (total <= 1) return 1;
+  if (total <= 2) return 2;
+  if (total === 3) return 3;
+  if (total <= 4) return 2;
+  if (total <= 6) return 3;
+  return 4;
+};
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const MicIcon = ({ muted }: { muted: boolean }) => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    {muted ? (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+      </>
+    ) : (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    )}
+  </svg>
+);
+
+const VideoIcon = ({ disabled }: { disabled: boolean }) => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    {disabled ? (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+      </>
+    ) : (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    )}
+  </svg>
+);
+
+const PhoneOffIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 16.5v2.25A2.25 2.25 0 005.25 21h2.25m-7.5-4.5h7.5m-7.5 0V9.25A2.25 2.25 0 015.25 7h2.25m12 9.75h-7.5m7.5 0V9.25A2.25 2.25 0 0118.75 7h-2.25" />
+  </svg>
+);
+
+const ChatIcon = ({ hasUnread }: { hasUnread: boolean }) => (
+  <div className="relative">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+    {hasUnread && (
+      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900" />
+    )}
+  </div>
+);
+
+const UsersIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+// ─── Local Video Tile ─────────────────────────────────────────────────────────
+
+interface LocalVideoTileProps {
+  track: ICameraVideoTrack | null;
+  isCamOn: boolean;
+  isMicOn: boolean;
+  displayName: string;
+  isMain: boolean;
+  onClick?: () => void;
+  /** Render a highlighted ring when this tile is pinned / active */
+  isPinned?: boolean;
+}
+
+interface LocalVideoTileProps {
+  track: ICameraVideoTrack | null;
+  isCamOn: boolean;
+  isMicOn: boolean;
+  displayName: string;
+  isMain: boolean;
+  onClick?: () => void;
+  isPinned?: boolean;
+  isSpeaking?: boolean;
+}
+
+const LocalVideoTile: React.FC<LocalVideoTileProps> = ({
+  track, isCamOn, isMicOn, displayName, isMain, onClick, isPinned, isSpeaking,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.innerHTML = "";
+    if (track && isCamOn) {
+      const div = document.createElement("div");
+      div.className = "w-full h-full";
+      container.appendChild(div);
+      track.play(div);
+    }
+  }, [track, isCamOn]);
+
+  const avatarSize = isMain ? "w-24 h-24 text-3xl" : "w-10 h-10 text-sm";
+
+  return (
+    <div
+      className={`relative w-full h-full bg-gray-900 overflow-hidden transition-all duration-200
+        ${onClick ? "cursor-pointer" : ""}
+        ${isPinned ? "ring-2 ring-blue-400 ring-inset" : ""}
+        ${isSpeaking && !isPinned ? "ring-2 ring-green-400 ring-inset" : ""}
+      `}
+      onClick={onClick}
+    >
+      {/* Speaking pulse border */}
+      {isSpeaking && (
+        <div className="absolute inset-0 ring-2 ring-green-400 ring-inset rounded-[inherit] animate-pulse pointer-events-none z-10" />
+      )}
+      <div ref={containerRef} className="absolute inset-0" />
+      {!isCamOn && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+          <div className={`rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold ${avatarSize}`}>
+            {getInitials(displayName)}
+          </div>
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+        <div className={`px-2 py-0.5 backdrop-blur-sm rounded text-white text-xs font-medium transition-colors duration-200 ${isSpeaking ? "bg-green-500/70" : "bg-black/60"}`}>
+          {displayName} (You)
+        </div>
+        {!isMicOn && <span className="text-red-400 text-xs">🔇</span>}
+        {isSpeaking && isMicOn && (
+          <div className="flex items-end gap-[2px] h-3">
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite]" style={{ height: "40%" }} />
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_0.15s_infinite]" style={{ height: "100%" }} />
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_0.3s_infinite]" style={{ height: "60%" }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Remote Tile ──────────────────────────────────────────────────────────────
+
+interface RemoteTileProps {
+  participant: RemoteUserState;
+  isMain: boolean;
+  onClick?: () => void;
+  isPinned?: boolean;
+  isSpeaking?: boolean;
+}
+
+const RemoteTile: React.FC<RemoteTileProps> = ({ participant, isMain, onClick, isPinned, isSpeaking }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.innerHTML = "";
+    if (participant.hasVideo && participant.user.videoTrack) {
+      const div = document.createElement("div");
+      div.className = "w-full h-full";
+      container.appendChild(div);
+      (participant.user.videoTrack as IRemoteVideoTrack).play(div);
+    }
+  }, [participant.hasVideo, participant.user.videoTrack]);
+
+  const avatarSize = isMain ? "w-24 h-24 text-3xl" : "w-12 h-12 text-lg";
+
+  return (
+    <div
+      className={`relative bg-gray-900 overflow-hidden w-full h-full transition-all duration-200
+        ${!isMain ? "rounded-xl border border-gray-700" : ""}
+        ${onClick ? "cursor-pointer" : ""}
+        ${isPinned ? "ring-2 ring-blue-400 ring-inset" : ""}
+        ${isSpeaking && !isPinned ? "ring-2 ring-green-400 ring-inset" : ""}
+      `}
+      onClick={onClick}
+    >
+      {/* Speaking pulse border */}
+      {isSpeaking && (
+        <div className="absolute inset-0 ring-2 ring-green-400 ring-inset rounded-[inherit] animate-pulse pointer-events-none z-10" />
+      )}
+      <div ref={containerRef} className="absolute inset-0" />
+      {!participant.hasVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+          <div className={`rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold ${avatarSize}`}>
+            {getInitials(participant.displayName)}
+          </div>
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+        <div className={`px-2 py-0.5 backdrop-blur-sm rounded text-white text-xs font-medium transition-colors duration-200 ${isSpeaking ? "bg-green-500/70" : "bg-black/60"}`}>
+          {participant.displayName || `User ${participant.user.uid}`}
+        </div>
+        {!participant.hasAudio && (
+          <div className="w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center">
+            <span className="text-white text-xs">🔇</span>
+          </div>
+        )}
+        {isSpeaking && participant.hasAudio && (
+          <div className="flex items-end gap-[2px] h-3">
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite]" style={{ height: "40%" }} />
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_0.15s_infinite]" style={{ height: "100%" }} />
+            <span className="w-[3px] bg-green-400 rounded-full animate-[soundbar_0.6s_ease-in-out_0.3s_infinite]" style={{ height: "60%" }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
   const { name } = useAuthStore();
   const { state } = useLocation() as { state?: AgoraState };
   const displayName = name || "You";
+  const isMobile = useIsMobile();
 
   const [appId, setAppId] = useState<string | undefined>(state?.agora?.appId);
-  const [channel, setChannel] = useState<string | undefined>(
-    state?.agora?.channel
-  );
+  const [channel, setChannel] = useState<string | undefined>(state?.agora?.channel);
   const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
-
   const [isLoadingToken, setIsLoadingToken] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinStep, setJoinStep] = useState<string>("Connecting…");
 
-  // Session timer states (removed modal-related states)
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
 
-  // Agora client & tracks
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioRef = useRef<IMicrophoneAudioTrack | null>(null);
-  const localVideoRef = useRef<ICameraVideoTrack | null>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<ICameraVideoTrack | null>(null);
+  const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null);
 
   const [isJoined, setIsJoined] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
-  const [remoteUser, setRemoteUser] = useState<RemoteUserState | null>(null);
-  const [isSwapped, setIsSwapped] = useState(false);
 
-  // Fixed containers - these never swap
-  const mainVideoContainerRef = useRef<HTMLDivElement | null>(null);
-  const pipVideoContainerRef = useRef<HTMLDivElement | null>(null);
+  const [remoteUsers, setRemoteUsers] = useState<RemoteUserState[]>([]);
+  const [pinnedUid, setPinnedUid] = useState<number | string | null>(null);
 
-  // Calculate session duration from appointment time
-  useEffect(() => {
-    if (state?.appointment) {
-      const appointment = state.appointment;
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [activeSpeakerUid, setActiveSpeakerUid] = useState<number | string | null>(null);
 
-      // Parse the session end time from the appointment time field
-      // Format: "5:20 PM - 6:20 PM"
-      const timeParts = appointment.time?.split(" - ");
+  // ── Timer ──────────────────────────────────────────────────────────────────
 
-      if (timeParts && timeParts.length === 2) {
-        const endTimeStr = timeParts[1]; // e.g., "6:20 PM"
-        const dateStr = appointment.date; // e.g., "2025-10-25"
-
-        // Parse the end time
-        const endDateTime = parseTimeToTimestamp(dateStr, endTimeStr);
-
-        if (endDateTime) {
-          const currentTimestamp = Math.floor(Date.now() / 1000);
-          const remainingSeconds = endDateTime - currentTimestamp;
-
-          if (remainingSeconds > 0) {
-            setRemainingTime(remainingSeconds);
-          } else {
-            setRemainingTime(0);
-          }
-        }
-      } else if (state?.appointment?.action?.agoraToken?.expiresAt) {
-        // Fallback to expiresAt if time parsing fails
-        const expiresAtTimestamp = parseInt(
-          state.appointment.action.agoraToken.expiresAt
-        );
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        const remainingSeconds = expiresAtTimestamp - currentTimestamp;
-
-        if (remainingSeconds > 0) {
-          setRemainingTime(remainingSeconds);
-        } else {
-          setRemainingTime(0);
-        }
-      }
-    }
-  }, [state]);
-
-  // Helper function to parse time string to Unix timestamp
-  const parseTimeToTimestamp = (
-    dateStr: string,
-    timeStr: string
-  ): number | null => {
+  const parseTimeToTimestamp = (dateStr: string, timeStr: string): number | null => {
     try {
-      // Parse date (YYYY-MM-DD)
       const [year, month, day] = dateStr.split("-").map(Number);
-
-      // Parse time (e.g., "6:20 PM")
       const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (!timeMatch) return null;
-
       let hours = parseInt(timeMatch[1]);
       const minutes = parseInt(timeMatch[2]);
       const period = timeMatch[3].toUpperCase();
-
-      // Convert to 24-hour format
-      if (period === "PM" && hours !== 12) {
-        hours += 12;
-      } else if (period === "AM" && hours === 12) {
-        hours = 0;
-      }
-
-      // Create date object (assumes local timezone - WAT in your case)
-      const date = new Date(year, month - 1, day, hours, minutes, 0);
-
-      // Return Unix timestamp in seconds
-      return Math.floor(date.getTime() / 1000);
-    } catch (e) {
-      console.error("Error parsing time:", e);
-      return null;
-    }
+      if (period === "PM" && hours !== 12) hours += 12;
+      else if (period === "AM" && hours === 12) hours = 0;
+      return Math.floor(new Date(year, month - 1, day, hours, minutes).getTime() / 1000);
+    } catch { return null; }
   };
 
-  // Timer countdown effect - simplified without modal logic
   useEffect(() => {
-    if (remainingTime === null || remainingTime <= 0) {
-      return;
+    if (!state?.appointment) return;
+    const apt = state.appointment;
+    const timeParts = apt.time?.split(" - ");
+    if (timeParts?.length === 2) {
+      const end = parseTimeToTimestamp(apt.date, timeParts[1]);
+      if (end) { const rem = end - Math.floor(Date.now() / 1000); setRemainingTime(rem > 0 ? rem : 0); return; }
     }
+    const expiresAt = apt.action?.agoraToken?.expiresAt;
+    if (expiresAt) { const rem = parseInt(expiresAt) - Math.floor(Date.now() / 1000); setRemainingTime(rem > 0 ? rem : 0); }
+  }, [state]);
 
+  useEffect(() => {
+    if (!remainingTime) return;
     timerIntervalRef.current = window.setInterval(() => {
-      setRemainingTime((prev) => {
-        if (prev === null || prev <= 1) {
-          if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-          }
-          return 0;
-        }
-        return prev - 1;
+      setRemainingTime((p) => {
+        if (!p || p <= 1) { clearInterval(timerIntervalRef.current!); return 0; }
+        return p - 1;
       });
     }, 1000);
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
+    return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
   }, [remainingTime]);
 
-  // Format time display
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  const formatTime = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   useEffect(() => {
-    function fetchIfNeeded() {
-      if (appId && channel) return;
-      try {
-        setAppId(import.meta.env.VITE_AGORA_APP_ID);
-        setChannel(state?.agora?.channel);
-        setUid(state?.agora?.uid ?? 0);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    fetchIfNeeded();
-  }, [appId, channel, state]);
+    if (!appId) setAppId(import.meta.env.VITE_AGORA_APP_ID);
+    if (!channel) setChannel(state?.agora?.channel);
+    if (!uid) setUid(state?.agora?.uid ?? 0);
+  }, []); // eslint-disable-line
 
-  // Function to fetch fresh token from the API
-  const fetchFreshToken =
-    useCallback(async (): Promise<TokenRefreshResponse | null> => {
-      if (!channel || uid === undefined) {
-        console.error("Missing channel or uid for token refresh");
-        return null;
-      }
+  // ── Token ──────────────────────────────────────────────────────────────────
 
-      try {
-        setIsLoadingToken(true);
-        const response = await Api.get<TokenRefreshResponse>(
-          "/api/agora/refresh-token",
-          {
-            params: {
-              sessionName: channel,
-              uid: uid,
-            },
-          }
-        );
+  const getFreshRtcToken = useCallback(async () => {
+    if (!channel) return null;
+    try {
+      setIsLoadingToken(true);
+      const result = await fetchAgoraRtcToken(channel, uid);
+      return result?.data ?? null;
+    } catch (err) {
+      console.error("RTC token fetch failed:", err);
+      throw err;
+    } finally { setIsLoadingToken(false); }
+  }, [channel, uid]);
 
-        return response.data || null;
-      } catch (error: unknown) {
-        console.error(
-          "Failed to fetch fresh token:",
-          error instanceof Error ? error.message : "Unknown error"
-        );
-        throw new Error("Failed to refresh Agora token");
-      } finally {
-        setIsLoadingToken(false);
-      }
-    }, [channel, uid]);
-
-  const renderVideoInContainer = useCallback(
-    (
-      track: ICameraVideoTrack | IRemoteVideoTrack | null,
-      container: HTMLDivElement,
-      isEnabled: boolean
-    ) => {
-      container.innerHTML = "";
-      if (track && isEnabled) {
-        const videoDiv = document.createElement("div");
-        videoDiv.className = "w-full h-full";
-        container.appendChild(videoDiv);
-        track.play(videoDiv);
-      }
-    },
-    []
-  );
-
-  // Effect to handle video rendering based on swap state
-  useEffect(() => {
-    if (!isJoined) return;
-
-    const mainContainer = mainVideoContainerRef.current;
-    const pipContainer = pipVideoContainerRef.current;
-
-    if (!mainContainer || !pipContainer) return;
-
-    if (isSwapped) {
-      if (remoteUser?.hasVideo && remoteUser.user.videoTrack) {
-        renderVideoInContainer(
-          remoteUser.user.videoTrack as IRemoteVideoTrack,
-          mainContainer,
-          true
-        );
-      } else {
-        mainContainer.innerHTML = "";
-      }
-
-      if (localVideoRef.current) {
-        renderVideoInContainer(localVideoRef.current, pipContainer, isCamOn);
-      }
-    } else {
-      if (localVideoRef.current) {
-        renderVideoInContainer(localVideoRef.current, mainContainer, isCamOn);
-      }
-
-      if (remoteUser?.hasVideo && remoteUser.user.videoTrack) {
-        renderVideoInContainer(
-          remoteUser.user.videoTrack as IRemoteVideoTrack,
-          pipContainer,
-          true
-        );
-      } else if (pipContainer) {
-        pipContainer.innerHTML = "";
-      }
-    }
-  }, [isSwapped, remoteUser, isCamOn, isJoined, renderVideoInContainer]);
+  // ── Agora event listeners ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (!clientRef.current) {
       clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     }
-
     const client = clientRef.current;
-    if (!client) return;
 
-    // User-published: subscribe and play
-    const handleUserPublished = async (
-      user: IAgoraRTCRemoteUser,
-      mediaType: "audio" | "video"
-    ) => {
-      try {
-        await client.subscribe(user, mediaType);
-
-        if (mediaType === "audio" && user.audioTrack) {
-          (user.audioTrack as IRemoteAudioTrack).play();
+    const handleUserPublished = async (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
+      await client.subscribe(user, mediaType);
+      if (mediaType === "audio" && user.audioTrack) (user.audioTrack as IRemoteAudioTrack).play();
+      setRemoteUsers((prev) => {
+        const existing = prev.find((u) => u.user.uid === user.uid);
+        if (existing) {
+          return prev.map((u) =>
+            u.user.uid === user.uid
+              ? { ...u, user, hasVideo: mediaType === "video" ? true : u.hasVideo, hasAudio: mediaType === "audio" ? true : u.hasAudio }
+              : u
+          );
         }
-
-        setRemoteUser((prev) => ({
+        return [...prev, {
           user,
-          hasVideo: prev?.hasVideo || mediaType === "video",
-          hasAudio: prev?.hasAudio || mediaType === "audio",
-          displayName:
-            state?.appointment?.fullName || `Participant ${user.uid}`,
-        }));
-      } catch (err) {
-        console.error("subscribe error", err);
-      }
-    };
-
-    const handleUserUnpublished = (
-      user: IAgoraRTCRemoteUser,
-      mediaType: "audio" | "video"
-    ) => {
-      setRemoteUser((prev) => {
-        if (!prev || prev.user.uid !== user.uid) return prev;
-        return {
-          ...prev,
-          hasVideo: mediaType === "video" ? false : prev.hasVideo,
-          hasAudio: mediaType === "audio" ? false : prev.hasAudio,
-        };
+          hasVideo: mediaType === "video",
+          hasAudio: mediaType === "audio",
+          displayName: state?.appointment?.fullName || `Participant ${user.uid}`,
+        }];
       });
     };
 
-    const handleUserLeft = () => {
-      if (mainVideoContainerRef.current) {
-        mainVideoContainerRef.current.innerHTML = "";
-      }
-      if (pipVideoContainerRef.current) {
-        pipVideoContainerRef.current.innerHTML = "";
-      }
-      setRemoteUser(null);
+    const handleUserUnpublished = (user: IAgoraRTCRemoteUser, mediaType: "audio" | "video") => {
+      setRemoteUsers((prev) =>
+        prev.map((u) =>
+          u.user.uid === user.uid
+            ? { ...u, hasVideo: mediaType === "video" ? false : u.hasVideo, hasAudio: mediaType === "audio" ? false : u.hasAudio }
+            : u
+        )
+      );
+    };
+
+    const handleUserLeft = (user: IAgoraRTCRemoteUser) => {
+      setRemoteUsers((prev) => prev.filter((u) => u.user.uid !== user.uid));
+      setPinnedUid((prev) => (prev === user.uid ? null : prev));
     };
 
     client.on("user-published", handleUserPublished);
     client.on("user-unpublished", handleUserUnpublished);
     client.on("user-left", handleUserLeft);
 
+    // Enable volume indicator — fires every 2 s with a list of speakers sorted
+    // by volume level descending. We pick the loudest one above a threshold.
+    client.enableAudioVolumeIndicator();
+    const handleVolumeIndicator = (volumes: Array<{ uid: number | string; level: number }>) => {
+      const THRESHOLD = 5;
+      const loudest = volumes.find((v) => v.level >= THRESHOLD);
+      setActiveSpeakerUid(loudest ? loudest.uid : null);
+    };
+    client.on("volume-indicator", handleVolumeIndicator);
+
     return () => {
       client.off("user-published", handleUserPublished);
       client.off("user-unpublished", handleUserUnpublished);
       client.off("user-left", handleUserLeft);
+      client.off("volume-indicator", handleVolumeIndicator);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line
 
-  const createPreviewTracks = useCallback(async () => {
-    try {
-      if (!localAudioRef.current) {
-        localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
-        await localAudioRef.current.setEnabled(isMicOn);
-      }
-      if (!localVideoRef.current) {
-        localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
-      }
-      if (localVideoRef.current) {
-        await localVideoRef.current.setEnabled(isCamOn);
-        if (!isJoined && mainVideoContainerRef.current) {
-          renderVideoInContainer(
-            localVideoRef.current,
-            mainVideoContainerRef.current,
-            isCamOn
-          );
-        }
-      }
-    } catch (e) {
-      console.error("preview error", e);
-    }
-  }, [isMicOn, isCamOn, isJoined, renderVideoInContainer]);
+  // ── Preview tracks ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    createPreviewTracks();
-  }, [createPreviewTracks]);
+    (async () => {
+      try {
+        if (!localAudioRef.current) {
+          localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
+          await localAudioRef.current.setEnabled(isMicOn);
+        }
+        if (!localVideoTrackRef.current) {
+          const track = await AgoraRTC.createCameraVideoTrack();
+          await track.setEnabled(isCamOn);
+          localVideoTrackRef.current = track;
+          setLocalVideoTrack(track);
+        }
+      } catch (e) { console.error("preview error", e); }
+    })();
+  }, []); // eslint-disable-line
+
+  // ── Join ───────────────────────────────────────────────────────────────────
 
   const join = useCallback(async () => {
     const client = clientRef.current;
-    if (!client) return;
-    if (!appId || !channel) {
-      alert("Video is not ready yet. Missing Agora credentials.");
-      return;
-    }
-
+    if (!client || !appId || !channel) { alert("Video is not ready yet. Missing Agora credentials."); return; }
     try {
-      // Fetch fresh token before joining
-      const tokenData = await fetchFreshToken();
-      if (!tokenData || !tokenData.token) {
-        alert("Failed to get video call token. Please try again.");
-        return;
-      }
+      setIsJoining(true);
 
+      setJoinStep("Fetching session token…");
+      const tokenData = await getFreshRtcToken();
+      if (!tokenData?.token) { alert("Failed to get token."); return; }
+
+      setJoinStep("Joining the channel…");
       await client.join(appId, channel, tokenData.token, tokenData.uid);
-
-      // Update uid in case it changed from the server
       setUid(tokenData.uid);
 
+      setJoinStep("Setting up microphone…");
       if (!localAudioRef.current) {
         localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
         await localAudioRef.current.setEnabled(isMicOn);
       }
-      if (!localVideoRef.current) {
-        localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
-        await localVideoRef.current.setEnabled(isCamOn);
+
+      setJoinStep("Setting up camera…");
+      if (!localVideoTrackRef.current) {
+        const track = await AgoraRTC.createCameraVideoTrack();
+        await track.setEnabled(isCamOn);
+        localVideoTrackRef.current = track;
+        setLocalVideoTrack(track);
       }
-      const toPublish = [
+
+      setJoinStep("Publishing your stream…");
+      await client.publish([
         ...(localAudioRef.current ? [localAudioRef.current] : []),
-        ...(localVideoRef.current ? [localVideoRef.current] : []),
-      ];
-      await client.publish(toPublish);
+        ...(localVideoTrackRef.current ? [localVideoTrackRef.current] : []),
+      ]);
 
       setIsJoined(true);
-    } catch (err) {
-      console.error("join error", err);
-      alert(
-        "Failed to join the call. Please check your connection and try again."
-      );
+    } catch {
+      alert("Failed to join. Please check your connection and try again.");
+    } finally {
+      setIsJoining(false);
     }
-  }, [appId, channel, isMicOn, isCamOn, fetchFreshToken]);
+  }, [appId, channel, isMicOn, isCamOn, getFreshRtcToken]);
+
+  // ── Leave ──────────────────────────────────────────────────────────────────
 
   const leave = useCallback(async () => {
-    const client = clientRef.current;
     try {
-      // Close local tracks
       localAudioRef.current?.close();
-      localVideoRef.current?.close();
+      localVideoTrackRef.current?.close();
       localAudioRef.current = null;
-      localVideoRef.current = null;
-
-      // Remove container content
-      if (mainVideoContainerRef.current)
-        mainVideoContainerRef.current.innerHTML = "";
-      if (pipVideoContainerRef.current)
-        pipVideoContainerRef.current.innerHTML = "";
-
-      await client?.leave();
-    } catch (err) {
-      console.error("leave error", err);
+      localVideoTrackRef.current = null;
+      setLocalVideoTrack(null);
+      await clientRef.current?.leave();
     } finally {
       setIsJoined(false);
-      setRemoteUser(null);
+      setRemoteUsers([]);
+      setPinnedUid(null);
     }
   }, []);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      leave();
-    };
-  }, [leave]);
+  useEffect(() => () => { leave(); }, [leave]);
+
+  // ── Controls ───────────────────────────────────────────────────────────────
 
   const toggleMic = useCallback(async () => {
     const next = !isMicOn;
     setIsMicOn(next);
-    if (localAudioRef.current) {
-      await localAudioRef.current.setEnabled(next);
-    } else {
-      if (next) {
-        localAudioRef.current = await AgoraRTC.createMicrophoneAudioTrack();
-      }
-    }
+    if (localAudioRef.current) await localAudioRef.current.setEnabled(next);
   }, [isMicOn]);
 
   const toggleCam = useCallback(async () => {
     const next = !isCamOn;
     setIsCamOn(next);
-    if (!localVideoRef.current) {
-      localVideoRef.current = await AgoraRTC.createCameraVideoTrack();
+    if (!localVideoTrackRef.current) {
+      const track = await AgoraRTC.createCameraVideoTrack();
+      localVideoTrackRef.current = track;
+      setLocalVideoTrack(track);
     }
-    await localVideoRef.current.setEnabled(next);
+    await localVideoTrackRef.current.setEnabled(next);
   }, [isCamOn]);
 
-  const swapViews = useCallback(() => {
-    if (!remoteUser) return;
-    setIsSwapped(!isSwapped);
-  }, [isSwapped, remoteUser]);
+  // ── Derived state ──────────────────────────────────────────────────────────
 
-  // Determine display information based on swap state
-  const mainDisplayName = isSwapped
-    ? remoteUser?.displayName || state?.appointment?.fullName
-    : displayName;
-  const pipDisplayName = isSwapped
-    ? displayName
-    : remoteUser?.displayName || state?.appointment?.fullName;
-  const mainIsMuted = isSwapped ? !remoteUser?.hasAudio : !isMicOn;
-  const mainCameraOff = isSwapped ? !remoteUser?.hasVideo : !isCamOn;
-  const pipCameraOff = isSwapped ? !isCamOn : !remoteUser?.hasVideo;
+  const totalParticipants = 1 + remoteUsers.length;
+
+  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  DESKTOP LAYOUT — Adaptive Grid
+  //  All tiles (local + remote) shown as equal-sized cells in a CSS grid.
+  //  Clicking any tile pins it so it expands to fill the full area (spotlight).
+  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const desktopLayout = () => {
+    // ── Spotlight mode: one tile fills the screen, rest in a bottom strip ──
+    if (pinnedUid) {
+      const pinnedRemote = remoteUsers.find((u) => u.user.uid === pinnedUid);
+      const stripItems: Array<"local" | RemoteUserState> = [
+        "local",
+        ...remoteUsers.filter((u) => u.user.uid !== pinnedUid),
+      ];
+
+      return (
+        <div className="absolute inset-0 flex flex-col">
+          {/* Spotlight */}
+          <div className="flex-1 relative overflow-hidden">
+            {pinnedRemote ? (
+              <RemoteTile
+                participant={pinnedRemote}
+                isMain={true}
+                onClick={() => setPinnedUid(null)}
+                isPinned
+                isSpeaking={activeSpeakerUid === pinnedRemote.user.uid}
+              />
+            ) : (
+              <LocalVideoTile
+                track={localVideoTrack}
+                isCamOn={isCamOn}
+                isMicOn={isMicOn}
+                displayName={displayName}
+                isMain={true}
+                onClick={() => setPinnedUid(null)}
+                isPinned
+                isSpeaking={activeSpeakerUid === uid}
+              />
+            )}
+            {/* "Click to unpin" hint */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full text-white text-xs pointer-events-none select-none">
+              Click to exit spotlight
+            </div>
+          </div>
+
+          {/* Bottom thumbnail strip */}
+          {stripItems.length > 0 && (
+            <div className="h-28 flex flex-row gap-1 px-1 pb-1 overflow-x-auto shrink-0 bg-black/30 backdrop-blur-sm">
+              {stripItems.map((item) =>
+                item === "local" ? (
+                  <div
+                    key="local"
+                    className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
+                    onClick={() => setPinnedUid(null)}
+                  >
+                    <LocalVideoTile
+                      track={localVideoTrack}
+                      isCamOn={isCamOn}
+                      isMicOn={isMicOn}
+                      displayName={displayName}
+                      isMain={false}
+                      isSpeaking={activeSpeakerUid === uid}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    key={(item as RemoteUserState).user.uid}
+                    className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
+                    onClick={() => setPinnedUid((item as RemoteUserState).user.uid)}
+                  >
+                    <RemoteTile
+                      participant={item as RemoteUserState}
+                      isMain={false}
+                      isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
+                    />
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Standard adaptive grid ─────────────────────────────────────────────
+    const cols = gridColumns(totalParticipants);
+    // Build an ordered list: local first, then remote
+    const allTiles: Array<"local" | RemoteUserState> = ["local", ...remoteUsers];
+
+    return (
+      <div
+        className="absolute inset-0 p-1 gap-1"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          // Each row fills available height equally
+          gridAutoRows: `calc((100% - ${(Math.ceil(allTiles.length / cols) - 1) * 4}px) / ${Math.ceil(allTiles.length / cols)})`,
+        }}
+      >
+        {allTiles.map((item) =>
+          item === "local" ? (
+            <div key="local" className="relative rounded-xl overflow-hidden">
+              <LocalVideoTile
+                track={localVideoTrack}
+                isCamOn={isCamOn}
+                isMicOn={isMicOn}
+                displayName={displayName}
+                isMain={totalParticipants === 1}
+                onClick={remoteUsers.length > 0 ? () => setPinnedUid(null) : undefined}
+                isSpeaking={activeSpeakerUid === uid}
+              />
+            </div>
+          ) : (
+            <div key={(item as RemoteUserState).user.uid} className="relative rounded-xl overflow-hidden">
+              <RemoteTile
+                participant={item as RemoteUserState}
+                isMain={totalParticipants === 1}
+                onClick={() => setPinnedUid((item as RemoteUserState).user.uid)}
+                isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
+              />
+            </div>
+          )
+        )}
+      </div>
+    );
+  };
+
+  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  MOBILE LAYOUT — 2-column grid
+  //  All tiles shown as equal cells in a 2-column grid that fills the screen.
+  //  1 person  → full screen (1 col)
+  //  2+ people → 2 columns, rows fill available height equally
+  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const mobileLayout = () => {
+    const allTiles: Array<"local" | RemoteUserState> = ["local", ...remoteUsers];
+    const cols = 1;
+    const rows = allTiles.length;
+
+    return (
+      <div
+        className="absolute inset-0 p-0.5 gap-0.5"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          gridAutoRows: `calc((100% - ${(rows - 1) * 2}px) / ${rows})`,
+        }}
+      >
+        {allTiles.map((item) =>
+          item === "local" ? (
+            <div key="local" className="relative rounded-lg overflow-hidden">
+              <LocalVideoTile
+                track={localVideoTrack}
+                isCamOn={isCamOn}
+                isMicOn={isMicOn}
+                displayName={displayName}
+                isMain={allTiles.length === 1}
+                isSpeaking={activeSpeakerUid === uid}
+              />
+            </div>
+          ) : (
+            <div key={(item as RemoteUserState).user.uid} className="relative rounded-lg overflow-hidden">
+              <RemoteTile
+                participant={item as RemoteUserState}
+                isMain={allTiles.length === 1}
+                isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
+              />
+            </div>
+          )
+        )}
+      </div>
+    );
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 bg-black z-[100]">
-      {/* Main container - fills entire screen */}
-      <div className="relative w-full h-full">
-        {/* Main Stage - fullscreen */}
-        <div className="absolute inset-0">
-          <div
-            className="absolute inset-0 transition-all duration-500 ease-in-out"
-            ref={mainVideoContainerRef}
-          />
+    <div className="fixed inset-0 bg-black z-[100] flex flex-col">
+      <style>{`
+        @keyframes soundbar {
+          0%, 100% { transform: scaleY(0.4); }
+          50%       { transform: scaleY(1);   }
+        }
+      `}</style>
+      {/* ── Top bar ── */}
+      <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-[110]">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-3 py-1.5 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-1"
+        >
+          ← Back
+        </button>
 
-          {mainCameraOff && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 transition-opacity duration-300">
-              <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-semibold">
-                {getInitials(mainDisplayName)}
-              </div>
-            </div>
-          )}
-
-          {/* Top bar with back button, title, and timer */}
-          <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent flex items-center justify-between z-[101]">
-            <button
-              onClick={() => navigate(-1)}
-              className="px-4 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-2 group relative"
-              title="Go back"
-            >
-              ← Back
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                Go back
-              </span>
-            </button>
-            <h1 className="text-xl font-semibold text-white">
-              Therapy Session
-            </h1>
-            {/* Timer Display */}
-            <div className="flex items-center gap-2">
-              {remainingTime !== null && remainingTime > 0 && (
-                <div
-                  className={`px-4 py-2 rounded-full font-mono text-sm font-semibold group relative ${
-                    remainingTime <= 300
-                      ? "bg-red-500/90 text-white animate-pulse"
-                      : remainingTime <= 600
-                      ? "bg-yellow-500/90 text-white"
-                      : "bg-gray-800/80 text-white"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    {formatTime(remainingTime)}
-                  </span>
-                  <span className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                    Time remaining in session
-                  </span>
-                </div>
-              )}
-              {remainingTime === 0 && (
-                <div className="px-4 py-2 bg-red-500 rounded-full text-white text-sm font-semibold group relative">
-                  Time's Up
-                  <span className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                    Session has ended
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Name label */}
-          <div className="absolute bottom-20 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white text-sm font-medium z-[101]">
-            {mainDisplayName}
-            {mainIsMuted && <span className="ml-2 text-red-500">🔇</span>}
-          </div>
-
-          {/* PIP Video */}
+        <div className="flex items-center gap-2">
+          <h1 className="text-base font-semibold text-white">Therapy Session</h1>
           {isJoined && (
-            <div className="absolute top-20 right-4 group z-[101]">
-              <div
-                className="relative w-48 h-36 bg-gray-900 rounded-xl overflow-hidden border border-gray-700 shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105"
-                onClick={swapViews}
-                title="Click to swap views"
-              >
-                {/* Add swap icon overlay */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full">
-                    <SwapIcon />
-                  </div>
-                </div>
-
-                <div className="relative w-full h-full">
-                  <div
-                    className="absolute inset-0 transition-all duration-500 ease-in-out"
-                    ref={pipVideoContainerRef}
-                  />
-
-                  {remoteUser && pipCameraOff && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                      <div className="w-16 h-16 rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-semibold">
-                        {getInitials(pipDisplayName)}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <div className="px-2 py-1 bg-black/50 backdrop-blur-sm rounded text-white text-xs">
-                      {remoteUser ? pipDisplayName : "Waiting..."}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tooltip */}
-                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                  Click to swap views
-                </span>
-              </div>
+            <div className="flex items-center gap-1 bg-gray-800/70 px-2 py-0.5 rounded-full">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-gray-200 text-xs font-medium">
+                {totalParticipants} participant{totalParticipants > 1 ? "s" : ""}
+              </span>
             </div>
           )}
+        </div>
 
-          {/* Controls - centered at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent z-[101]">
-            <div className="flex items-center justify-center gap-4">
-              {!isJoined ? (
-                <button
-                  onClick={join}
-                  disabled={isLoadingToken}
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2 group relative"
-                  title="Join the video call"
+        <div className="flex items-center gap-2">
+          {remainingTime !== null && remainingTime > 0 && (
+            <div
+              className={`px-3 py-1 rounded-full font-mono text-xs font-semibold flex items-center gap-1 ${
+                remainingTime <= 300
+                  ? "bg-red-500/90 text-white animate-pulse"
+                  : remainingTime <= 600
+                  ? "bg-yellow-500/90 text-white"
+                  : "bg-gray-800/80 text-white"
+              }`}
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {formatTime(remainingTime)}
+            </div>
+          )}
+          {remainingTime === 0 && (
+            <div className="px-3 py-1 bg-red-500 rounded-full text-white text-xs font-semibold">
+              Time's Up
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Video area ── */}
+      <div className="absolute inset-0">
+        {isMobile ? mobileLayout() : desktopLayout()}
+
+        {/* ── Participants sidebar panel ── */}
+        {showParticipants && (
+          <div className="absolute top-0 left-0 h-full w-56 bg-gray-900/95 backdrop-blur-md border-r border-gray-700 z-[105] flex flex-col">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
+              <span className="text-white font-semibold text-sm">
+                Participants ({totalParticipants})
+              </span>
+              <button
+                onClick={() => setShowParticipants(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                  {getInitials(displayName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-medium truncate">{displayName}</p>
+                  <p className="text-gray-400 text-xs">You</p>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  {!isMicOn && <span className="text-red-400 text-xs">🔇</span>}
+                  {!isCamOn && <span className="text-gray-400 text-xs">📷</span>}
+                </div>
+              </div>
+              {remoteUsers.map((ru) => (
+                <div
+                  key={ru.user.uid}
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                  onClick={() => { setPinnedUid(ru.user.uid); setShowParticipants(false); }}
                 >
-                  {isLoadingToken ? "Getting Ready..." : "Join Call"}
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                    {isLoadingToken
-                      ? "Preparing connection..."
-                      : "Join the video call"}
-                  </span>
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={toggleMic}
-                    className={`p-4 rounded-full transition-all duration-200 group relative ${
-                      isMicOn
-                        ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
-                    title={isMicOn ? "Mute microphone" : "Unmute microphone"}
-                  >
-                    <MicIcon muted={!isMicOn} />
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                      {isMicOn ? "Mute microphone" : "Unmute microphone"}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={toggleCam}
-                    className={`p-4 rounded-full transition-all duration-200 group relative ${
-                      isCamOn
-                        ? "bg-gray-800/80 hover:bg-gray-700/80 text-white"
-                        : "bg-red-500 hover:bg-red-600 text-white"
-                    }`}
-                    title={isCamOn ? "Turn off camera" : "Turn on camera"}
-                  >
-                    <VideoIcon disabled={!isCamOn} />
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                      {isCamOn ? "Turn off camera" : "Turn on camera"}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={leave}
-                    className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 group relative"
-                    title="Leave call"
-                  >
-                    <PhoneIcon />
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                      Leave call
-                    </span>
-                  </button>
-                </>
-              )}
+                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                    {getInitials(ru.displayName)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-xs font-medium truncate">
+                      {ru.displayName || `User ${ru.user.uid}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    {!ru.hasAudio && <span className="text-red-400 text-xs">🔇</span>}
+                    {!ru.hasVideo && <span className="text-gray-400 text-xs">📷</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ── Chat overlay ── */}
+      {appId && channel && (
+        <InCallChat
+          appId={appId}
+          channel={channel}
+          uid={String(uid)}
+          displayName={displayName}
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          onUnreadCount={setChatUnread}
+        />
+      )}
+
+      {/* ── Joining overlay ── */}
+      {isJoining && (
+        <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
+          {/* Animated rings */}
+          <div className="relative flex items-center justify-center mb-8">
+            <span className="absolute w-28 h-28 rounded-full border-2 border-blue-400/20 animate-ping" style={{ animationDuration: "1.6s" }} />
+            <span className="absolute w-20 h-20 rounded-full border-2 border-blue-400/30 animate-ping" style={{ animationDuration: "1.2s", animationDelay: "0.2s" }} />
+            <div className="relative w-16 h-16 rounded-full bg-blue-600/20 border-2 border-blue-500 flex items-center justify-center">
+              {/* Spinning arc */}
+              <svg className="absolute inset-0 w-full h-full animate-spin" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="28" stroke="white" strokeOpacity="0.08" strokeWidth="3" />
+                <path d="M32 4 A28 28 0 0 1 60 32" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              {/* Camera icon */}
+              <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Step label */}
+          <p className="text-white text-lg font-semibold tracking-wide mb-2">Joining Session</p>
+          <p className="text-blue-300 text-sm font-medium animate-pulse">{joinStep}</p>
+
+          {/* Progress dots */}
+          <div className="flex gap-1.5 mt-6">
+            {["Fetching session token…", "Joining the channel…", "Setting up microphone…", "Setting up camera…", "Publishing your stream…"].map((step, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  step === joinStep
+                    ? "w-5 bg-blue-400"
+                    : ["Fetching session token…", "Joining the channel…", "Setting up microphone…", "Setting up camera…", "Publishing your stream…"].indexOf(joinStep) > i
+                    ? "w-1.5 bg-blue-600"
+                    : "w-1.5 bg-gray-600"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bottom controls ── */}
+      <div className="absolute bottom-0 left-0 right-0 px-4 py-4 bg-gradient-to-t from-black/80 to-transparent z-[110]">
+        <div className="flex items-center justify-center gap-2">
+          {!isJoined ? (
+            <button
+              onClick={join}
+              disabled={isLoadingToken || isJoining}
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors flex items-center gap-2"
+            >
+              {isJoining || isLoadingToken ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Connecting…
+                </>
+              ) : (
+                "Join Call"
+              )}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={toggleMic}
+                title={isMicOn ? "Mute" : "Unmute"}
+                className={`p-3 rounded-full transition-all duration-200 group relative ${
+                  isMicOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
+              >
+                <MicIcon muted={!isMicOn} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                  {isMicOn ? "Mute" : "Unmute"}
+                </span>
+              </button>
+
+              <button
+                onClick={toggleCam}
+                title={isCamOn ? "Turn off camera" : "Turn on camera"}
+                className={`p-3 rounded-full transition-all duration-200 group relative ${
+                  isCamOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"
+                }`}
+              >
+                <VideoIcon disabled={!isCamOn} />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                  {isCamOn ? "Turn off camera" : "Turn on camera"}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setShowParticipants((p) => !p)}
+                title="Participants"
+                className={`p-3 rounded-full transition-all duration-200 group relative ${
+                  showParticipants ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"
+                }`}
+              >
+                <UsersIcon />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                  Participants
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setIsChatOpen((p) => !p); if (!isChatOpen) setChatUnread(0); }}
+                title="Chat"
+                className={`p-3 rounded-full transition-all duration-200 group relative ${
+                  isChatOpen ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"
+                }`}
+              >
+                <ChatIcon hasUnread={!isChatOpen && chatUnread > 0} />
+                {!isChatOpen && chatUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
+                    {chatUnread > 9 ? "9+" : chatUnread}
+                  </span>
+                )}
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                  {isChatOpen ? "Close chat" : "Open chat"}
+                </span>
+              </button>
+
+              <button
+                onClick={leave}
+                title="Leave call"
+                className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 group relative"
+              >
+                <PhoneOffIcon />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                  Leave call
+                </span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
