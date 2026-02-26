@@ -12,6 +12,7 @@ import { Appointment } from "../../api/Appointments.api";
 import { fetchAgoraRtcToken } from "../../api/Agora.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import InCallChat from "../../components/VideoChat/inCallChat";
+import PostCallReviewModal from "../../components/appointment/Postcallreviewmodal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,10 +46,6 @@ const getInitials = (name?: string) => {
     .join("");
 };
 
-/**
- * Returns true when the viewport width is below the "md" Tailwind breakpoint
- * (< 768 px). Re-evaluates on resize.
- */
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -59,18 +56,6 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-/**
- * Given the total number of tiles, return the number of CSS grid columns that
- * produces the most balanced, square-ish layout.
- *
- *   1  →  1 col   (full screen)
- *   2  →  2 cols  (side by side)
- *   3  →  3 cols  (one row of 3)
- *   4  →  2 cols  (2 × 2)
- *   5  →  3 cols  (2 + 3)
- *   6  →  3 cols  (2 × 3)
- *   7+  → 4 cols
- */
 const gridColumns = (total: number): number => {
   if (total <= 1) return 1;
   if (total <= 2) return 2;
@@ -148,17 +133,6 @@ interface LocalVideoTileProps {
   displayName: string;
   isMain: boolean;
   onClick?: () => void;
-  /** Render a highlighted ring when this tile is pinned / active */
-  isPinned?: boolean;
-}
-
-interface LocalVideoTileProps {
-  track: ICameraVideoTrack | null;
-  isCamOn: boolean;
-  isMicOn: boolean;
-  displayName: string;
-  isMain: boolean;
-  onClick?: () => void;
   isPinned?: boolean;
   isSpeaking?: boolean;
 }
@@ -191,7 +165,6 @@ const LocalVideoTile: React.FC<LocalVideoTileProps> = ({
       `}
       onClick={onClick}
     >
-      {/* Speaking pulse border */}
       {isSpeaking && (
         <div className="absolute inset-0 ring-2 ring-green-400 ring-inset rounded-[inherit] animate-pulse pointer-events-none z-10" />
       )}
@@ -257,7 +230,6 @@ const RemoteTile: React.FC<RemoteTileProps> = ({ participant, isMain, onClick, i
       `}
       onClick={onClick}
     >
-      {/* Speaking pulse border */}
       {isSpeaking && (
         <div className="absolute inset-0 ring-2 ring-green-400 ring-inset rounded-[inherit] animate-pulse pointer-events-none z-10" />
       )}
@@ -290,14 +262,72 @@ const RemoteTile: React.FC<RemoteTileProps> = ({ participant, isMain, onClick, i
   );
 };
 
+// ─── Session Expired Overlay ──────────────────────────────────────────────────
+
+interface SessionExpiredOverlayProps {
+  isCounselor: boolean;
+  onLeave: () => void;
+  onOpenReview: () => void;
+}
+
+const SessionExpiredOverlay: React.FC<SessionExpiredOverlayProps> = ({
+  isCounselor,
+  onLeave,
+  onOpenReview,
+}) => (
+  <div className="absolute inset-0 z-[115] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-5 text-center px-6 max-w-sm">
+      {/* Icon */}
+      <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
+        <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+
+      <div>
+        <h2 className="text-white text-lg font-semibold">Session Time Ended</h2>
+        <p className="text-gray-400 text-sm mt-1">
+          {isCounselor
+            ? "Your session has ended. You can leave a session review before exiting."
+            : "Your session has ended. You may now leave the call."}
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 w-full">
+        {isCounselor && (
+          <button
+            onClick={onOpenReview}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-gray-900 rounded-xl font-medium text-sm hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 21V4m0 0l4-1 4 1 4-1 4 1v13l-4-1-4 1-4-1-4 1V4z" />
+            </svg>
+            Session Review
+          </button>
+        )}
+        <button
+          onClick={onLeave}
+          className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium text-sm transition-colors"
+        >
+          <PhoneOffIcon />
+          Leave Call
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
-  const { name } = useAuthStore();
+  const { name, role } = useAuthStore();
   const { state } = useLocation() as { state?: AgoraState };
   const displayName = name || "You";
   const isMobile = useIsMobile();
+  const isCounselor = role === "counselor";
 
   const [appId, setAppId] = useState<string | undefined>(state?.agora?.appId);
   const [channel, setChannel] = useState<string | undefined>(state?.agora?.channel);
@@ -308,6 +338,8 @@ const VideoCallPage: React.FC = () => {
 
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
+  // Tracks whether the timer has already fired the expiry modal so it only opens once
+  const sessionExpiredFiredRef = useRef(false);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -325,6 +357,11 @@ const VideoCallPage: React.FC = () => {
   const [chatUnread, setChatUnread] = useState(0);
   const [showParticipants, setShowParticipants] = useState(false);
   const [activeSpeakerUid, setActiveSpeakerUid] = useState<number | string | null>(null);
+
+  // ── Session-expired state ──────────────────────────────────────────────────
+  const [sessionExpired, setSessionExpired] = useState(false);
+  // Review modal — opens after expiry (counselor) or manually via leave flow
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   // ── Timer ──────────────────────────────────────────────────────────────────
 
@@ -355,15 +392,35 @@ const VideoCallPage: React.FC = () => {
   }, [state]);
 
   useEffect(() => {
-    if (!remainingTime) return;
+    if (remainingTime === null) return;
+
+    // Already at zero on mount (e.g. stale link)
+    if (remainingTime === 0 && !sessionExpiredFiredRef.current) {
+      sessionExpiredFiredRef.current = true;
+      if (isJoined) setSessionExpired(true);
+      return;
+    }
+
+    if (remainingTime <= 0) return;
+
     timerIntervalRef.current = window.setInterval(() => {
-      setRemainingTime((p) => {
-        if (!p || p <= 1) { clearInterval(timerIntervalRef.current!); return 0; }
-        return p - 1;
+      setRemainingTime((prev) => {
+        if (!prev || prev <= 1) {
+          clearInterval(timerIntervalRef.current!);
+          // Fire session-expired overlay only once and only when already in the call
+          if (!sessionExpiredFiredRef.current) {
+            sessionExpiredFiredRef.current = true;
+            // Use a timeout so state updates don't collide
+            setTimeout(() => setSessionExpired(true), 0);
+          }
+          return 0;
+        }
+        return prev - 1;
       });
     }, 1000);
+
     return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
-  }, [remainingTime]);
+  }, [remainingTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -436,8 +493,6 @@ const VideoCallPage: React.FC = () => {
     client.on("user-unpublished", handleUserUnpublished);
     client.on("user-left", handleUserLeft);
 
-    // Enable volume indicator — fires every 2 s with a list of speakers sorted
-    // by volume level descending. We pick the loudest one above a threshold.
     client.enableAudioVolumeIndicator();
     const handleVolumeIndicator = (volumes: Array<{ uid: number | string; level: number }>) => {
       const THRESHOLD = 5;
@@ -480,7 +535,6 @@ const VideoCallPage: React.FC = () => {
     if (!client || !appId || !channel) { alert("Video is not ready yet. Missing Agora credentials."); return; }
     try {
       setIsJoining(true);
-
       setJoinStep("Fetching session token…");
       const tokenData = await getFreshRtcToken();
       if (!tokenData?.token) { alert("Failed to get token."); return; }
@@ -531,10 +585,36 @@ const VideoCallPage: React.FC = () => {
       setIsJoined(false);
       setRemoteUsers([]);
       setPinnedUid(null);
+      setSessionExpired(false);
     }
   }, []);
 
   useEffect(() => () => { leave(); }, [leave]);
+
+  // ── Leave (manual — no review modal) ──────────────────────────────────────
+
+  const handleLeave = useCallback(async () => {
+    await leave();
+    navigate(-1);
+  }, [leave, navigate]);
+
+  // Called from the expired overlay "Leave Call" button
+  const handleLeaveAfterExpiry = useCallback(async () => {
+    await leave();
+    navigate(-1);
+  }, [leave, navigate]);
+
+  const handleOpenReviewFromExpiry = useCallback(async () => {
+    // Close video infrastructure but stay on page for the modal
+    await leave();
+    setReviewModalOpen(true);
+  }, [leave]);
+
+  // After the review modal closes post-expiry, navigate away
+  const handleReviewModalClose = useCallback(() => {
+    setReviewModalOpen(false);
+    navigate(-1);
+  }, [navigate]);
 
   // ── Controls ───────────────────────────────────────────────────────────────
 
@@ -559,14 +639,9 @@ const VideoCallPage: React.FC = () => {
 
   const totalParticipants = 1 + remoteUsers.length;
 
-  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  DESKTOP LAYOUT — Adaptive Grid
-  //  All tiles (local + remote) shown as equal-sized cells in a CSS grid.
-  //  Clicking any tile pins it so it expands to fill the full area (spotlight).
-  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── Desktop Layout ─────────────────────────────────────────────────────────
 
   const desktopLayout = () => {
-    // ── Spotlight mode: one tile fills the screen, rest in a bottom strip ──
     if (pinnedUid) {
       const pinnedRemote = remoteUsers.find((u) => u.user.uid === pinnedUid);
       const stripItems: Array<"local" | RemoteUserState> = [
@@ -576,7 +651,6 @@ const VideoCallPage: React.FC = () => {
 
       return (
         <div className="absolute inset-0 flex flex-col">
-          {/* Spotlight */}
           <div className="flex-1 relative overflow-hidden">
             {pinnedRemote ? (
               <RemoteTile
@@ -598,42 +672,22 @@ const VideoCallPage: React.FC = () => {
                 isSpeaking={activeSpeakerUid === uid}
               />
             )}
-            {/* "Click to unpin" hint */}
             <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full text-white text-xs pointer-events-none select-none">
               Click to exit spotlight
             </div>
           </div>
-
-          {/* Bottom thumbnail strip */}
           {stripItems.length > 0 && (
             <div className="h-28 flex flex-row gap-1 px-1 pb-1 overflow-x-auto shrink-0 bg-black/30 backdrop-blur-sm">
               {stripItems.map((item) =>
                 item === "local" ? (
-                  <div
-                    key="local"
-                    className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
-                    onClick={() => setPinnedUid(null)}
-                  >
-                    <LocalVideoTile
-                      track={localVideoTrack}
-                      isCamOn={isCamOn}
-                      isMicOn={isMicOn}
-                      displayName={displayName}
-                      isMain={false}
-                      isSpeaking={activeSpeakerUid === uid}
-                    />
+                  <div key="local" className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
+                    onClick={() => setPinnedUid(null)}>
+                    <LocalVideoTile track={localVideoTrack} isCamOn={isCamOn} isMicOn={isMicOn} displayName={displayName} isMain={false} isSpeaking={activeSpeakerUid === uid} />
                   </div>
                 ) : (
-                  <div
-                    key={(item as RemoteUserState).user.uid}
-                    className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
-                    onClick={() => setPinnedUid((item as RemoteUserState).user.uid)}
-                  >
-                    <RemoteTile
-                      participant={item as RemoteUserState}
-                      isMain={false}
-                      isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
-                    />
+                  <div key={(item as RemoteUserState).user.uid} className="h-full aspect-video rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-blue-400 transition-colors shrink-0"
+                    onClick={() => setPinnedUid((item as RemoteUserState).user.uid)}>
+                    <RemoteTile participant={item as RemoteUserState} isMain={false} isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid} />
                   </div>
                 )
               )}
@@ -643,9 +697,7 @@ const VideoCallPage: React.FC = () => {
       );
     }
 
-    // ── Standard adaptive grid ─────────────────────────────────────────────
     const cols = gridColumns(totalParticipants);
-    // Build an ordered list: local first, then remote
     const allTiles: Array<"local" | RemoteUserState> = ["local", ...remoteUsers];
 
     return (
@@ -654,31 +706,17 @@ const VideoCallPage: React.FC = () => {
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-          // Each row fills available height equally
           gridAutoRows: `calc((100% - ${(Math.ceil(allTiles.length / cols) - 1) * 4}px) / ${Math.ceil(allTiles.length / cols)})`,
         }}
       >
         {allTiles.map((item) =>
           item === "local" ? (
             <div key="local" className="relative rounded-xl overflow-hidden">
-              <LocalVideoTile
-                track={localVideoTrack}
-                isCamOn={isCamOn}
-                isMicOn={isMicOn}
-                displayName={displayName}
-                isMain={totalParticipants === 1}
-                onClick={remoteUsers.length > 0 ? () => setPinnedUid(null) : undefined}
-                isSpeaking={activeSpeakerUid === uid}
-              />
+              <LocalVideoTile track={localVideoTrack} isCamOn={isCamOn} isMicOn={isMicOn} displayName={displayName} isMain={totalParticipants === 1} onClick={remoteUsers.length > 0 ? () => setPinnedUid(null) : undefined} isSpeaking={activeSpeakerUid === uid} />
             </div>
           ) : (
             <div key={(item as RemoteUserState).user.uid} className="relative rounded-xl overflow-hidden">
-              <RemoteTile
-                participant={item as RemoteUserState}
-                isMain={totalParticipants === 1}
-                onClick={() => setPinnedUid((item as RemoteUserState).user.uid)}
-                isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
-              />
+              <RemoteTile participant={item as RemoteUserState} isMain={totalParticipants === 1} onClick={() => setPinnedUid((item as RemoteUserState).user.uid)} isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid} />
             </div>
           )
         )}
@@ -686,12 +724,7 @@ const VideoCallPage: React.FC = () => {
     );
   };
 
-  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  MOBILE LAYOUT — 2-column grid
-  //  All tiles shown as equal cells in a 2-column grid that fills the screen.
-  //  1 person  → full screen (1 col)
-  //  2+ people → 2 columns, rows fill available height equally
-  // ── ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── Mobile Layout ──────────────────────────────────────────────────────────
 
   const mobileLayout = () => {
     const allTiles: Array<"local" | RemoteUserState> = ["local", ...remoteUsers];
@@ -710,22 +743,11 @@ const VideoCallPage: React.FC = () => {
         {allTiles.map((item) =>
           item === "local" ? (
             <div key="local" className="relative rounded-lg overflow-hidden">
-              <LocalVideoTile
-                track={localVideoTrack}
-                isCamOn={isCamOn}
-                isMicOn={isMicOn}
-                displayName={displayName}
-                isMain={allTiles.length === 1}
-                isSpeaking={activeSpeakerUid === uid}
-              />
+              <LocalVideoTile track={localVideoTrack} isCamOn={isCamOn} isMicOn={isMicOn} displayName={displayName} isMain={allTiles.length === 1} isSpeaking={activeSpeakerUid === uid} />
             </div>
           ) : (
             <div key={(item as RemoteUserState).user.uid} className="relative rounded-lg overflow-hidden">
-              <RemoteTile
-                participant={item as RemoteUserState}
-                isMain={allTiles.length === 1}
-                isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid}
-              />
+              <RemoteTile participant={item as RemoteUserState} isMain={allTiles.length === 1} isSpeaking={activeSpeakerUid === (item as RemoteUserState).user.uid} />
             </div>
           )
         )}
@@ -743,6 +765,7 @@ const VideoCallPage: React.FC = () => {
           50%       { transform: scaleY(1);   }
         }
       `}</style>
+
       {/* ── Top bar ── */}
       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-[110]">
         <button
@@ -794,17 +817,21 @@ const VideoCallPage: React.FC = () => {
       <div className="absolute inset-0">
         {isMobile ? mobileLayout() : desktopLayout()}
 
+        {/* ── Session expired overlay ── */}
+        {sessionExpired && isJoined && (
+          <SessionExpiredOverlay
+            isCounselor={isCounselor}
+            onLeave={handleLeaveAfterExpiry}
+            onOpenReview={handleOpenReviewFromExpiry}
+          />
+        )}
+
         {/* ── Participants sidebar panel ── */}
         {showParticipants && (
           <div className="absolute top-0 left-0 h-full w-56 bg-gray-900/95 backdrop-blur-md border-r border-gray-700 z-[105] flex flex-col">
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
-              <span className="text-white font-semibold text-sm">
-                Participants ({totalParticipants})
-              </span>
-              <button
-                onClick={() => setShowParticipants(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+              <span className="text-white font-semibold text-sm">Participants ({totalParticipants})</span>
+              <button onClick={() => setShowParticipants(false)} className="text-gray-400 hover:text-white transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -825,18 +852,13 @@ const VideoCallPage: React.FC = () => {
                 </div>
               </div>
               {remoteUsers.map((ru) => (
-                <div
-                  key={ru.user.uid}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-                  onClick={() => { setPinnedUid(ru.user.uid); setShowParticipants(false); }}
-                >
+                <div key={ru.user.uid} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                  onClick={() => { setPinnedUid(ru.user.uid); setShowParticipants(false); }}>
                   <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
                     {getInitials(ru.displayName)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-xs font-medium truncate">
-                      {ru.displayName || `User ${ru.user.uid}`}
-                    </p>
+                    <p className="text-white text-xs font-medium truncate">{ru.displayName || `User ${ru.user.uid}`}</p>
                   </div>
                   <div className="flex items-center gap-0.5">
                     {!ru.hasAudio && <span className="text-red-400 text-xs">🔇</span>}
@@ -865,41 +887,29 @@ const VideoCallPage: React.FC = () => {
       {/* ── Joining overlay ── */}
       {isJoining && (
         <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
-          {/* Animated rings */}
           <div className="relative flex items-center justify-center mb-8">
             <span className="absolute w-28 h-28 rounded-full border-2 border-blue-400/20 animate-ping" style={{ animationDuration: "1.6s" }} />
             <span className="absolute w-20 h-20 rounded-full border-2 border-blue-400/30 animate-ping" style={{ animationDuration: "1.2s", animationDelay: "0.2s" }} />
             <div className="relative w-16 h-16 rounded-full bg-blue-600/20 border-2 border-blue-500 flex items-center justify-center">
-              {/* Spinning arc */}
               <svg className="absolute inset-0 w-full h-full animate-spin" viewBox="0 0 64 64" fill="none">
                 <circle cx="32" cy="32" r="28" stroke="white" strokeOpacity="0.08" strokeWidth="3" />
                 <path d="M32 4 A28 28 0 0 1 60 32" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
               </svg>
-              {/* Camera icon */}
               <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
           </div>
-
-          {/* Step label */}
           <p className="text-white text-lg font-semibold tracking-wide mb-2">Joining Session</p>
           <p className="text-blue-300 text-sm font-medium animate-pulse">{joinStep}</p>
-
-          {/* Progress dots */}
           <div className="flex gap-1.5 mt-6">
             {["Fetching session token…", "Joining the channel…", "Setting up microphone…", "Setting up camera…", "Publishing your stream…"].map((step, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  step === joinStep
-                    ? "w-5 bg-blue-400"
-                    : ["Fetching session token…", "Joining the channel…", "Setting up microphone…", "Setting up camera…", "Publishing your stream…"].indexOf(joinStep) > i
-                    ? "w-1.5 bg-blue-600"
-                    : "w-1.5 bg-gray-600"
-                }`}
-              />
+              <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${
+                step === joinStep ? "w-5 bg-blue-400"
+                  : ["Fetching session token…", "Joining the channel…", "Setting up microphone…", "Setting up camera…", "Publishing your stream…"].indexOf(joinStep) > i
+                  ? "w-1.5 bg-blue-600" : "w-1.5 bg-gray-600"
+              }`} />
             ))}
           </div>
         </div>
@@ -919,45 +929,28 @@ const VideoCallPage: React.FC = () => {
                   <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   Connecting…
                 </>
-              ) : (
-                "Join Call"
-              )}
+              ) : "Join Call"}
             </button>
           ) : (
             <>
-              <button
-                onClick={toggleMic}
-                title={isMicOn ? "Mute" : "Unmute"}
-                className={`p-3 rounded-full transition-all duration-200 group relative ${
-                  isMicOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"
-                }`}
-              >
+              <button onClick={toggleMic} title={isMicOn ? "Mute" : "Unmute"}
+                className={`p-3 rounded-full transition-all duration-200 group relative ${isMicOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}>
                 <MicIcon muted={!isMicOn} />
                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
                   {isMicOn ? "Mute" : "Unmute"}
                 </span>
               </button>
 
-              <button
-                onClick={toggleCam}
-                title={isCamOn ? "Turn off camera" : "Turn on camera"}
-                className={`p-3 rounded-full transition-all duration-200 group relative ${
-                  isCamOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"
-                }`}
-              >
+              <button onClick={toggleCam} title={isCamOn ? "Turn off camera" : "Turn on camera"}
+                className={`p-3 rounded-full transition-all duration-200 group relative ${isCamOn ? "bg-gray-800/80 hover:bg-gray-700/80 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}>
                 <VideoIcon disabled={!isCamOn} />
                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
                   {isCamOn ? "Turn off camera" : "Turn on camera"}
                 </span>
               </button>
 
-              <button
-                onClick={() => setShowParticipants((p) => !p)}
-                title="Participants"
-                className={`p-3 rounded-full transition-all duration-200 group relative ${
-                  showParticipants ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"
-                }`}
-              >
+              <button onClick={() => setShowParticipants((p) => !p)} title="Participants"
+                className={`p-3 rounded-full transition-all duration-200 group relative ${showParticipants ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"}`}>
                 <UsersIcon />
                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
                   Participants
@@ -967,10 +960,7 @@ const VideoCallPage: React.FC = () => {
               <button
                 onClick={() => { setIsChatOpen((p) => !p); if (!isChatOpen) setChatUnread(0); }}
                 title="Chat"
-                className={`p-3 rounded-full transition-all duration-200 group relative ${
-                  isChatOpen ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"
-                }`}
-              >
+                className={`p-3 rounded-full transition-all duration-200 group relative ${isChatOpen ? "bg-blue-600 text-white" : "bg-gray-800/80 hover:bg-gray-700/80 text-white"}`}>
                 <ChatIcon hasUnread={!isChatOpen && chatUnread > 0} />
                 {!isChatOpen && chatUnread > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
@@ -982,11 +972,8 @@ const VideoCallPage: React.FC = () => {
                 </span>
               </button>
 
-              <button
-                onClick={leave}
-                title="Leave call"
-                className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 group relative"
-              >
+              <button onClick={handleLeave} title="Leave call"
+                className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all duration-200 group relative">
                 <PhoneOffIcon />
                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
                   Leave call
@@ -996,6 +983,14 @@ const VideoCallPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ── Post-call review modal (counselors only) ── */}
+      <PostCallReviewModal
+        isOpen={reviewModalOpen}
+        appointment={state?.appointment ?? null}
+        onClose={handleReviewModalClose}
+        onSubmitted={handleReviewModalClose}
+      />
     </div>
   );
 };
