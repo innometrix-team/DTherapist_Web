@@ -41,11 +41,10 @@ function LoginForm() {
   // Load saved credentials on component mount
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
-    const savedPassword = localStorage.getItem("rememberedPassword");
+   
 
-    if (savedEmail && savedPassword) {
+    if (savedEmail) {
       setValue("email", savedEmail);
-      setValue("password", savedPassword);
       setValue("rememberMe", true);
     }
   }, [setValue]);

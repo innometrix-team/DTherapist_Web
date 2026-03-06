@@ -1,23 +1,18 @@
-import AgoraRTM from "agora-rtm-sdk";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAgoraRtmToken } from "../../api/Agora.api";
-
-type RTMClientV2 = InstanceType<typeof AgoraRTM.RTM>;
+import socketService from "../../Services/SocketService";
 
 interface ChatMessage {
   id: string;
   text: string;
   senderId: string;
-  senderName: string;
+  senderName?: string;
   timestamp: Date;
   isLocal: boolean;
 }
 
 interface InCallChatProps {
-  appId: string;
   channel: string;
-  uid: string;
-  displayName: string;
+  userId: string;
   isOpen: boolean;
   onClose: () => void;
   onUnreadCount?: (count: number) => void;
@@ -61,27 +56,21 @@ const clampPosition = (x: number, y: number, panelW: number, panelH: number) => 
 });
 
 const InCallChat: React.FC<InCallChatProps> = ({
-  appId,
   channel,
-  uid,
-  displayName,
+  userId,
   isOpen,
   onClose,
   onUnreadCount,
 }) => {
-  const rtmClientRef = useRef<RTMClientV2 | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const pendingUnreadRef = useRef(0);
 
-  const isConnectedRef = useRef(false);
-  const isInitialisingRef = useRef(false);
-  const isDestroyingRef = useRef(false);
+  // Refs to avoid stale closures inside socket handler without triggering re-subscriptions
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
 
-  const numericUidRef = useRef<number>(parseInt(uid, 10) || 0);
-  const stringUidRef = useRef<string>(
-    uid && uid !== "0" ? uid : String(numericUidRef.current)
-  );
+  const onUnreadCountRef = useRef(onUnreadCount);
+  useEffect(() => { onUnreadCountRef.current = onUnreadCount; }, [onUnreadCount]);
 
   // ── Drag ─────────────────────────────────────────────────────────────────
 
@@ -127,200 +116,68 @@ const InCallChat: React.FC<InCallChatProps> = ({
 
   const onPointerUp = () => { dragRef.current = null; };
 
-  // ── UID sync ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!isConnectedRef.current && uid && uid !== "0") {
-      const n = parseInt(uid, 10);
-      if (!isNaN(n)) {
-        numericUidRef.current = n;
-        stringUidRef.current = uid;
-      }
-    }
-  }, [uid]);
+  // ── Messages & connection ─────────────────────────────────────────────────
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const connected = socketService.isSocketConnected();
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Socket subscription — only depends on stable values ──────────────────
 
-  const addSystemMessage = useCallback((text: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        text,
-        senderId: "system",
-        senderName: "System",
-        timestamp: new Date(),
-        isLocal: false,
-      },
-    ]);
-  }, []);
+  useEffect(() => {
+    if (!channel) return;
 
-  const addRemoteMessage = useCallback(
-    (text: string, senderId: string, senderName: string) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          text,
-          senderId,
-          senderName,
-          timestamp: new Date(),
-          isLocal: false,
-        },
-      ]);
-      if (!isOpen) {
-        pendingUnreadRef.current += 1;
-        onUnreadCount?.(pendingUnreadRef.current);
-      }
-    },
-    [isOpen, onUnreadCount]
-  );
+    let cleanupFn: () => void = () => {};
+    let cancelled = false;
+    let subscribed = false;
 
-  // ── Token ─────────────────────────────────────────────────────────────────
+    const setup = () => {
+      if (cancelled || subscribed) return;
+      if (socketService.isSocketConnected()) {
+        socketService.joinCallChat(channel);
+        subscribed = true;
+        cleanupFn = socketService.onReceiveCallMessage((msg) => {
+          setMessages((prev) => {
+            // Use refs so we never need isOpen/onUnreadCount in the dep array
+            if (!isOpenRef.current) {
+              onUnreadCountRef.current?.(prev.length + 1);
+            }
 
-  const getRtmToken = useCallback(async (): Promise<string | null> => {
-    try {
-      const result = await fetchAgoraRtmToken(channel, numericUidRef.current);
-      return result?.data?.token ?? null;
-    } catch {
-      return null;
-    }
-  }, [channel]);
+            // Skip adding if it's from ourselves, since we optimistically added it locally
+            if (msg.senderId === userId) {
+              return prev;
+            }
 
-  // ── RTM destroy ───────────────────────────────────────────────────────────
-
-  const destroyRtm = useCallback(async () => {
-    if (!rtmClientRef.current) return;
-    isDestroyingRef.current = true;
-    try {
-      await rtmClientRef.current.unsubscribe(channel);
-      await rtmClientRef.current.logout();
-    } catch {
-      /* ignore */
-    } finally {
-      rtmClientRef.current = null;
-      isConnectedRef.current = false;
-      isDestroyingRef.current = false;
-      setIsConnected(false);
-    }
-  }, [channel]);
-
-  // ── RTM init ──────────────────────────────────────────────────────────────
-
-  const initRtm = useCallback(async () => {
-    if (isInitialisingRef.current || isConnectedRef.current) return;
-
-    if (isDestroyingRef.current) {
-      await new Promise<void>((resolve) => {
-        let elapsed = 0;
-        const interval = setInterval(() => {
-          elapsed += 50;
-          if (!isDestroyingRef.current || elapsed >= 3000) {
-            clearInterval(interval);
-            resolve();
-          }
-        }, 50);
-      });
-    }
-
-    if (isInitialisingRef.current || isConnectedRef.current) return;
-
-    isInitialisingRef.current = true;
-    setIsConnecting(true);
-    setError(null);
-
-    try {
-      const token = await getRtmToken();
-      if (!token) {
-        setError("Failed to get chat token. Please try again.");
-        return;
-      }
-
-      const userId = stringUidRef.current;
-      const client = new AgoraRTM.RTM(appId, userId, { logLevel: "warn" });
-      rtmClientRef.current = client;
-
-      client.addEventListener(
-        "message",
-        (event: {
-          channelName: string;
-          publisher: string;
-          message: string | Uint8Array;
-          channelType: string;
-        }) => {
-          if (event.channelName !== channel || event.publisher === userId) return;
-          if (typeof event.message !== "string") return;
-          try {
-            const parsed = JSON.parse(event.message);
-            addRemoteMessage(parsed.text, event.publisher, parsed.senderName || event.publisher);
-          } catch {
-            addRemoteMessage(event.message, event.publisher, event.publisher);
-          }
-        }
-      );
-
-      client.addEventListener(
-        "presence",
-        (event: { eventType: string; publisher: string; channelName: string }) => {
-          if (event.publisher === userId || event.channelName !== channel) return;
-          if (event.eventType === "remoteJoin") {
-            addSystemMessage(`${event.publisher} joined the chat`);
-          } else if (event.eventType === "remoteLeave" || event.eventType === "remoteTimeout") {
-            addSystemMessage(`${event.publisher} left the chat`);
-          }
-        }
-      );
-
-      await client.login({ token });
-
-      /**
-       * FIX: explicitly set withMessage: true.
-       * In RTM v2.2.x withMessage can default to false depending on build,
-       * which means the message event listener above never fires — messages
-       * are sent but never delivered to the subscriber.
-       */
-      await client.subscribe(channel, {
-        withMessage: true,
-        withPresence: true,
-      });
-
-      isConnectedRef.current = true;
-      setIsConnected(true);
-      addSystemMessage("You joined the chat");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("-10005") || message.toLowerCase().includes("invalid token")) {
-        setError("Chat authentication failed. Please refresh the page and try again.");
-      } else if (message.toLowerCase().includes("kicked")) {
-        setError("Chat session conflict. Please wait a moment and retry.");
+            return [
+              ...prev,
+              {
+                id: msg.id,
+                text: msg.message,
+                senderId: msg.senderId,
+                timestamp: new Date(),
+                isLocal: false, // incoming messages are not local
+              },
+            ];
+          });
+        });
       } else {
-        setError("Could not connect to chat. Please try again.");
+        setTimeout(setup, 300);
       }
-      if (rtmClientRef.current) {
-        try { await rtmClientRef.current.logout(); } catch { /* ignore */ }
-        rtmClientRef.current = null;
-      }
-    } finally {
-      isInitialisingRef.current = false;
-      setIsConnecting(false);
-    }
-  }, [appId, channel, getRtmToken, addRemoteMessage, addSystemMessage]);
+    };
+
+    setup();
+
+    return () => {
+      cancelled = true;
+      cleanupFn();
+      socketService.leaveCallChat(channel);
+    };
+  }, [channel, userId]); // ← stable deps only; isOpen/onUnreadCount accessed via refs
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (isOpen && !isConnectedRef.current && !isInitialisingRef.current) initRtm();
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (isOpen) {
-      pendingUnreadRef.current = 0;
       onUnreadCount?.(0);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -330,30 +187,31 @@ const InCallChat: React.FC<InCallChatProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => () => { destroyRtm(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Send ──────────────────────────────────────────────────────────────────
 
-  const sendMessage = useCallback(async () => {
+  const sendMessage = useCallback(() => {
     const text = inputText.trim();
-    if (!text || !isConnectedRef.current || !rtmClientRef.current) return;
-    try {
-      const payload = JSON.stringify({ text, senderName: displayName });
-      await rtmClientRef.current.publish(channel, payload, { channelType: "MESSAGE" });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          text,
-          senderId: stringUidRef.current,
-          senderName: displayName,
-          timestamp: new Date(),
-          isLocal: true,
-        },
-      ]);
-      setInputText("");
-    } catch { /* ignore */ }
-  }, [inputText, displayName, channel]);
+    if (!text || !socketService.isSocketConnected()) return;
+
+    socketService.sendCallMessage({
+      channel,
+      senderId: userId,
+      message: text,
+    });
+
+    // Optimistically add the message locally since server may not echo back to sender
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local-${Date.now()}-${Math.random()}`, // unique ID to avoid conflicts
+        text,
+        senderId: userId,
+        timestamp: new Date(),
+        isLocal: true,
+      },
+    ]);
+    setInputText("");
+  }, [inputText, channel, userId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -392,11 +250,7 @@ const InCallChat: React.FC<InCallChatProps> = ({
           <DragIcon />
           <div
             className={`w-2 h-2 rounded-full ${
-              isConnected
-                ? "bg-green-400"
-                : isConnecting
-                ? "bg-yellow-400 animate-pulse"
-                : "bg-red-400"
+              connected ? "bg-green-400" : "bg-red-400"
             }`}
           />
           <span className="text-white text-sm font-semibold">Session Chat</span>
@@ -411,56 +265,37 @@ const InCallChat: React.FC<InCallChatProps> = ({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-        {isConnecting && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-gray-400 text-xs">Connecting to chat...</p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
-            <p className="text-red-400 text-xs">{error}</p>
-            <button onClick={initRtm} className="mt-2 text-xs text-blue-400 hover:text-blue-300 underline">
-              Retry
-            </button>
-          </div>
-        )}
-
-        {!isConnecting &&
-          messages.map((msg) => {
-            if (msg.senderName === "System") {
-              return (
-                <div key={msg.id} className="flex justify-center">
-                  <span className="text-xs text-gray-500 bg-gray-800 px-3 py-1 rounded-full">
-                    {msg.text}
-                  </span>
-                </div>
-              );
-            }
+        {messages.map((msg) => {
+          if (msg.senderName === "System") {
             return (
-              <div
-                key={msg.id}
-                className={`flex flex-col gap-1 ${msg.isLocal ? "items-end" : "items-start"}`}
-              >
-                {!msg.isLocal && (
-                  <span className="text-xs text-gray-400 px-1">{msg.senderName}</span>
-                )}
-                <div
-                  className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
-                    msg.isLocal
-                      ? "bg-blue-600 text-white rounded-br-sm"
-                      : "bg-gray-700 text-gray-100 rounded-bl-sm"
-                  }`}
-                >
+              <div key={msg.id} className="flex justify-center">
+                <span className="text-xs text-gray-500 bg-gray-800 px-3 py-1 rounded-full">
                   {msg.text}
-                </div>
-                <span className="text-xs text-gray-500 px-1">{formatTime(msg.timestamp)}</span>
+                </span>
               </div>
             );
-          })}
+          }
+          return (
+            <div
+              key={msg.id}
+              className={`flex flex-col gap-1 ${msg.isLocal ? "items-end" : "items-start"}`}
+            >
+              {!msg.isLocal && (
+                <span className="text-xs text-gray-400 px-1">{msg.senderName}</span>
+              )}
+              <div
+                className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
+                  msg.isLocal
+                    ? "bg-blue-600 text-white rounded-br-sm"
+                    : "bg-gray-700 text-gray-100 rounded-bl-sm"
+                }`}
+              >
+                {msg.text}
+              </div>
+              <span className="text-xs text-gray-500 px-1">{formatTime(msg.timestamp)}</span>
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
@@ -472,15 +307,15 @@ const InCallChat: React.FC<InCallChatProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isConnected ? "Type a message... (Enter to send)" : "Connecting..."}
-            disabled={!isConnected}
+            placeholder={connected ? "Type a message... (Enter to send)" : "Connecting..."}
+            disabled={!connected}
             rows={1}
             className="flex-1 bg-gray-700 text-white text-sm placeholder-gray-400 rounded-xl px-3 py-2 resize-none outline-none border border-gray-600 focus:border-blue-500 transition-colors disabled:opacity-50 max-h-24"
             style={{ minHeight: "38px" }}
           />
           <button
             onClick={sendMessage}
-            disabled={!isConnected || !inputText.trim()}
+            disabled={!connected || !inputText.trim()}
             className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-xl transition-colors shrink-0"
           >
             <SendIcon />

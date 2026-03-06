@@ -74,6 +74,51 @@ class SocketService {
     this.currentChatId = chatId;
   }
 
+  // ---------------------------------------------------------------------------
+  // Call-specific chat helpers (temporary websocket chat during a video session)
+  // ---------------------------------------------------------------------------
+
+  // join the call chat room (agora channel identifier)
+  joinCallChat(channel: string): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit('joinCallChat', channel);
+    this.currentChatId = channel;
+  }
+
+  // leave the call chat room
+  leaveCallChat(channel: string): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit('leaveCallChat', channel);
+    if (this.currentChatId === channel) {
+      this.currentChatId = null;
+    }
+  }
+
+  // subscribe to incoming call messages
+  onReceiveCallMessage(
+    callback: (msg: { id: string; senderId: string; message: string }) => void
+  ): () => void {
+    if (!this.socket) {
+      return () => {};
+    }
+    this.socket.on('receiveCallMessage', callback);
+    return () => {
+      if (this.socket) {
+        this.socket.off('receiveCallMessage', callback);
+      }
+    };
+  }
+
+  // send a message over the call chat
+  sendCallMessage(payload: {
+    channel: string;
+    senderId: string;
+    message: string;
+  }): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit('sendCallMessage', payload);
+  }
+
   // Leave a chat room
   leaveRoom(chatId: string): void {
     if (!this.socket || !this.isConnected) {

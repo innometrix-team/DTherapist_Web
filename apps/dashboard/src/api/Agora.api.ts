@@ -96,24 +96,23 @@ export async function fetchAgoraRtmToken(
 ): Promise<IAPIResult<AgoraRtmTokenResult> | null> {
   // Convert string uid → number for the backend, guard against NaN.
   const numericUid = typeof uid === "number" ? uid : parseInt(uid, 10);
-  if (isNaN(numericUid)) {
+  if (isNaN(numericUid) || numericUid === 0) {
     return Promise.reject({
       code: 0,
       status: "error",
-      message: `fetchAgoraRtmToken: uid "${uid}" is not a valid integer.`,
+      message: `fetchAgoraRtmToken: uid "${uid}" is not a valid non-zero integer.`,
       data: undefined,
     });
   }
 
   try {
     const response = await Api.get<AgoraTokenAPIResponse>(
-      "/api/agora/refresh-token",
+      "/api/agora/refresh/rtm-token",
       {
         ...config,
         params: {
           sessionName,
           uid: numericUid,
-          type: "rtm",   
           ...config?.params,
         },
       }
@@ -136,7 +135,7 @@ export async function fetchAgoraRtmToken(
       message: response.data.message ?? "success",
       data: {
         uid: d.uid,
-        token: d.rtmToken,   // map rtmToken → token
+        token: d.rtmToken,
         sessionName: d.sessionName,
         expiresAt: d.expiresAt,
       },
