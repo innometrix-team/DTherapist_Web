@@ -8,7 +8,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Trash } from "lucide-react";
 import { CameraIcon } from "../../assets/icons";
-
 import { IUserProfile } from "../../api/GetUsers.api";
 import ProfileUpdateApi, {
   IProfileUpdateData,
@@ -25,6 +24,12 @@ const baseSchema = z.object({
       message: "Please enter your full name",
     }),
   country: z.string().min(2, "Country is required"),
+  phoneNumber: z
+    .string()
+    .min(2, "Phone Number is required")
+    .refine((val) => val.trim().split(/\s+/).length >= 2, {
+      message: "Please enter your phone number",
+    }),
 });
 
 // User-specific schema
@@ -72,6 +77,7 @@ const ProfileForm = ({
           specialization: "",
           experience: 0,
           country: "",
+          phoneNumber: "",
         }
       : {
           fullName: "",
@@ -94,6 +100,7 @@ const ProfileForm = ({
       setValue("fullName", userData.fullName || "");
       setValue("bio", userData.bio || "");
       setValue("country", userData.country || "");
+      setValue("phoneNumber", userData.phoneNumber || "");
 
       // Set counselor-specific fields if user is counselor
       if (isCounselor) {
@@ -142,6 +149,7 @@ const ProfileForm = ({
         fullName,
         bio,
         country,
+        phoneNumber,
         specialization,
         experience,
         profilePicture,
@@ -151,6 +159,7 @@ const ProfileForm = ({
       setValue("fullName", fullName);
       setValue("bio", bio);
       setValue("country", country);
+      setValue("phoneNumber", phoneNumber);
 
       // Set counselor-specific fields if user is counselor
       if (isCounselor) {
@@ -304,6 +313,7 @@ const ProfileForm = ({
         fullName: data.fullName,
         bio: data.bio,
         country: data.country,
+        phoneNumber: data.phoneNumber,
         profilePicture: profileImage || undefined,
         // Add counselor-specific fields if user is counselor
         ...(isCounselor &&
@@ -460,6 +470,28 @@ const ProfileForm = ({
           />
           {errors.bio && (
             <p className="text-red-600 text-sm mt-1">{errors.bio.message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Phone Number */}
+      <div className={formGroupStyle}>
+        <label htmlFor="phoneNumber" className={labelStyle}>
+          Phone Number
+        </label>
+        <div className="flex flex-col w-full max-w-full md:max-w-md">
+          <input
+            id="phoneNumber"
+            type="tel"
+            placeholder="Enter phone number"
+            {...register("phoneNumber")}
+            disabled={isPending || isSubmitting}
+            className={inputStyle}
+          />
+          {errors.phoneNumber && (
+            <p className="text-red-600 text-sm mt-1">
+              {errors.phoneNumber.message}
+            </p>
           )}
         </div>
       </div>

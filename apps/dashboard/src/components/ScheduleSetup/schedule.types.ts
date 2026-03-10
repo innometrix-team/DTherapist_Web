@@ -1,4 +1,4 @@
-export type MeetingPreference = 'In-person' | 'Video Session' | 'Both';
+export type MeetingPreference = 'In-person' | 'Video Session' | 'Team Session' | 'Both';
 
 export interface ScheduleSetupData {
   meetingPreference: MeetingPreference;

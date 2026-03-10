@@ -13,6 +13,8 @@ import DAnonymous from "./pages/DAnonymous/DAnonymous";
 import UserDetail from "./pages/UserDetail/UserDetail";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DisputesPage from "./pages/Dispute/Dispute";
+import Moderation from "./pages/Moderation/Moderation";
+import Feedback from "./pages/Feedback/Feedback";
 
 function App() {
   return (
@@ -39,6 +41,8 @@ function App() {
           <Route path="transaction" element={<Transaction />} />
           <Route path="danonymous" element={<DAnonymous />} />
           <Route path="/disputes/*" element={<DisputesPage />} />
+          <Route path="/moderation/*" element={<Moderation />} />
+          <Route path="/feedback/*" element={<Feedback />} />
         </Route>
 
         {/* Public Routes */}

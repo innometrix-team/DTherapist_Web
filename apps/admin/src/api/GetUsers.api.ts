@@ -17,6 +17,7 @@ export interface IUserProfile {
   fullName: string;
   bio: string;
   country: string;
+  phoneNumber: string;
   profilePicture: string;
   status: string;
   areaOfSpecialization: string;

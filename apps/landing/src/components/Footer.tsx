@@ -1,3 +1,4 @@
+import { FaInstagram, FaFacebook } from "react-icons/fa";
 
 const Footer = () => {
   return (
@@ -34,8 +35,12 @@ const Footer = () => {
 
         {/* Social Media */}
         <div>
+          <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
+          <ul className="space-y-2 text-sm">
+            <li><a href="https://www.facebook.com/share/1AfjAd6BWB/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="hover:underline "> <FaFacebook /></a></li>
+            <li><a href="https://www.instagram.com/dtherapist_app?igsh=MWp4OWt1dWtiem11Nw==" target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaInstagram /></a></li>
+          </ul>
           <h4 className="text-lg font-semibold mb-4">Download Our App</h4>
-
           <div className="flex gap-3">
             <a href="#">
               <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053' alt="Download on iOS" className="w-28" />

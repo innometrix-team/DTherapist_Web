@@ -14,6 +14,7 @@ export interface IScheduleItem {
   meetingType: "video" | "in-person";
   timezone: string;
   isAvailable: boolean;
+  allowGroupBooking: boolean;
   slots: ITimeSlot[];
   __v: number;
   createdAt: string;
@@ -44,24 +45,17 @@ export async function getTherapistVideoScheduleApi(
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "success",
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
+    if (axios.isCancel(e)) return Promise.resolve(null);
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
   }
 }
 
@@ -79,24 +73,17 @@ export async function getTherapistInPersonScheduleApi(
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "success",
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
+    if (axios.isCancel(e)) return Promise.resolve(null);
     const statusCode = (e as AxiosError).response?.status || 0;
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
   }
 }
 
@@ -110,5 +97,33 @@ export async function getTherapistScheduleApi(
     return getTherapistVideoScheduleApi(therapistId, config);
   } else {
     return getTherapistInPersonScheduleApi(therapistId, config);
+  }
+}
+
+// Get all therapist schedules (both video and in-person)
+export async function getAllTherapistSchedulesApi(
+  therapistId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<ITherapistScheduleResponse> | null> {
+  try {
+    const response = await Api.get<APIResponse<ITherapistScheduleResponse>>(
+      `/api/schedule/${encodeURIComponent(therapistId)}`,
+      { ...config }
+    );
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "success",
+      data: response.data.data,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) return Promise.resolve(null);
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data.message ||
+      (e as Error).message;
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
   }
 }

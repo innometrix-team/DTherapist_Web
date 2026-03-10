@@ -34,11 +34,11 @@ export interface IMessage {
   _id: string;
   content: string;
   createdAt: string;
-  senderId: string;
-  groupId: string;
+  userId: string; // Changed from senderId to userId to match API response
+  groupId?: string;
   alias?: string;
   replyTo?: IReplyTo | null;
-  isOwnMessage?: boolean; // Added isOwnMessage field
+  isOwnMessage?: boolean; // This will be computed on the client side
 }
 
 interface GroupMessagesAPIResponse {
@@ -61,13 +61,44 @@ interface IMessageData {
   createdAt: string;
   updatedAt: string;
   replyTo?: string | null;
-  isOwnMessage?: boolean; // Added isOwnMessage field
+  isOwnMessage?: boolean; // This will be computed on the client side
   __v?: number;
 }
 
 interface SendGroupMessageApiResponse {
   message: string;
   data: IMessageData;
+}
+
+// Report message interface
+interface IReportMessageRequestData {
+  groupId: string;
+  _id: string;
+  reason: string;
+  description: string;
+}
+
+interface ReportMessageApiResponse {
+  message: string;
+}
+
+// Block/Unblock user interface
+interface IBlockUserRequestData {
+  userId: string;
+}
+
+interface BlockUserApiResponse {
+  message: string;
+}
+
+// Delete message interface
+interface IDeleteMessageRequestData {
+  groupId: string;
+  _id: string;
+}
+
+interface DeleteMessageApiResponse {
+  message: string;
 }
 
 // Define an interface for error response data
@@ -234,6 +265,165 @@ export async function SendGroupMessageApi(
       status: "success",
       message: response.data.message ?? "Message sent",
       data: response.data.data,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
+    const status =
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
+
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+export async function ReportGroupMessageApi(
+  data: IReportMessageRequestData,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> {
+  try {
+    const payload = {
+      reason: data.reason,
+      description: data.description,
+    };
+
+    const response = await Api.post<ReportMessageApiResponse>(
+      `/api/group/${data.groupId}/messages/${data._id}/report`,
+      payload,
+      {
+        ...config,
+      }
+    );
+
+    return Promise.resolve({
+      code: response.status,
+      status: "success",
+      message: response.data.message ?? "Message reported successfully",
+      data: response.data.message,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
+    const status =
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
+
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+export async function BlockUserApi(
+  data: IBlockUserRequestData,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> {
+  try {
+    const response = await Api.post<BlockUserApiResponse>(
+      `/api/group/block/${data.userId}`,
+      null,
+      {
+        ...config,
+      }
+    );
+
+    return Promise.resolve({
+      code: response.status,
+      status: "success",
+      message: response.data.message ?? "User blocked successfully",
+      data: response.data.message,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
+    const status =
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
+
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+export async function UnblockUserApi(
+  data: IBlockUserRequestData,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> {
+  try {
+    const response = await Api.delete<BlockUserApiResponse>(
+      `/api/group/block/${data.userId}`,
+      {
+        ...config,
+      }
+    );
+
+    return Promise.resolve({
+      code: response.status,
+      status: "success",
+      message: response.data.message ?? "User unblocked successfully",
+      data: response.data.message,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const axiosError = e as AxiosError;
+    const statusCode = axiosError.response?.status || 0;
+    const errorMessage = getErrorMessage(axiosError);
+    const status =
+      (axiosError.response?.data as ErrorResponseData)?.status || "error";
+
+    return Promise.reject({
+      code: statusCode,
+      status,
+      message: errorMessage,
+      data: undefined,
+    });
+  }
+}
+
+export async function DeleteOwnMessageApi(
+  data: IDeleteMessageRequestData,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> {
+  try {
+    const response = await Api.delete<DeleteMessageApiResponse>(
+      `/api/group/groups/${data.groupId}/messages/${data._id}`,
+      {
+        ...config,
+      }
+    );
+
+    return Promise.resolve({
+      code: response.status,
+      status: "success",
+      message: response.data.message ?? "Message deleted successfully",
+      data: response.data.message,
     });
   } catch (e) {
     if (axios.isCancel(e)) {

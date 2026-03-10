@@ -10,6 +10,7 @@ export interface IProfileUpdateData {
   experience?: number;
   country: string;
   gender?: string;
+  phoneNumber?: string;
   profilePicture?: File;
 }
 
@@ -23,6 +24,7 @@ interface IResponseData {
   country: string;
   gender?: string;
   profilePicture?: string;
+  phoneNumber?: string;
   updatedAt: string;
   token: string;
 }

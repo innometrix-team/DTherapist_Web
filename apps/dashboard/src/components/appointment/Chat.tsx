@@ -429,7 +429,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
   return (
     <div className="flex flex-col h-full w-full max-w-full bg-white overflow-hidden">
       {/* Header matching DAnonymousChat style - Fixed */}
-      <div className="border-b border-gray-200 relative flex-shrink-0">
+      <div className="border-b border-gray-200 relative shrink-0">
         <img
           src={
             recipient.avatar ||
@@ -446,7 +446,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white flex-shrink-0 mr-2">
+          <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white shrink-0 mr-2">
             {!imageLoadError && recipient.avatar ? (
               <img
                 src={recipient.avatar}
@@ -486,37 +486,25 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
           <div key={`group-${group.date}`}>
             <DateSeparator date={group.date} />
             <div className="space-y-4">
-              {group.messages.map((msg, index) => (
-                <div
-                  key={msg._id + index} // Use _id for key
-                  className={`flex ${
-                    msg._id === currentUserId
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
-                      msg._id === currentUserId
-                        ? "bg-primary text-white rounded-br-md"
-                        : "bg-white text-gray-800 rounded-bl-md shadow-sm"
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed break-words">
-                      {msg.content}
-                    </p>
-                    <div
-                      className={`text-xs mt-2 ${
-                        msg._id === currentUserId
-                          ? "text-blue-100"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {formatMessageTime(msg.createdAt)}
-                    </div>
-                  </div>
-                </div>
-              ))}
+             {group.messages.map((msg, index) => (
+  <div
+    key={msg._id + index}
+    className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
+  >
+    <div
+      className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
+        msg.isOwn
+          ? "bg-primary text-white rounded-br-md"
+          : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+      }`}
+    >
+      <p className="text-sm leading-relaxed wrap-break-words">{msg.content}</p>
+      <div className={`text-xs mt-2 ${msg.isOwn ? "text-blue-100" : "text-gray-500"}`}>
+        {formatMessageTime(msg.createdAt)}
+      </div>
+    </div>
+  </div>
+))}
             </div>
           </div>
         ))}
@@ -524,7 +512,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
       </div>
 
       {/* Input section matching DAnonymousChat - Fixed */}
-      <div className="bg-[#F7FAFF] p-4 border-t border-gray-200 flex-shrink-0">
+      <div className="bg-[#F7FAFF] p-4 border-t border-gray-200 shrink-0">
         <form onSubmit={handleSubmit} className="flex items-center space-x-3">
           <Input
             multiline
@@ -544,7 +532,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
               !newMessage?.trim() ||
               !isConnectedToSocket
             }
-            className="w-5 h-5 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-5 h-5 rounded-full flex items-center justify-center transition-colors shrink-0"
           >
             {sendMessageMutation.isPending ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
