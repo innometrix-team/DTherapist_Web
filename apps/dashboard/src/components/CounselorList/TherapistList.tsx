@@ -259,7 +259,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     if (!hasGroup) return `₦${video}/₦${inPerson}/hr`;
     return `₦${video}/₦${inPerson} ₦${groupVideo}/hr`;
   }
-  return "Contact for pricing";
+  return "0.00";
 };
 
   const handleSearch = useCallback((query: string) => {
