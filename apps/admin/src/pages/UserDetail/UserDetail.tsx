@@ -70,7 +70,7 @@ const UserDetail = () => {
       refetchOnWindowFocus: false,
       staleTime: 2 * 60 * 1000, // 2 minutes
       enabled: !!userId && shouldFetchCredentials,
-    }
+    },
   );
 
   const handleBackButton = () => {
@@ -184,8 +184,9 @@ const UserDetail = () => {
       {profileError && (
         <div className="flex justify-center items-center h-64">
           <div className="text-red-500">
-            {profileError.message ??
-              "Error loading user details. Please try again."}
+            {profileError.message
+              ? `${profileError.message}, Profile not updated`
+              : "Error loading user details. Please try again."}
           </div>
         </div>
       )}

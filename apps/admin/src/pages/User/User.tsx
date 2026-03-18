@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { GetAllUsersApi, IUser } from "../../api/GetUsers.api";
+import { GetAllUsersApi } from "../../api/GetUsers.api";
 import Pagination from "../../components/pagination/Pagination";
 
 interface UserFilters {
@@ -83,11 +83,16 @@ function User() {
   });
 
   const filteredUsers = useMemo(() => {
-    const users: IUser[] = (usersData || [])
+    const users = (usersData || [])
       .filter((user) => user.role !== "admin")
       .map((user) => ({
         ...user,
-        role: user.role === "therapist" ? "counselor" : user.role,
+        role:
+          user.role === "therapist"
+            ? "counselor"
+            : user.role === "client"
+            ? "user"
+            : user.role,
       }));
 
     return users.filter((user) => {
@@ -120,7 +125,7 @@ function User() {
     const data = usersData || [];
     return {
       counselors: data.filter((user) => user.role === "therapist").length ?? 0,
-      clients: data.filter((user) => user.role === "client").length ?? 0,
+      users: data.filter((user) => user.role === "client").length ?? 0,
     };
   }, [usersData]);
 
@@ -221,7 +226,7 @@ function User() {
           >
             <option value="all">All Roles</option>
             <option value="counselor">Counselors</option>
-            <option value="client">Client</option>
+            <option value="user">User</option>
           </select>
 
           {/* Suspension Status Filter */}
@@ -241,7 +246,7 @@ function User() {
         {/* Stats */}
         <div className="flex gap-6 text-sm text-gray-600 mb-6">
           <span>Counselors: {userCount.counselors.toLocaleString()}</span>
-          <span>Clients: {userCount.clients.toLocaleString()}</span>
+          <span>Users: {userCount.users.toLocaleString()}</span>
         </div>
       </div>
 
@@ -253,7 +258,7 @@ function User() {
             <div className="text-center py-8 text-gray-500">No users found</div>
           )}
 
-          {paginatedUsers.map((user: IUser) => (
+          {paginatedUsers.map((user) => (
             <div
               key={user._id}
               className="bg-gray-50 rounded-lg p-4 border border-gray-200"
@@ -335,7 +340,7 @@ function User() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedUsers.map((user: IUser) => (
+              {paginatedUsers.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50">
                   {/* User Info with Alias */}
                   <td className="px-4 py-4 whitespace-nowrap">
@@ -434,7 +439,7 @@ function User() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedUsers.map((user: IUser) => (
+              {paginatedUsers.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50">
                   {/* User Info */}
                   <td className="px-4 py-4 whitespace-nowrap">
