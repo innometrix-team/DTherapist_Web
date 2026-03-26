@@ -226,7 +226,7 @@ function User() {
           >
             <option value="all">All Roles</option>
             <option value="counselor">Counselors</option>
-            <option value="user">User</option>
+            <option value="user">Users</option>
           </select>
 
           {/* Suspension Status Filter */}
