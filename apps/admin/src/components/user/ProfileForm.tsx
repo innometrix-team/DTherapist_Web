@@ -26,9 +26,10 @@ const baseSchema = z.object({
   country: z.string().min(2, "Country is required"),
   phoneNumber: z
     .string()
+    .trim()
     .min(2, "Phone Number is required")
-    .refine((val) => val.trim().split(/\s+/).length >= 2, {
-      message: "Please enter your phone number",
+    .refine((val) => /[0-9]/.test(val), {
+      message: "Please enter a valid phone number",
     }),
 });
 
@@ -83,6 +84,7 @@ const ProfileForm = ({
           fullName: "",
           bio: "",
           country: "",
+          phoneNumber: "",
         },
   });
 

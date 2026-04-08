@@ -53,8 +53,8 @@ function validateProfilePicture(file: File): void {
 }
 
 function validateRequiredFields(data: IProfileUpdateData): void {
-  if (!data.fullName?.trim() || !data.country?.trim()) {
-    throw new Error('Required fields (fullName, country) are missing or empty');
+  if (!data.fullName?.trim() || !data.country?.trim() || !data.phoneNumber?.trim()) {
+    throw new Error('Required fields (fullName, country, phoneNumber) are missing or empty');
   }
 }
 
@@ -64,6 +64,7 @@ function createProfileFormData(data: IProfileUpdateData, isTherapist: boolean): 
   formData.append('fullName', data.fullName.trim());
   formData.append('bio', data.bio || '');
   formData.append('country', data.country.trim());
+  formData.append('phoneNumber', data.phoneNumber?.trim() || '');
 
   if (isTherapist) {
     formData.append('specialization', data.specialization?.trim() || '');

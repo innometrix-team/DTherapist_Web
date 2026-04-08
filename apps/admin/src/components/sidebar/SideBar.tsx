@@ -11,7 +11,7 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
   admin: {
     primary: [
       { to: "/", label: "Dashboard" },
-      { to: "/user", label: "User" },
+      { to: "/user", label: "Users" },
       { to: "/library", label: "Library" },
       { to: "/bookings", label: "Bookings" },
       { to: "/moderation", label: "Moderation" },
