@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SubmitHandler } from "react-hook-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { genderOptions } from "../../constant/settings.constants";
@@ -49,6 +49,7 @@ type ProfileFormData = UserFormData | CounselorFormData;
 
 const ProfileForm: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { role, setAuth } = useAuthStore();
   const auth = useAuthStore((state) => state);
   const isCounselor = role === "counselor";
@@ -138,7 +139,7 @@ const ProfileForm: React.FC = () => {
         auth?.role ?? undefined
       );
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       // Handle case where result is null (cancelled request)
       if (!result) {
         return;
@@ -204,6 +205,8 @@ const ProfileForm: React.FC = () => {
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
+
+      await queryClient.invalidateQueries({ queryKey: ["profile", role] });
     },
     onError: (error) => {
       // Handle different types of errors

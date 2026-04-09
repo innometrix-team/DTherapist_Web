@@ -71,6 +71,7 @@ function createProfileFormData(data: IProfileUpdateData, isTherapist: boolean): 
   formData.append('fullName', data.fullName.trim());
   formData.append('bio', data.bio || '');
   formData.append('country', data.country.trim());
+  formData.append('phoneNumber', data.phoneNumber?.trim() || '');
 
   if (isTherapist) {
     formData.append('specialization', data.specialization?.trim() || '');
