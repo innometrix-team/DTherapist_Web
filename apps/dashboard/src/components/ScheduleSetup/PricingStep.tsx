@@ -6,11 +6,11 @@ import { MeetingPreference } from "./schedule.types";
 
 interface PricingStepProps {
   pricing: {
-    inPerson: number;
-    video: number;
-    group: number;
+    inPerson: number | undefined;
+    video: number | undefined;
+    group: number | undefined;
   };
-  onPricingChange: (pricing: { inPerson: number; video: number; group: number }) => void;
+  onPricingChange: (pricing: { inPerson: number | undefined; video: number | undefined; group: number | undefined }) => void;
   meetingPreference: MeetingPreference;
   onBack: () => void;
   onSuccess?: () => void;
@@ -43,25 +43,22 @@ const PricingStep: React.FC<PricingStepProps> = ({
     };
   }, []);
 
-  const isComplete =
-    pricing.video > 0 && pricing.inPerson > 0 && pricing.group > 0;
+  const pricingEntries = [
+    { label: "Video Sessions", key: "videoPrice", value: pricing.video },
+    { label: "In-Person Sessions", key: "inPersonPrice", value: pricing.inPerson },
+    { label: "Team Sessions", key: "groupVideoPrice", value: pricing.group },
+  ] as const;
 
   const handleSaveClick = () => {
-    if (!isComplete) {
-      toast.error(
-        "Please enter valid pricing for all session types."
-      );
-      return;
-    }
     setShowModal(true);
   };
 
   const handleConfirm = async () => {
     try {
       await handlePricingSubmit({
-        videoPrice: pricing.video,
-        inPersonPrice: pricing.inPerson,
-        groupVideoPrice: pricing.group,
+        videoPrice: pricing.video ?? 0,
+        inPersonPrice: pricing.inPerson ?? 0,
+        groupVideoPrice: pricing.group ?? 0,
         allowGroupVideo: meetingPreference === "Team Session",
       });
       toast.success("Pricing saved successfully!");
@@ -84,30 +81,34 @@ const PricingStep: React.FC<PricingStepProps> = ({
     hint?: string;
   }) => {
     const val = pricing[field];
-    const isSet = val > 0;
+    const isSet = val !== undefined && val > 0;
     return (
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <label className="font-medium text-gray-700">{label}</label>
-          {isSet && (
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-              Set
+          {val !== undefined && (
+            <span className={`text-xs px-2 py-1 rounded ${
+              isSet
+                ? "bg-green-100 text-green-800"
+                : "bg-orange-100 text-orange-800"
+            }`}>
+              {isSet ? "Set" : "Disabled"}
             </span>
           )}
         </div>
         <div className="relative">
           <input
             type="number"
-            value={val || ""}
+            value={val ?? ""}
             onChange={(e) =>
               onPricingChange({
                 ...pricing,
-                [field]: parseFloat(e.target.value) || 0,
+                [field]: e.target.value === "" ? undefined : parseFloat(e.target.value),
               })
             }
             placeholder={placeholder}
             min="0"
-            step="100"
+            step="1"
             className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
               isSet
                 ? "border-green-300 focus:ring-green-500"
@@ -186,13 +187,13 @@ const PricingStep: React.FC<PricingStepProps> = ({
           <div className="px-6 pb-6">
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
               <p className="text-sm font-semibold text-gray-900 mb-3">
-                Pricing Requirements:
+                Pricing Setup (Leave empty to skip a service):
               </p>
               <ul className="space-y-2">
                 {[
-                  { label: "Video call pricing set", done: pricing.video > 0 },
-                  { label: "In-person pricing set", done: pricing.inPerson > 0 },
-                  { label: "Team session pricing set", done: pricing.group > 0 },
+                  { label: "Video call pricing", done: pricing.video !== undefined },
+                  { label: "In-person pricing", done: pricing.inPerson !== undefined },
+                  { label: "Team session pricing", done: pricing.group !== undefined },
                 ].map(({ label, done }) => (
                   <li key={label} className="flex items-center gap-2 text-sm">
                     <svg
@@ -232,7 +233,7 @@ const PricingStep: React.FC<PricingStepProps> = ({
           </button>
           <button
             onClick={handleSaveClick}
-            disabled={!isComplete || isPending}
+            disabled={isPending}
             className="flex items-center gap-2 px-8 py-3 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             {isPending ? "Saving..." : "Save Pricing"}
@@ -253,15 +254,11 @@ const PricingStep: React.FC<PricingStepProps> = ({
             </p>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3 border border-gray-100">
-              {[
-                { label: "Video Sessions", value: pricing.video },
-                { label: "In-Person Sessions", value: pricing.inPerson },
-                { label: "Team Sessions", value: pricing.group },
-              ].map(({ label, value }) => (
+              {pricingEntries.map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center">
                   <span className="text-gray-600">{label}</span>
                   <span className="font-bold text-gray-900">
-                    ₦{value.toLocaleString()}/hr
+                    {value !== undefined ? `₦${value.toLocaleString()}/hr` : "Not Set"}
                   </span>
                 </div>
               ))}

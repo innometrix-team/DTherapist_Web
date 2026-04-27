@@ -26,7 +26,7 @@ const MySchedule: React.FC = () => {
   const [meetingPreference, setMeetingPreference] = useState<MeetingPreference | null>(null);
   const [dateTime, setDateTime] = useState("");
   const [selectedTimeZone, setSelectedTimeZone] = useState("West African Time (WAT)");
-  const [pricing, setPricing] = useState({ inPerson: 0, video: 0, group: 0 });
+  const [pricing, setPricing] = useState({ inPerson: undefined as number | undefined, video: undefined as number | undefined, group: undefined as number | undefined });
 
 
   const handleCreateNext = () => setCreateStep((p) => p + 1);
@@ -84,7 +84,7 @@ const MySchedule: React.FC = () => {
     setMeetingPreference(null);
     setDateTime("");
     setSelectedTimeZone("West African Time (WAT)");
-    setPricing({ inPerson: 0, video: 0, group: 0 });
+    setPricing({ inPerson: undefined, video: undefined, group: undefined });
     setCreateStep(1);
   };
 
