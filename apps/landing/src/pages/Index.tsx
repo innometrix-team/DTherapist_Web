@@ -34,7 +34,7 @@ const Index: React.FC = () => {
         description="Download our app and connect with a therapist 24/7, from anywhere in the world."
         buttonText={false}
         showDownloadButtons={true}
-        iosUrl="https://ik.imagekit.io/rqi1dzw2h/homepage/phone%20image.png?updatedAt=1756725017436"
+        iosUrl="https://apps.apple.com/us/app/dtherapist/id6751411829"
         androidUrl="https://play.google.com/store/apps/details?id=com.dtherapistmobile.dtherapistmobile&pcampaignid=web_share"
       />
 
