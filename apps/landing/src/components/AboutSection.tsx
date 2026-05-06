@@ -42,7 +42,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
               {iosUrl && (
                 <a href={iosUrl} target="_blank" rel="noopener noreferrer">
                   <img
-                    src="https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053"
+                    src="/app-store.png"
                     alt="Download on the App Store"
                     className="h-12"
                   />
@@ -51,7 +51,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
               {androidUrl && (
                 <a href={androidUrl} target="_blank" rel="noopener noreferrer">
                   <img
-                    src="https://ik.imagekit.io/rqi1dzw2h/homepage/playstore.png?updatedAt=1746020196102"
+                    src="/google-play.png"
                     alt="Get it on Google Play"
                     className="h-12"
                   />
