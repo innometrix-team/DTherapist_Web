@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CancelIcon, CopyIcon, AddIcon } from "../../assets/icons";
+import { CancelIcon, AddIcon } from "../../assets/icons";
 import { MeetingPreference } from "./schedule.types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -169,11 +169,7 @@ const DateTimeStep: React.FC<Props> = ({
     sync(updated);
   };
 
-  const copySlot = (dayIndex: number, slotIndex: number) => {
-    const updated = [...availability];
-    updated[dayIndex] = [...updated[dayIndex], { ...updated[dayIndex][slotIndex] }];
-    sync(updated);
-  };
+
 
   const updateSlot = (
     dayIndex: number,
