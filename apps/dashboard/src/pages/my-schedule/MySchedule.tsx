@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import MeetingPreferenceStep from "../../components/ScheduleSetup/MeetingPreferenceStep";
 import DateTimeStep from "../../components/ScheduleSetup/DateTimeStep";
@@ -6,6 +7,9 @@ import PricingStep from "../../components/ScheduleSetup/PricingStep";
 import ViewEditSchedule from "../../components/ScheduleSetup/ViewEditSchedule";
 import { MeetingPreference } from "../../components/ScheduleSetup/schedule.types";
 import { IScheduleRequestData } from "../../api/Schedule.api";
+import { getAllTherapistSchedulesApi, IScheduleItem } from "../../api/TherapistSchedule.api";
+import { getTherapistDetailsApi, ITherapist } from "../../api/Therapist.api";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface Slot {
   startTime: string;
@@ -14,20 +18,129 @@ interface Slot {
   allowGroupBooking: boolean;
 }
 
+interface PricingValues {
+  inPerson: number | undefined;
+  video: number | undefined;
+  group: number | undefined;
+}
+
 const days = [
   "Sunday", "Monday", "Tuesday", "Wednesday",
   "Thursday", "Friday", "Saturday",
 ];
 
+const getMeetingPreferenceFromSchedule = (schedules: IScheduleItem[]): MeetingPreference => {
+  const hasInPerson = schedules.some((schedule) => schedule.meetingType === "in-person");
+  const hasVideo = schedules.some((schedule) => schedule.meetingType === "video");
+  const hasGroup = schedules.some((schedule) => schedule.allowGroupBooking === true);
+
+  if (hasInPerson && hasVideo) return "Both";
+  if (hasGroup && !hasInPerson) return "Team Session";
+  if (hasVideo) return "Video Session";
+  return "In-person";
+};
+
+const buildDateTimeFromSchedule = (schedules: IScheduleItem[]): string => {
+  const dayMap = days.map((day) => {
+    const schedule = schedules.find((item) => item.day === day);
+    if (!schedule) return [];
+
+    return schedule.slots.map((slot) => ({
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      mode: schedule.meetingType === "in-person" ? "in-person" : schedule.allowGroupBooking ? "group" : "video",
+      allowGroupBooking: schedule.allowGroupBooking,
+    }));
+  });
+
+  return JSON.stringify(dayMap);
+};
+
+const getPricingFromCost = (cost: ITherapist["cost"]): PricingValues => {
+  if (typeof cost === "number") {
+    return {
+      inPerson: cost > 0 ? cost : undefined,
+      video: cost > 0 ? cost : undefined,
+      group: undefined,
+    };
+  }
+
+  if (!cost || typeof cost !== "object") {
+    return {
+      inPerson: undefined,
+      video: undefined,
+      group: undefined,
+    };
+  }
+
+  return {
+    inPerson: cost.inPerson > 0 ? cost.inPerson : undefined,
+    video: cost.video > 0 ? cost.video : undefined,
+    group: cost.groupVideo > 0 ? cost.groupVideo : undefined,
+  };
+};
+
+const hasAnyPricingValue = (pricing: PricingValues) =>
+  pricing.inPerson !== undefined ||
+  pricing.video !== undefined ||
+  pricing.group !== undefined;
+
 const MySchedule: React.FC = () => {
+  const authId = useAuthStore((state) => state.id);
+  const { data: scheduleResponse } = useQuery({
+    queryKey: ["therapistSchedules", authId],
+    queryFn: async () => {
+      if (!authId) return [] as IScheduleItem[];
+      const result = await getAllTherapistSchedulesApi(authId);
+      return result?.data?.schedules || [];
+    },
+    enabled: !!authId,
+  });
+  const { data: therapistDetailsResponse } = useQuery({
+    queryKey: ["therapistDetails", authId],
+    queryFn: async () => {
+      if (!authId) return null;
+      const result = await getTherapistDetailsApi(authId);
+      return result?.data?.therapist ?? null;
+    },
+    enabled: !!authId,
+  });
+
   const [step, setStep] = useState<"menu" | "create" | "view" | "pricing">("menu");
   const [createStep, setCreateStep] = useState(1);
 
   const [meetingPreference, setMeetingPreference] = useState<MeetingPreference | null>(null);
   const [dateTime, setDateTime] = useState("");
   const [selectedTimeZone, setSelectedTimeZone] = useState("West African Time (WAT)");
-  const [pricing, setPricing] = useState({ inPerson: undefined as number | undefined, video: undefined as number | undefined, group: undefined as number | undefined });
+  const [pricing, setPricing] = useState<PricingValues>({
+    inPerson: undefined,
+    video: undefined,
+    group: undefined,
+  });
+  const didHydratePricingRef = useRef(false);
 
+  const scheduleItems = (scheduleResponse || []).filter(
+    (schedule) => schedule.isAvailable && schedule.slots.length > 0
+  );
+
+  useEffect(() => {
+    if (!scheduleItems.length || meetingPreference !== null || dateTime) return;
+
+    setMeetingPreference(getMeetingPreferenceFromSchedule(scheduleItems));
+    setDateTime(buildDateTimeFromSchedule(scheduleItems));
+    setSelectedTimeZone(scheduleItems[0]?.timezone || "West African Time (WAT)");
+  }, [scheduleItems, meetingPreference, dateTime]);
+
+  useEffect(() => {
+    if (didHydratePricingRef.current || !therapistDetailsResponse?.cost) return;
+
+    setPricing((currentPricing) => {
+      if (hasAnyPricingValue(currentPricing)) return currentPricing;
+
+      didHydratePricingRef.current = true;
+      return getPricingFromCost(therapistDetailsResponse.cost);
+    });
+  }, [therapistDetailsResponse]);
 
   const handleCreateNext = () => setCreateStep((p) => p + 1);
   const handleCreateBack = () => {
@@ -44,8 +157,6 @@ const MySchedule: React.FC = () => {
     setCreateStep(1);
   };
 
-  // ── schedule data transform ──────────────────────────────────────────────
-
   const transformScheduleData = (): IScheduleRequestData[] => {
     try {
       const availability: Slot[][] = dateTime
@@ -58,10 +169,12 @@ const MySchedule: React.FC = () => {
         const firstMode = daySlots[0].mode;
         let meetingType = "video";
         if (firstMode === "in-person") meetingType = "in-person";
-        else if (firstMode === "group") meetingType = "group";
+        else if (firstMode === "group") meetingType = "video";
         else if (firstMode === "video") meetingType = "video";
+        else if (firstMode === "both") meetingType = "both";
         else if (meetingPreference === "In-person") meetingType = "in-person";
-        else if (meetingPreference === "Team Session") meetingType = "group";
+        else if (meetingPreference === "Team Session") meetingType = "video";
+        else if (meetingPreference === "Both") meetingType = "both";
 
         return [
           {
@@ -79,12 +192,12 @@ const MySchedule: React.FC = () => {
     }
   };
 
-
   const handleScheduleReset = () => {
     setMeetingPreference(null);
     setDateTime("");
     setSelectedTimeZone("West African Time (WAT)");
     setPricing({ inPerson: undefined, video: undefined, group: undefined });
+    didHydratePricingRef.current = false;
     setCreateStep(1);
   };
 
@@ -94,16 +207,10 @@ const MySchedule: React.FC = () => {
     setStep("menu");
   };
 
-  
-
   const stepLabels = ["Session Type", "Availability", "Pricing"];
-
-  
 
   return (
     <div className="bg-white min-h-screen">
-
-      {/* ── Menu ── */}
       {step === "menu" && (
         <div className="min-h-screen bg-linear-to-b from-gray-50 to-white p-8">
           <div className="max-w-4xl mx-auto">
@@ -179,10 +286,8 @@ const MySchedule: React.FC = () => {
         </div>
       )}
 
-      {/* ── Create flow ── */}
       {step === "create" && (
         <>
-          {/* Progress bar */}
           <div className="bg-white border-b border-gray-200 px-8 py-4">
             <div className="max-w-5xl mx-auto flex items-center gap-2">
               {stepLabels.map((label, i) => {
@@ -226,7 +331,6 @@ const MySchedule: React.FC = () => {
             </div>
           </div>
 
-          {/* Step 1 – Meeting preference */}
           {createStep === 1 && (
             <MeetingPreferenceStep
               value={meetingPreference as MeetingPreference}
@@ -236,7 +340,6 @@ const MySchedule: React.FC = () => {
             />
           )}
 
-          {/* Step 2 – Availability / DateTimeStep (no pricing) */}
           {createStep === 2 && (
             <DateTimeStep
               value={dateTime}
@@ -251,7 +354,6 @@ const MySchedule: React.FC = () => {
             />
           )}
 
-          {/* Step 3 – Pricing */}
           {createStep === 3 && (
             <PricingStep
               pricing={pricing}
@@ -264,25 +366,22 @@ const MySchedule: React.FC = () => {
         </>
       )}
 
-      {/* ── View / Edit ── */}
       {step === "view" && (
         <ViewEditSchedule
-          therapistId="current-user-id"
+          therapistId={authId || undefined}
           onBack={handleBackToMenu}
           onEdit={() => { setStep("create"); setCreateStep(1); }}
         />
       )}
 
-      {/* ── Pricing only ── */}
       {step === "pricing" && (
         <PricingStep
           pricing={pricing}
           onPricingChange={setPricing}
-          meetingPreference={meetingPreference as MeetingPreference}
+          meetingPreference={(meetingPreference ?? "Video Session") as MeetingPreference}
           onBack={handleBackToMenu}
           onSuccess={() => {
             toast.success("Pricing updated!");
-            handleBackToMenu();
           }}
         />
       )}

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { CancelIcon, CopyIcon, AddIcon } from "../../assets/icons";
 import { MeetingPreference } from "./schedule.types";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { CreateScheduleApi, IScheduleRequestData } from "../../api/Schedule.api";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const dayNames = [
   "Sunday", "Monday", "Tuesday", "Wednesday",
@@ -17,6 +18,19 @@ const timeZones = [
   "Eastern Time (ET)",
   "Pacific Time (PT)",
 ];
+
+const getMeetingTypeFromPreference = (meetingPreference: MeetingPreference): string => {
+  switch (meetingPreference) {
+    case "In-person":
+      return "in-person";
+    case "Both":
+      return "both";
+    case "Team Session":
+    case "Video Session":
+    default:
+      return "video";
+  }
+};
 
 interface Slot {
   startTime: string;
@@ -49,6 +63,8 @@ const DateTimeStep: React.FC<Props> = ({
   onSuccess,
   onReset,
 }) => {
+  const queryClient = useQueryClient();
+  const authId = useAuthStore((state) => state.id);
   const [availability, setAvailability] = useState<Slot[][]>(() => {
     try {
       return value ? JSON.parse(value) : Array(7).fill([]);
@@ -57,9 +73,33 @@ const DateTimeStep: React.FC<Props> = ({
     }
   });
 
+  React.useEffect(() => {
+    try {
+      if (value) {
+        const parsed = JSON.parse(value);
+        setAvailability(Array.isArray(parsed) ? parsed : Array(7).fill([]));
+      }
+    } catch {
+      setAvailability(Array(7).fill([]));
+    }
+  }, [value]);
+
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const hadExistingScheduleRef = React.useRef(false);
+
+  React.useEffect(() => {
+    try {
+      if (!value) return;
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed) && parsed.some((daySlots) => Array.isArray(daySlots) && daySlots.length > 0)) {
+        hadExistingScheduleRef.current = true;
+      }
+    } catch {
+      // Ignore malformed persisted state and keep the current flag.
+    }
+  }, [value]);
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -173,36 +213,51 @@ const DateTimeStep: React.FC<Props> = ({
   // ── build API payload ────────────────────────────────────────────────────
 
   const buildScheduleData = (): IScheduleRequestData[] =>
-    availability.flatMap((daySlots, index) => {
-      if (daySlots.length === 0) return [];
+    availability.map((daySlots, index) => {
+      if (daySlots.length === 0) {
+        return {
+          day: dayNames[index],
+          meetingType: getMeetingTypeFromPreference(meetingPreference),
+          timezone: selectedTimeZone,
+          isAvailable: false,
+          allowGroupBooking: false,
+          slots: [],
+        };
+      }
+
       const firstMode = daySlots[0].mode;
       let meetingType = "video";
       if (firstMode === "in-person") meetingType = "in-person";
-      else if (firstMode === "group") meetingType = "group";
+      else if (firstMode === "group") meetingType = "video";
       else if (firstMode === "video") meetingType = "video";
+      else if (firstMode === "both") meetingType = "both";
 
-      return [
-        {
-          day: dayNames[index],
-          meetingType,
-          timezone: selectedTimeZone,
-          isAvailable: true,
-          allowGroupBooking: daySlots.some((s) => s.allowGroupBooking),
-          slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
-        },
-      ];
+      return {
+        day: dayNames[index],
+        meetingType,
+        timezone: selectedTimeZone,
+        isAvailable: true,
+        allowGroupBooking: daySlots.some((s) => s.allowGroupBooking),
+        slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
+      };
     });
 
   // ── save flow ────────────────────────────────────────────────────────────
 
   const handleSaveClick = () => {
+    if (isPending) return;
     setShowModal(true);
   };
 
   const handleConfirm = async () => {
+    if (isPending) return;
+
     try {
-      if (activeDaysCount > 0) {
+      if (canSave) {
         await handleScheduleSubmit(buildScheduleData());
+        if (authId) {
+          await queryClient.invalidateQueries({ queryKey: ["therapistSchedules", authId] });
+        }
         toast.success("Schedule saved successfully!");
       }
       setShowModal(false);
@@ -218,6 +273,7 @@ const DateTimeStep: React.FC<Props> = ({
   const availableModes = getAvailableModes();
   const selectedDaySlots = selectedDayIdx !== null ? availability[selectedDayIdx] : [];
   const activeDaysCount = availability.filter((d) => d.length > 0).length;
+  const canSave = activeDaysCount > 0 || hadExistingScheduleRef.current;
 
   // ── render ────────────────────────────────────────────────────────────────
 
@@ -480,7 +536,7 @@ const DateTimeStep: React.FC<Props> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveClick}
-              disabled={activeDaysCount === 0 || isPending}
+              disabled={!canSave || isPending}
               className="flex items-center gap-2 px-6 py-3 rounded-lg border border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isPending ? (
@@ -568,7 +624,7 @@ const DateTimeStep: React.FC<Props> = ({
                 disabled={isPending}
                 className="px-6 py-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
               >
-                {isPending ? "Saving..." : "Confirm & Save"}
+                {isPending ? "Saving schedule..." : "Confirm & Save"}
               </button>
             </div>
           </div>

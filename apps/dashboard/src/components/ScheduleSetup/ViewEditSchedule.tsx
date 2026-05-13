@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getAllTherapistSchedulesApi } from "../../api/TherapistSchedule.api";
 import { CreateScheduleApi, IScheduleRequestData } from "../../api/Schedule.api";
@@ -23,6 +23,7 @@ const ViewEditSchedule: React.FC<Props> = ({
   onBack,
   onEdit
 }) => {
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSchedules, setEditedSchedules] = useState<{ [key: string]: EditingSlot[] }>({});
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -34,16 +35,20 @@ const ViewEditSchedule: React.FC<Props> = ({
       try {
         const result = await getAllTherapistSchedulesApi(therapistId);
         if (result?.data?.schedules) {
+          const activeSchedules = result.data.schedules.filter(
+            (schedule) => schedule.isAvailable && schedule.slots.length > 0
+          );
+
           // Initialize edited schedules with current data
           const initial: { [key: string]: EditingSlot[] } = {};
-          result.data.schedules.forEach((schedule) => {
+          activeSchedules.forEach((schedule) => {
             initial[schedule.day] = schedule.slots.map(slot => ({
               startTime: slot.startTime,
               endTime: slot.endTime,
             }));
           });
           setEditedSchedules(initial);
-          return result.data.schedules;
+          return activeSchedules;
         }
         return [];
       } catch (err) {
@@ -102,19 +107,23 @@ const ViewEditSchedule: React.FC<Props> = ({
   const handleSaveChanges = async () => {
     try {
       const updateData: IScheduleRequestData[] = schedules
-        .filter(schedule => editedSchedules[schedule.day]?.length > 0)
         .map(schedule => ({
           day: schedule.day,
           meetingType: schedule.meetingType,
           timezone: schedule.timezone,
-          isAvailable: true,
-          slots: editedSchedules[schedule.day].map(slot => ({
+          isAvailable: (editedSchedules[schedule.day] || []).length > 0,
+          allowGroupBooking:
+            (editedSchedules[schedule.day] || []).length > 0 ? schedule.allowGroupBooking : false,
+          slots: (editedSchedules[schedule.day] || []).map(slot => ({
             startTime: slot.startTime,
             endTime: slot.endTime,
           })),
         }));
 
       await handleScheduleUpdate(updateData);
+      if (therapistId) {
+        await queryClient.invalidateQueries({ queryKey: ["therapistSchedules", therapistId] });
+      }
       toast.success("Schedule updated successfully!");
       setIsEditing(false);
       setShowSaveModal(false);

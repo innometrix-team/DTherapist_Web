@@ -3,16 +3,17 @@ import { MeetingPreference } from './schedule.types';
 import { MeetingIcon, RescheduleIcon } from '../../assets/icons';
 
 interface Props {
-  value: MeetingPreference;
+  value: MeetingPreference | null;
   onChange: (val: MeetingPreference) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext, onBack }) => {
+const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext, onBack}) => {
   const options: { label: MeetingPreference; icon: JSX.Element }[] = [
     { label: 'In-person', icon: <RescheduleIcon className='fill-current' /> },
     { label: 'Video Session', icon: <MeetingIcon className='fill-current'/> },
+    
   ];
 
   return (
@@ -28,8 +29,10 @@ const MeetingPreferenceStep: React.FC<Props> = ({ value, onChange, onNext, onBac
           </p>
         </div>
 
+
+
         {/* Options Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           {options.map(({ label, icon }) => {
             const isSelected = value === label;
             return (

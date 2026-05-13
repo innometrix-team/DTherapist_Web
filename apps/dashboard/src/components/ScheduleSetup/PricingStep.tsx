@@ -1,20 +1,87 @@
 import React from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { CreatePricingApi, IPricingRequestData } from "../../api/Schedule.api";
 import { MeetingPreference } from "./schedule.types";
+import { useAuthStore } from "../../store/auth/useAuthStore";
+
+interface PricingValues {
+  inPerson: number | undefined;
+  video: number | undefined;
+  group: number | undefined;
+}
 
 interface PricingStepProps {
-  pricing: {
-    inPerson: number | undefined;
-    video: number | undefined;
-    group: number | undefined;
-  };
-  onPricingChange: (pricing: { inPerson: number | undefined; video: number | undefined; group: number | undefined }) => void;
+  pricing: PricingValues;
+  onPricingChange: (pricing: PricingValues) => void;
   meetingPreference: MeetingPreference;
   onBack: () => void;
   onSuccess?: () => void;
 }
+
+interface PriceFieldProps {
+  label: string;
+  field: keyof PricingValues;
+  placeholder: string;
+  hint?: string;
+  pricing: PricingValues;
+  onPricingChange: (pricing: PricingValues) => void;
+}
+
+const PriceField: React.FC<PriceFieldProps> = ({
+  label,
+  field,
+  placeholder,
+  hint,
+  pricing,
+  onPricingChange,
+}) => {
+  const val = pricing[field];
+  const isSet = val !== undefined && val > 0;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="font-medium text-gray-700">{label}</label>
+        {val !== undefined && (
+          <span className={`text-xs px-2 py-1 rounded ${
+            isSet
+              ? "bg-green-100 text-green-800"
+              : "bg-orange-100 text-orange-800"
+          }`}>
+            {isSet ? "Set" : "Disabled"}
+          </span>
+        )}
+      </div>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={val ?? ""}
+          onChange={(e) => {
+            const nextValue = e.target.value.replace(/[^\d]/g, "");
+
+            onPricingChange({
+              ...pricing,
+              [field]: nextValue === "" ? undefined : Number(nextValue),
+            });
+          }}
+          placeholder={placeholder}
+          className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
+            isSet
+              ? "border-green-300 focus:ring-green-500"
+              : "border-gray-300 focus:ring-blue-500"
+          }`}
+        />
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+          ₦/hr
+        </span>
+      </div>
+      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+    </div>
+  );
+};
 
 const PricingStep: React.FC<PricingStepProps> = ({
   pricing,
@@ -23,6 +90,8 @@ const PricingStep: React.FC<PricingStepProps> = ({
   onBack,
   onSuccess,
 }) => {
+  const queryClient = useQueryClient();
+  const authId = useAuthStore((state) => state.id);
   const [showModal, setShowModal] = React.useState(false);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -50,84 +119,36 @@ const PricingStep: React.FC<PricingStepProps> = ({
   ] as const;
 
   const handleSaveClick = () => {
+    if (isPending) return;
     setShowModal(true);
   };
 
   const handleConfirm = async () => {
+    if (isPending) return;
+
     try {
+      setShowModal(false);
+
       await handlePricingSubmit({
         videoPrice: pricing.video ?? 0,
         inPersonPrice: pricing.inPerson ?? 0,
         groupVideoPrice: pricing.group ?? 0,
         allowGroupVideo: meetingPreference === "Team Session",
       });
+      if (authId) {
+        void queryClient.invalidateQueries({ queryKey: ["therapistDetails", authId] });
+      }
       toast.success("Pricing saved successfully!");
-      setShowModal(false);
       if (onSuccess) onSuccess();
     } catch {
+      setShowModal(true);
       // error handled in onError
     }
-  };
-
-  const PriceField = ({
-    label,
-    field,
-    placeholder,
-    hint,
-  }: {
-    label: string;
-    field: keyof typeof pricing;
-    placeholder: string;
-    hint?: string;
-  }) => {
-    const val = pricing[field];
-    const isSet = val !== undefined && val > 0;
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <label className="font-medium text-gray-700">{label}</label>
-          {val !== undefined && (
-            <span className={`text-xs px-2 py-1 rounded ${
-              isSet
-                ? "bg-green-100 text-green-800"
-                : "bg-orange-100 text-orange-800"
-            }`}>
-              {isSet ? "Set" : "Disabled"}
-            </span>
-          )}
-        </div>
-        <div className="relative">
-          <input
-            type="number"
-            value={val ?? ""}
-            onChange={(e) =>
-              onPricingChange({
-                ...pricing,
-                [field]: e.target.value === "" ? undefined : parseFloat(e.target.value),
-              })
-            }
-            placeholder={placeholder}
-            min="0"
-            step="1"
-            className={`w-full pl-4 pr-16 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent font-medium transition ${
-              isSet
-                ? "border-green-300 focus:ring-green-500"
-                : "border-gray-300 focus:ring-blue-500"
-            }`}
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-            ₦/hr
-          </span>
-        </div>
-        {hint && <p className="text-xs text-gray-500">{hint}</p>}
-      </div>
-    );
   };
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 to-white p-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="mb-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-3">Session Pricing</h1>
           <p className="text-lg text-gray-600 leading-relaxed">
@@ -136,7 +157,6 @@ const PricingStep: React.FC<PricingStepProps> = ({
           </p>
         </div>
 
-        {/* Pricing Card */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-white">
             <div className="flex items-center gap-3">
@@ -167,12 +187,16 @@ const PricingStep: React.FC<PricingStepProps> = ({
               label="Video Call"
               field="video"
               placeholder="e.g. 5000"
+              pricing={pricing}
+              onPricingChange={onPricingChange}
             />
             <div className="border-t border-gray-100" />
             <PriceField
               label="In-Person Session"
               field="inPerson"
               placeholder="e.g. 7500"
+              pricing={pricing}
+              onPricingChange={onPricingChange}
             />
             <div className="border-t border-gray-100" />
             <PriceField
@@ -180,10 +204,11 @@ const PricingStep: React.FC<PricingStepProps> = ({
               field="group"
               placeholder="e.g. 3000"
               hint="Per person pricing for Team sessions"
+              pricing={pricing}
+              onPricingChange={onPricingChange}
             />
           </div>
 
-          {/* Checklist footer */}
           <div className="px-6 pb-6">
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
               <p className="text-sm font-semibold text-gray-900 mb-3">
@@ -219,7 +244,6 @@ const PricingStep: React.FC<PricingStepProps> = ({
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between gap-4 mt-10">
           <button
             onClick={onBack}
@@ -244,7 +268,6 @@ const PricingStep: React.FC<PricingStepProps> = ({
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
@@ -277,7 +300,7 @@ const PricingStep: React.FC<PricingStepProps> = ({
                 disabled={isPending}
                 className="px-6 py-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
               >
-                {isPending ? "Saving..." : "Confirm & Save"}
+                {isPending ? "Saving pricing..." : "Confirm & Save"}
               </button>
             </div>
           </div>
