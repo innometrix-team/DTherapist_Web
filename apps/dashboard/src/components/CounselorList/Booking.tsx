@@ -206,9 +206,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({
       const scheduleMeetingType =
         scheduleItem.meetingType === "in-person" ? "physical" : "video";
 
-      // For group sessions, filter only schedules where allowGroupBooking is true
+      // For group sessions, filter only schedules where teamBooking is true
       const passesGroupCheck = isGroupSession
-        ? scheduleItem.allowGroupBooking === true
+        ? scheduleItem.teamBooking === true
         : true;
 
       if (

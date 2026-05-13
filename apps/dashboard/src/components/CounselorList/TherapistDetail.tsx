@@ -107,11 +107,11 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Determine if any schedule slot has allowGroupBooking = true
+  // Determine if any schedule slot has teamBooking = true
   const supportsGroupBooking = useMemo(() => {
     const schedules = scheduleResponse?.data?.schedules || [];
     return schedules.some(
-      (s) => s.isAvailable && s.allowGroupBooking === true
+      (s) => s.isAvailable && s.teamBooking === true
     );
   }, [scheduleResponse?.data?.schedules]);
 

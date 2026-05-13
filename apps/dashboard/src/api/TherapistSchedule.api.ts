@@ -14,7 +14,7 @@ export interface IScheduleItem {
   meetingType: "video" | "in-person";
   timezone: string;
   isAvailable: boolean;
-  allowGroupBooking: boolean;
+  teamBooking: boolean;
   slots: ITimeSlot[];
   __v: number;
   createdAt: string;

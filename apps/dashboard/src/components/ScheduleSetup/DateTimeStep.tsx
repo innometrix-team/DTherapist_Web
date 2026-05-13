@@ -36,7 +36,7 @@ interface Slot {
   startTime: string;
   endTime: string;
   mode: string;
-  allowGroupBooking: boolean;
+  teamBooking: boolean;
 }
 
 interface Props {
@@ -149,7 +149,7 @@ const DateTimeStep: React.FC<Props> = ({
     updated[index] =
       updated[index].length > 0
         ? []
-        : [{ startTime: "09:00", endTime: "10:00", mode: getDefaultMode(), allowGroupBooking: false }];
+        : [{ startTime: "09:00", endTime: "10:00", mode: getDefaultMode(), teamBooking: false }];
     sync(updated);
   };
 
@@ -157,7 +157,7 @@ const DateTimeStep: React.FC<Props> = ({
     const updated = [...availability];
     updated[dayIndex] = [
       ...updated[dayIndex],
-      { startTime: "09:00", endTime: "10:00", mode: getDefaultMode(), allowGroupBooking: false },
+      { startTime: "09:00", endTime: "10:00", mode: getDefaultMode(), teamBooking: false },
     ];
     sync(updated);
   };
@@ -220,7 +220,7 @@ const DateTimeStep: React.FC<Props> = ({
           meetingType: getMeetingTypeFromPreference(meetingPreference),
           timezone: selectedTimeZone,
           isAvailable: false,
-          allowGroupBooking: false,
+          teamBooking: false,
           slots: [],
         };
       }
@@ -237,7 +237,7 @@ const DateTimeStep: React.FC<Props> = ({
         meetingType,
         timezone: selectedTimeZone,
         isAvailable: true,
-        allowGroupBooking: daySlots.some((s) => s.allowGroupBooking),
+        teamBooking: daySlots.some((s) => s.teamBooking),
         slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
       };
     });
@@ -440,13 +440,7 @@ const DateTimeStep: React.FC<Props> = ({
                           )}
 
                           <div className="flex items-center gap-2 ml-auto">
-                            <button
-                              onClick={() => copySlot(selectedDayIdx, slotIdx)}
-                              className="p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition"
-                              title="Duplicate slot"
-                            >
-                              <CopyIcon className="w-5 h-5" />
-                            </button>
+                           
                             <button
                               onClick={() => removeSlot(selectedDayIdx, slotIdx)}
                               className="p-2 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
@@ -457,34 +451,34 @@ const DateTimeStep: React.FC<Props> = ({
                           </div>
                         </div>
 
-                        {/* Group booking toggle */}
+                        {/* Team booking toggle */}
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                           <div>
                             <p className="text-sm font-medium text-gray-700">
-                              Allow Group Booking
+                              Team Booking
                             </p>
                             <p className="text-xs text-gray-500">
-                              Let multiple clients book this slot simultaneously
+                              Have a Team session with clients
                             </p>
                           </div>
                           <button
                             role="switch"
-                            aria-checked={slot.allowGroupBooking}
+                            aria-checked={slot.teamBooking}
                             onClick={() =>
                               updateSlot(
                                 selectedDayIdx,
                                 slotIdx,
-                                "allowGroupBooking",
-                                !slot.allowGroupBooking
+                                "teamBooking",
+                                !slot.teamBooking
                               )
                             }
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                              slot.allowGroupBooking ? "bg-blue-600" : "bg-gray-300"
+                              slot.teamBooking ? "bg-blue-600" : "bg-gray-300"
                             }`}
                           >
                             <span
                               className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                                slot.allowGroupBooking ? "translate-x-6" : "translate-x-1"
+                                slot.teamBooking ? "translate-x-6" : "translate-x-1"
                               }`}
                             />
                           </button>
@@ -592,9 +586,9 @@ const DateTimeStep: React.FC<Props> = ({
                           {slots.map((s, si) => (
                             <span key={si} className="text-gray-600">
                               {s.startTime} – {s.endTime}
-                              {s.allowGroupBooking && (
+                              {s.teamBooking && (
                                 <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                  Group
+                                  Team
                                 </span>
                               )}
                             </span>

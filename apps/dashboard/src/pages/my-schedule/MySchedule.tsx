@@ -15,7 +15,7 @@ interface Slot {
   startTime: string;
   endTime: string;
   mode: string;
-  allowGroupBooking: boolean;
+  teamBooking: boolean;
 }
 
 interface PricingValues {
@@ -32,7 +32,7 @@ const days = [
 const getMeetingPreferenceFromSchedule = (schedules: IScheduleItem[]): MeetingPreference => {
   const hasInPerson = schedules.some((schedule) => schedule.meetingType === "in-person");
   const hasVideo = schedules.some((schedule) => schedule.meetingType === "video");
-  const hasGroup = schedules.some((schedule) => schedule.allowGroupBooking === true);
+  const hasGroup = schedules.some((schedule) => schedule.teamBooking === true);
 
   if (hasInPerson && hasVideo) return "Both";
   if (hasGroup && !hasInPerson) return "Team Session";
@@ -48,8 +48,8 @@ const buildDateTimeFromSchedule = (schedules: IScheduleItem[]): string => {
     return schedule.slots.map((slot) => ({
       startTime: slot.startTime,
       endTime: slot.endTime,
-      mode: schedule.meetingType === "in-person" ? "in-person" : schedule.allowGroupBooking ? "group" : "video",
-      allowGroupBooking: schedule.allowGroupBooking,
+      mode: schedule.meetingType === "in-person" ? "in-person" : schedule.teamBooking ? "group" : "video",
+      teamBooking: schedule.teamBooking,
     }));
   });
 
@@ -182,7 +182,7 @@ const MySchedule: React.FC = () => {
             meetingType,
             timezone: selectedTimeZone,
             isAvailable: true,
-            allowGroupBooking: daySlots.some((s) => s.allowGroupBooking),
+            teamBooking: daySlots.some((s) => s.teamBooking),
             slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
           },
         ];

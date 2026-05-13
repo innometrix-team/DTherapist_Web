@@ -112,8 +112,8 @@ const ViewEditSchedule: React.FC<Props> = ({
           meetingType: schedule.meetingType,
           timezone: schedule.timezone,
           isAvailable: (editedSchedules[schedule.day] || []).length > 0,
-          allowGroupBooking:
-            (editedSchedules[schedule.day] || []).length > 0 ? schedule.allowGroupBooking : false,
+          teamBooking:
+            (editedSchedules[schedule.day] || []).length > 0 ? schedule.teamBooking : false,
           slots: (editedSchedules[schedule.day] || []).map(slot => ({
             startTime: slot.startTime,
             endTime: slot.endTime,

@@ -12,7 +12,7 @@ export interface IScheduleRequestData {
   meetingType: string;
   timezone: string;
   isAvailable: boolean;
-  allowGroupBooking: boolean;
+  teamBooking: boolean;
   slots: IScheduleSlot[];
 }
 

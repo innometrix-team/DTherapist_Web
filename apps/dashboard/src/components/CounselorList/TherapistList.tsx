@@ -240,7 +240,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     therapists.forEach((t: ITherapist, i: number) => {
       const data = scheduleQueries[i]?.data;
       const schedules = data?.data?.schedules || [];
-      map.set(t.userId, schedules.some((s) => s.isAvailable && s.allowGroupBooking === true));
+      map.set(t.userId, schedules.some((s) => s.isAvailable && s.teamBooking === true));
     });
     return map;
   }, [therapists, scheduleQueries]);
