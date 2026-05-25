@@ -42,11 +42,11 @@ const Footer = () => {
           </ul>
           <h4 className="text-lg font-semibold mb-4">Download Our App</h4>
           <div className="flex gap-3">
-            <a href="#">
-              <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/applestore.png?updatedAt=1746020196053' alt="Download on iOS" className="w-28" />
+            <a href="https://apps.apple.com/us/app/dtherapist/id6751411829">
+              <img src='/app-store.png' alt="Download on iOS" className="w-28" />
             </a>
             <a href="https://play.google.com/store/apps/details?id=com.dtherapistmobile.dtherapistmobile&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
-              <img src='https://ik.imagekit.io/rqi1dzw2h/homepage/playstore.png?updatedAt=1746020196102' alt="Download on Android" className="w-28" />
+              <img src='/google-play.png' alt="Download on Android" className="w-28" />
             </a>
           </div>
         </div>
