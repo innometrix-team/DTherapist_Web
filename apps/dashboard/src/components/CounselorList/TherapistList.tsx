@@ -246,21 +246,38 @@ const TherapistList: React.FC<TherapistListProps> = ({
   }, [therapists, scheduleQueries]);
 
   const getCostDisplay = (
-  cost: { video: number; inPerson: number; groupVideo?: number } | number | null
-): string => {
-  if (typeof cost === "number") return `₦${cost}.00/hr`;
-  if (typeof cost === "object" && cost !== null) {
+    cost: { video: number; inPerson: number; groupVideo?: number } | number | null
+  ): string => {
+    if (cost === null || cost === undefined) return "";
+    if (typeof cost === "number") {
+      if (cost === 0) return "";
+      return `₦${cost}.00/hr`;
+    }
     const { video, inPerson, groupVideo } = cost;
-    const hasGroup = groupVideo !== undefined && groupVideo !== null;
+    const hasGroup = groupVideo !== undefined && groupVideo !== null && groupVideo > 0;
+    const videoCost = video > 0 ? video : null;
+    const inPersonCost = inPerson > 0 ? inPerson : null;
 
-    if (video === inPerson && !hasGroup) return `₦${video}.00/hr`;
-    if (video === inPerson && hasGroup) return `₦${video}.00/₦${groupVideo}/hr`;
+    if (!videoCost && !inPersonCost && !hasGroup) return "";
 
-    if (!hasGroup) return `₦${video}/₦${inPerson}/hr`;
-    return `₦${video}/₦${inPerson} ₦${groupVideo}/hr`;
-  }
-  return "0.00";
-};
+    if (videoCost && inPersonCost && videoCost === inPersonCost && !hasGroup) {
+      return `₦${videoCost}.00/hr`;
+    }
+    if (videoCost && inPersonCost && videoCost === inPersonCost && hasGroup) {
+      return `₦${videoCost}.00/₦${groupVideo}/hr`;
+    }
+
+    const parts: string[] = [];
+    if (videoCost) parts.push(`₦${videoCost}`);
+    if (inPersonCost && inPersonCost !== videoCost) parts.push(`₦${inPersonCost}`);
+    if (hasGroup) parts.push(`₦${groupVideo}`);
+
+    if (parts.length === 1) return `${parts[0]}.00/hr`;
+    if (parts.length === 2 && hasGroup && videoCost === inPersonCost) {
+      return `${parts[0]}.00/${parts[1]}/hr`;
+    }
+    return `${parts.join("/")}/hr`;
+  };
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);

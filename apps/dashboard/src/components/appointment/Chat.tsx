@@ -486,25 +486,29 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
           <div key={`group-${group.date}`}>
             <DateSeparator date={group.date} />
             <div className="space-y-4">
-             {group.messages.map((msg, index) => (
-  <div
-    key={msg._id + index}
-    className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}
-  >
-    <div
-      className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
-        msg.isOwn
-          ? "bg-primary text-white rounded-br-md"
-          : "bg-white text-gray-800 rounded-bl-md shadow-sm"
-      }`}
-    >
-      <p className="text-sm leading-relaxed wrap-break-words">{msg.content}</p>
-      <div className={`text-xs mt-2 ${msg.isOwn ? "text-blue-100" : "text-gray-500"}`}>
-        {formatMessageTime(msg.createdAt)}
-      </div>
-    </div>
-  </div>
-))}
+              {group.messages.map((msg, index) => {
+                const isOwnMessage = msg.userId === currentUserId;
+
+                return (
+                  <div
+                    key={msg._id + index}
+                    className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-2xl ${
+                        isOwnMessage
+                          ? "bg-primary text-white rounded-br-md"
+                          : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed wrap-break-words">{msg.content}</p>
+                      <div className={`text-xs mt-2 ${isOwnMessage ? "text-blue-100" : "text-gray-500"}`}>
+                        {formatMessageTime(msg.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
