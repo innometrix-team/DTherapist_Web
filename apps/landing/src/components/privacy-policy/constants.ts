@@ -92,11 +92,14 @@ export const PRIVACY_POLICY_DATA: PrivacyPolicyData = {
       {
         id: "data-retention",
         title: "9. Data Retention",
-        content: [
-          "We retain Provider data for as long as your account remains active and you are offering services on the platform.",
-          "Professional credentials and verification records (licence, certification, experience) are retained for the life of the account and for 7 years after account closure, where required to evidence that verification was properly carried out.",
-          "Profile and contact information is deleted within 30 days of account closure.Session records are retained per the applicable clinical record-keeping requirements in your jurisdiction, and otherwise deleted with the account.",
-          "Encrypted backups containing deleted data are purged within a further 60 days. Providers may request deletion by emailing support@dtherapist.com. Where we are legally required to retain certain records, we retain only the minimum necessary and delete the remainder."
+                content: [
+          "We retain your personal information only for as long as necessary to provide our services and fulfil the purposes described in this policy.",
+          "Account information (name, email, phone number, age, profile details) is retained for as long as your account remains active.",
+          "Session records, in-app messages, and uploaded files are retained while your account is active and are deleted when your account is deleted.",
+          "When you request account deletion, we permanently delete your personal data within 30 days, except where longer retention is required by law. Residual copies in encrypted backups are purged within a further 60 days.",
+          "Analytics and advertising identifiers collected through our third-party partners are retained for up to 24 months from collection, after which they are deleted or irreversibly anonymised.",
+          "Where we are required to retain records to comply with legal, regulatory, tax, or clinical-governance obligations, we retain only the minimum data necessary for that period, after which it is securely deleted.",
+          "You may request deletion of your account and associated data at any time by emailing support@dtherapist.com or using the account deletion option in the app."
         ]
       }
     ],
@@ -149,14 +152,11 @@ export const PRIVACY_POLICY_DATA: PrivacyPolicyData = {
       {
         id: "data-retention-providers",
         title: "4. Data Retention",
-        content: [
-          "We retain your personal information only for as long as necessary to provide our services and fulfil the purposes described in this policy.",
-          "Account information (name, email, phone number, age, profile details) is retained for as long as your account remains active.",
-          "Session records, in-app messages, and uploaded files are retained while your account is active and are deleted when your account is deleted.",
-          "When you request account deletion, we permanently delete your personal data within 30 days, except where longer retention is required by law. Residual copies in encrypted backups are purged within a further 60 days.",
-          "Analytics and advertising identifiers collected through our third-party partners are retained for up to 24 months from collection, after which they are deleted or irreversibly anonymised.",
-          "Where we are required to retain records to comply with legal, regulatory, tax, or clinical-governance obligations, we retain only the minimum data necessary for that period, after which it is securely deleted.",
-          "You may request deletion of your account and associated data at any time by emailing support@dtherapist.com or using the account deletion option in the app."
+         content: [
+          "We retain Provider data for as long as your account remains active and you are offering services on the platform.",
+          "Professional credentials and verification records (licence, certification, experience) are retained for the life of the account and for 7 years after account closure, where required to evidence that verification was properly carried out.",
+          "Profile and contact information is deleted within 30 days of account closure.Session records are retained per the applicable clinical record-keeping requirements in your jurisdiction, and otherwise deleted with the account.",
+          "Encrypted backups containing deleted data are purged within a further 60 days. Providers may request deletion by emailing support@dtherapist.com. Where we are legally required to retain certain records, we retain only the minimum necessary and delete the remainder."
         ]
       },
       {
