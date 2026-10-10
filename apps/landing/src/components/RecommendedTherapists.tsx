@@ -40,7 +40,7 @@ const RecommendedTherapists: React.FC = () => {
                 </h3>
                 <p className="text-sm text-gray-500 mb-2">{specialty}</p>
                 <div className="flex items-center text-yellow-500 text-xs mb-1">
-                  {[...Array(Math.round(stars))].map((_, i) => (
+                  {Array.from({ length: Math.round(stars) }).map((_, i) => (
                     <FaStar key={i} className="mr-1" />
                   ))}
                   <span className="text-gray-600 ml-2">
