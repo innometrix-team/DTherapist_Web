@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // Fund Wallet Interfaces
 export interface IFundWalletRequest {
@@ -83,12 +83,7 @@ export default async function FundWalletApi(
     
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -124,12 +119,7 @@ export async function getBanksApi(
     
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -183,11 +173,6 @@ export async function withdrawFundsApi(
     
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

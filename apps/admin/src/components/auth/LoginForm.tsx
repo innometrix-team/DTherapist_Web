@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { SubmitHandler } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import LoginApi, { IRequestData } from "../../api/Login.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 import { toast } from "react-hot-toast";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -21,7 +21,8 @@ function LoginForm() {
   const setAuth = useAuthStore((state) => state.setAuth);
   
   // Get the return URL from location state, or default to dashboard
-  const from = location.state?.from?.pathname || "/";
+  const locationState = location.state as { from?: { pathname?: string } } | null;
+  const from = locationState?.from?.pathname || "/";
   
   const {
     register,
@@ -32,7 +33,7 @@ function LoginForm() {
   });
   const abortControllerRef = useRef<AbortController>(null);
 
-  const { mutateAsync: handleLogin, isPending: isSubmitting } = useMutation({
+  const { mutate: handleLogin, isPending: isSubmitting } = useMutation({
     mutationFn: (data: IRequestData) => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -55,7 +56,7 @@ function LoginForm() {
       
       // Navigate to the intended page or dashboard
       // Use replace: true to prevent going back to login page
-      navigate(from, { replace: true });
+      void navigate(from, { replace: true });
     },
     onError: (error) => {
       toast.error(error.message || "Login failed");
@@ -79,7 +80,12 @@ function LoginForm() {
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Login into Admin account</h2>
     
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+      >
         <input
           type="email"
           placeholder="Email Address"

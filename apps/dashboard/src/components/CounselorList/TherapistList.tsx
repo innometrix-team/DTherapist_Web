@@ -11,6 +11,7 @@ import {
 } from "../../api/Therapist.api";
 import { getTherapistScheduleApi } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface TherapistListProps {
   onBookAppointment: (therapistId: string, sessionType: SessionType) => void;
@@ -180,7 +181,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     isLoading: categoriesLoading,
     error: categoriesError,
   } = useQuery({
-    queryKey: ["categories"],
+    queryKey: QUERY_KEYS.therapists.categories,
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -197,7 +198,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
     error: therapistsError,
     refetch: refetchTherapists,
   } = useQuery({
-    queryKey: ["therapists", selectedCategory, searchQuery, currentPage],
+    queryKey: QUERY_KEYS.therapists.list(selectedCategory, searchQuery, currentPage),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -224,7 +225,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
   // so the "Team Meeting" option is ready before the dropdown opens
   const scheduleQueries = useQueries({
     queries: therapists.map((t: ITherapist) => ({
-      queryKey: ["therapist-schedule", t.userId, "video"],
+      queryKey: QUERY_KEYS.therapists.schedule(t.userId, "video"),
       queryFn: async () => {
         const result = await getTherapistScheduleApi(t.userId, "video");
         if (!result) throw new Error("Request cancelled");
@@ -400,7 +401,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
               Failed to load counselors
             </p>
             <button
-              onClick={() => refetchTherapists()}
+              onClick={() => {
+                void refetchTherapists();
+              }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
             >
               Try Again

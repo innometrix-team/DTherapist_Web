@@ -103,12 +103,16 @@ For in-depth API refactoring instructions, consult the folder-specific guide:
 1. **Centralize Error & Cancel Handling:**
    - Eliminate repetitive 30-line `try/catch` blocks from individual `.api.ts` files.
    - Let Axios interceptors in `Api.ts` normalize response errors and cancelation signals.
-2. **Deduplicate Endpoints:**
+2. **Reject Promises Exclusively with `Error` Instances (`prefer-promise-reject-errors`):**
+   - Never reject a promise with a plain object literal (e.g. `Promise.reject({ code, message })`) or a primitive.
+   - Always reject with an instance of `Error` or the shared `ApiError` class: `return Promise.reject(new ApiError(errorMessage, statusCode, status))`.
+   - Plain objects omit stack traces and trigger ESLint errors (`@typescript-eslint/prefer-promise-reject-errors`).
+3. **Deduplicate Endpoints:**
    - Consolidate redundant files (e.g. merge `Appointment.api.ts` and `Appointments.api.ts` into a unified `appointments.api.ts`).
-3. **Centralize Query Keys:**
+4. **Centralize Query Keys:**
    - All TanStack Query keys must be registered in `configs/queryKeys.config.ts`.
    - Disallow magic string arrays like `['appointments', id]` inside components.
-4. **Decouple Types:**
+5. **Decouple Types:**
    - Store domain entities in `src/types/` rather than inlining them inside individual API files.
 
 ---

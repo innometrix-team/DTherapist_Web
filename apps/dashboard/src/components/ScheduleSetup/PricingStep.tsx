@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { CreatePricingApi, IPricingRequestData } from "../../api/Schedule.api";
 import { MeetingPreference } from "./schedule.types";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface PricingValues {
   inPerson: number | undefined;
@@ -136,7 +137,7 @@ const PricingStep: React.FC<PricingStepProps> = ({
         allowGroupVideo: meetingPreference === "Team Session",
       });
       if (authId) {
-        void queryClient.invalidateQueries({ queryKey: ["therapistDetails", authId] });
+        void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.details(authId) });
       }
       toast.success("Pricing saved successfully!");
       if (onSuccess) onSuccess();
@@ -296,7 +297,9 @@ const PricingStep: React.FC<PricingStepProps> = ({
                 Cancel
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={() => {
+                  void handleConfirm();
+                }}
                 disabled={isPending}
                 className="px-6 py-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
               >

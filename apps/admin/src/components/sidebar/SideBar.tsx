@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LogoutIcon } from "../../assets/icons";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 import { NavGroup } from "../layout/types";
 import { SidebarLink } from "./SideBarLink";
 import { SidebarProps } from "./types";
@@ -25,14 +25,14 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const { logout } = useAuthStore();
+  const logout = useAuthStore((s) => s.logout);
   const role = useAuthStore((state) => state.role);
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
     logout();
     localStorage.removeItem(STORE_KEYS.AUTH);
-    navigate("/auth");
+    void navigate("/auth");
   }, [logout, navigate]);
 
 

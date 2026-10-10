@@ -6,19 +6,20 @@ import Sidebar from "../sidebar/SideBar";
 import ProfileApi from "../../api/Profile.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import UserNotificationsDropdown from "../Notification/Notification";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   // Determine user type based on role
   const userType = role === "counselor" ? "counselor" : "user";
 
   // Query to fetch user profile
   const { data: profileData, isLoading: profileLoading } = useQuery({
-    queryKey: ["user-profile", userType],
+    queryKey: QUERY_KEYS.profile.userProfile(userType),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -133,7 +134,7 @@ const Layout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-[#f7f7f8]">
+        <main className="flex-1 overflow-y-auto bg-offwhite">
           <Outlet />
         </main>
       </div>

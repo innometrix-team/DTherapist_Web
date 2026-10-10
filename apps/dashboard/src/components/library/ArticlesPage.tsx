@@ -6,6 +6,7 @@ import { getAllArticlesApi, getArticlesByCategoryApi, getCategoriesApi, IArticle
 import ArticleCard from './ArticleCard';
 import FilterDropdown from './FilterDropdown';
 import toast from 'react-hot-toast';
+import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
 const FILTER_OPTIONS = {
   dateRanges: ['All Time', 'Last Week', 'Last Month', 'Last 3 Months', 'Last Year'],
@@ -63,7 +64,7 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
     data: categoriesData, 
     isLoading: categoriesLoading 
   } = useQuery({
-    queryKey: ['categories'],
+    queryKey: QUERY_KEYS.library.categories,
     queryFn: async () => {
       try {
         const controller = new AbortController();
@@ -89,11 +90,11 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
   // Query for articles
   const { 
     data: articlesData, 
-    isLoading: articlesLoading, 
+    isLoading: articlesLoading,
     error: articlesError,
     refetch 
   } = useQuery({
-    queryKey: ['articles', filters.category],
+    queryKey: QUERY_KEYS.library.articles(filters.category),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -320,7 +321,9 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
               Error: {articlesError instanceof Error ? articlesError.message : 'Unknown error'}
             </p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
             >
               Try Again
@@ -365,7 +368,9 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
               {articlesData === null ? 'Request may have been cancelled.' : 'The server returned no articles.'}
             </p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="mt-4 text-primary hover:text-primary underline"
             >
               Refresh

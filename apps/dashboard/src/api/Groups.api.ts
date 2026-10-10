@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IGroup {
   _id: string;
@@ -149,12 +149,7 @@ export async function GetGroupsApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -191,12 +186,7 @@ export async function JoinGroupApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -229,12 +219,7 @@ export async function GetGroupMessagesApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -277,12 +262,7 @@ export async function SendGroupMessageApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -321,12 +301,7 @@ export async function ReportGroupMessageApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -360,12 +335,7 @@ export async function BlockUserApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -398,12 +368,7 @@ export async function UnblockUserApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -436,11 +401,6 @@ export async function DeleteOwnMessageApi(
     const status =
       (axiosError.response?.data as ErrorResponseData)?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

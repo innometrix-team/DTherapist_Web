@@ -254,7 +254,9 @@ const PostCallReviewModal: React.FC<PostCallReviewModalProps> = ({
               Skip for now
             </button>
             <button
-              onClick={handleSubmit}
+              onClick={() => {
+                void handleSubmit();
+              }}
               disabled={isSubmitting || !note.trim()}
               className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
             >

@@ -2,8 +2,10 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useCallback } from 'react';
 import ChatComponent from '../../components/appointment/Chat';
-import { getCounselorAppointments, getUserAppointments, Appointment, UserDashboardData } from '../../api/Appointments.api';
+import { getCounselorAppointments, getUserAppointments, Appointment } from '../../api/Appointments.api';
 import { useAuthStore } from '../../store/auth/useAuthStore';
+
+import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
 // Extended appointment interface to handle additional properties
 interface ExtendedAppointment extends Appointment {
@@ -24,7 +26,7 @@ interface UserDetails {
 
 const ChatWrapper: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const isCounselor = role === 'counselor';
 
   // Helper function to extract client ID from appointment
@@ -56,7 +58,9 @@ const ChatWrapper: React.FC = () => {
 
   // Fetch appointments based on user role
   const { data: appointmentsData, isLoading } = useQuery({
-    queryKey: [isCounselor ? 'counselor-appointments' : 'user-appointments'],
+    queryKey: isCounselor
+      ? QUERY_KEYS.appointments.counselorList
+      : QUERY_KEYS.appointments.userList,
     queryFn: async () => {
       if (isCounselor) {
         return await getCounselorAppointments();
@@ -83,7 +87,7 @@ const ChatWrapper: React.FC = () => {
       if (Array.isArray(appointmentsData.data)) {
         appointments = appointmentsData.data;
       } else {
-        const dashboardData = appointmentsData.data as UserDashboardData;
+        const dashboardData = appointmentsData.data;
         appointments = dashboardData.upcomingAppointments || [];
       }
     }

@@ -65,6 +65,7 @@ npx markdownlint docs/                    # Lint markdown files
 ### TypeScript & Typing
 - **Strict mode:** Never use `any`. Always supply explicit interfaces/types for props, state, and API DTOs.
 - **Unused variables:** TypeScript's `noUnusedLocals` is enabled. Remove unused imports (including unused `import React from 'react'`) to prevent `tsc -b` failures.
+- **Promise Rejection Reason:** Never reject promises with plain objects (`Promise.reject({ ... })`) or primitives. Always reject with an `Error` instance (e.g. `new ApiError(...)`) to preserve stack traces and satisfy `@typescript-eslint/prefer-promise-reject-errors`.
 
 ### Components & Hook Rules
 - **Functional Components Exclusively:** Write only React functional components. Never use class components.

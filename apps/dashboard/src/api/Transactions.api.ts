@@ -1,5 +1,5 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import { AxiosRequestConfig } from "axios";
+import Api, { IAPIResult, handleApiRequest } from "./Api";
 
 export interface ITransaction {
   _id: string;
@@ -18,13 +18,6 @@ export interface ITransactionHistoryData {
   transactions: ITransaction[];
 }
 
-interface APIErrorResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: undefined;
-}
-
 export interface ITransactionQueryParams {
   page?: number;
   limit?: number;
@@ -35,52 +28,26 @@ export interface ITransactionQueryParams {
 }
 
 // Get Transaction History
-export async function getTransactionHistoryApi(
+export const getTransactionHistoryApi = (
   params?: ITransactionQueryParams,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<ITransactionHistoryData> | null> {
-  try {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.startDate) queryParams.append('startDate', params.startDate);
-    if (params?.endDate) queryParams.append('endDate', params.endDate);
+): Promise<IAPIResult<ITransactionHistoryData> | null> => {
+  const queryParams = new URLSearchParams();
 
-    const queryString = queryParams.toString();
-    const url = `/api/paystack/transactions${queryString ? `?${queryString}` : ''}`;
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.type) queryParams.append('type', params.type);
+  if (params?.startDate) queryParams.append('startDate', params.startDate);
+  if (params?.endDate) queryParams.append('endDate', params.endDate);
 
-    const response = await Api.get<ITransactionHistoryData>(url, {
-      ...config,
-    });
-    
-    // The API returns the transaction data directly, not wrapped
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: "Transaction history fetched successfully",
-      data: response.data // response.data IS the transaction data structure
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+  const queryString = queryParams.toString();
+  const url = `/api/paystack/transactions${queryString ? `?${queryString}` : ''}`;
 
-    const error = e as AxiosError<IAPIResult>;
-    const statusCode = error.response?.status || 0;
-    const errorMessage = error.response?.data?.message || error.message || "Failed to fetch transaction history";
-    const status = error.response?.data?.status || "error";
-    
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
+  return handleApiRequest<ITransactionHistoryData>(() =>
+    Api.get<ITransactionHistoryData>(url, config)
+  );
+};
 
 // Helper function to format currency
 export function formatCurrency(amount: number): string {
@@ -89,7 +56,7 @@ export function formatCurrency(amount: number): string {
     currency: 'NGN',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount ); // Assuming amount is in kobo
+  }).format(amount);
 }
 
 // Helper function to format date

@@ -23,7 +23,7 @@ function EmailVerification() {
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
   const authToken = useAuthStore((state) => state.token);
-  const { setToken } = useAuthStore();
+  const setToken = useAuthStore((state) => state.setToken);
 
   // Regular OTP verification for registration
   const { mutateAsync: handleVerifyOTP, isPending } = useMutation({
@@ -43,7 +43,7 @@ function EmailVerification() {
       if (isTherapistSignup || isClientSignup) {
         setShowWelcomeModal(true);
       } else {
-        navigate("/");
+        void navigate("/");
       }
     },
     onError: (error) => {
@@ -70,7 +70,7 @@ function EmailVerification() {
       }
       
       // Navigate to change password with the token
-      navigate(`/auth/change-password?token=${newToken}`);
+      void navigate(`/auth/change-password?token=${newToken}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -91,7 +91,7 @@ function EmailVerification() {
     },
   });
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (isPending || isPendingReset) {
       return;
     }
@@ -102,7 +102,7 @@ function EmailVerification() {
         toast.error("Reset token is missing");
         return;
       }
-      handleVerifyOTPReset({
+      void handleVerifyOTPReset({
         otp,
         token: resetToken,
       });
@@ -112,7 +112,7 @@ function EmailVerification() {
         toast.error("Authentication token is missing");
         return;
       }
-      handleVerifyOTP({
+      void handleVerifyOTP({
         otp,
         token: authToken,
       });
@@ -122,32 +122,32 @@ function EmailVerification() {
   // Handle modal actions
   const handleModalContinue = useCallback(() => {
     setShowWelcomeModal(false);
-    navigate("/settings"); // Navigate to settings for profile completion
+    void navigate("/settings"); // Navigate to settings for profile completion
   }, [navigate]);
 
   const handleModalClose = useCallback(() => {
     setShowWelcomeModal(false);
-    navigate("/"); // Navigate to home
+    void navigate("/"); // Navigate to home
   }, [navigate]);
 
   useEffect(() => {
     // Redirect if email is missing
     if (!email) {
-      navigate("/auth/login");
+      void navigate("/auth/login");
       return;
     }
 
     // For registration flow, check if auth token exists in auth store
     if (!isPasswordReset && !authToken) {
       toast.error("Please complete registration first");
-      navigate("/auth/signup");
+      void navigate("/auth/signup");
       return;
     }
 
     // For password reset flow, check if reset token exists in URL
     if (isPasswordReset && !resetToken) {
       toast.error("Reset token is missing");
-      navigate("/auth/forgot-password");
+      void navigate("/auth/forgot-password");
       return;
     }
   }, [email, authToken, resetToken, isPasswordReset, navigate]);
@@ -199,7 +199,9 @@ function EmailVerification() {
         <p className="text-gray-500 text-sm text-center">
           Didn't receive the OTP?{" "}
           <button
-            onClick={() => handleResendOTP({ email })}
+            onClick={() => {
+              void handleResendOTP({ email });
+            }}
             disabled={isResending}
             className="text-primary font-medium disabled:opacity-50 hover:underline"
           >

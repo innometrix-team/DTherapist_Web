@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // Request interfaces for rescheduling (removed price field)
 export interface ICounselorRescheduleRequest {
@@ -71,12 +71,7 @@ export async function rescheduleCounselorBookingApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -113,12 +108,7 @@ export async function rescheduleUserBookingApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -143,12 +133,9 @@ export async function rescheduleBookingApi(
     // For user, we need therapistId
     const userData = data as IUserRescheduleRequest;
     if (!userData.therapistId) {
-      return Promise.reject({
-        code: 400,
-        status: 'error',
-        message: 'therapistId is required for user reschedule',
-        data: undefined,
-      });
+      return Promise.reject(
+        new ApiError('therapistId is required for user reschedule', 400, 'error')
+      );
     }
     return rescheduleUserBookingApi(bookingId, userData, config);
   }

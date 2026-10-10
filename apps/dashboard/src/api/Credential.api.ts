@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // Define Role type (ensure this matches your existing type definitions)
 type Role = "client" | "therapist" | "user" | "counselor";
@@ -29,12 +29,6 @@ interface APIResponse {
   data?: ICredentialResponseData;
 }
 
-interface APIErrorResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: undefined;
-}
 
 // Upload CV/Resume
 export async function uploadCVApi(
@@ -69,12 +63,7 @@ export async function uploadCVApi(
     const errorMessage = error.response?.data.message || error.message || "An error occurred";
     const status = error.response?.data.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -111,12 +100,7 @@ export async function uploadCertificationApi(
     const errorMessage = error.response?.data.message || error.message || "An error occurred";
     const status = error.response?.data.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -146,11 +130,6 @@ export async function saveCredentialsApi(
     const errorMessage = error.response?.data.message || error.message || "An error occurred";
     const status = error.response?.data.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

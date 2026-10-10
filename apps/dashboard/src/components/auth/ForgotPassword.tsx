@@ -39,7 +39,7 @@ function ForgotPassword() {
       }
       toast.success("OTP sent to your email successfully!");
       // Navigate to email verification with email and token for password reset flow
-      navigate(`/auth/verify-email?email=${encodeURIComponent(variables.email)}&token=${responseData.token}`);
+      void navigate(`/auth/verify-email?email=${encodeURIComponent(variables.email)}&token=${responseData.token}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -52,7 +52,7 @@ function ForgotPassword() {
         return;
       }
 
-      handleForgotPassword({
+      void handleForgotPassword({
         email: data.email,
       });
     },
@@ -71,7 +71,12 @@ function ForgotPassword() {
       <p className="text-gray-500 text-sm">
         Enter the email address associated with your account.
       </p>
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+      >
         <div>
           <input
             type="email"

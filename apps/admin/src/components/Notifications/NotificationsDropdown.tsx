@@ -11,7 +11,7 @@ import {
   getNotificationTypeColor,
   getNotificationIcon,
 } from "../../api/AdminNotifications.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface NotificationsDropdownProps {
   className?: string;
@@ -25,7 +25,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
 
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const isAdmin = role === "admin";
 
   // Fetch notifications
@@ -178,7 +178,9 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
             <div className="flex items-center space-x-2">
               {unreadCount > 0 && (
                 <button
-                  onClick={handleMarkAllAsRead}
+                  onClick={() => {
+                    void handleMarkAllAsRead();
+                  }}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
                   Mark all read
@@ -204,7 +206,9 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
               <div className="text-center py-8 px-4">
                 <p className="text-red-600 text-sm mb-2">Failed to load notifications</p>
                 <button
-                  onClick={() => refetch()}
+                  onClick={() => {
+                    void refetch();
+                  }}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
                   Try Again
@@ -225,7 +229,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                     }`}
                     onClick={() => {
                       if (!notification.seen) {
-                        handleMarkAsRead(notification._id);
+                        void handleMarkAsRead(notification._id);
                       }
                     }}
                   >
@@ -266,7 +270,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleMarkAsRead(notification._id);
+                                void handleMarkAsRead(notification._id);
                               }}
                               className="ml-2 text-blue-600 hover:text-blue-800 p-1 rounded"
                               title="Mark as read"

@@ -6,13 +6,13 @@ import {
   deleteDAnonymousGroupApi,
   IDAnonymousGroup
 } from "../../api/DAnonymous.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 import EditDAnonymousGroupModal from "./EditDAnonymousGroupModal";
 
 const DAnonymousGroupsList: React.FC = () => {
   const queryClient = useQueryClient();
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -54,7 +54,7 @@ const DAnonymousGroupsList: React.FC = () => {
   const deleteGroupMutation = useMutation({
     mutationFn: (groupId: string) => deleteDAnonymousGroupApi(groupId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
+      void queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
       setDeleteConfirmId(null);
       setSelectedGroups(prev => prev.filter(id => id !== deleteConfirmId));
     },
@@ -170,7 +170,9 @@ const DAnonymousGroupsList: React.FC = () => {
           <p className="text-red-600 text-sm">Failed to load groups</p>
           <p className="text-red-500 text-xs mt-1">Please refresh the page</p>
           <button 
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
           >
             Retry

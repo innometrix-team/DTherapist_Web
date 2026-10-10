@@ -1,5 +1,5 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import { AxiosRequestConfig } from "axios";
+import Api, { IAPIResult, handleApiRequest } from "./Api";
 
 // Types for API responses
 export interface AppointmentAction {
@@ -8,12 +8,11 @@ export interface AppointmentAction {
   agoraToken?: {
     token: string;
     expiresAt: string;
-    uid: number
-  }
+    uid: number;
+  };
   invoiceDownloadLink?: string;
 }
 
-// Updated interface to match actual API response
 export interface Appointment {
   bookingId: string;
   fullName: string;
@@ -24,9 +23,8 @@ export interface Appointment {
   chatId: string | null;
   status: "upcoming" | "passed" | "confirmed";
   action: AppointmentAction;
-  // Additional fields based on actual API responses
-  therapistId?: string; // Present in user appointments
-  userId?: string;     // Present in therapist appointments
+  therapistId?: string;
+  userId?: string;
 }
 
 export interface UserDashboardData {
@@ -38,18 +36,21 @@ export interface UserDashboardData {
 }
 
 export interface UserProfile {
-  _id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: string;
-  audience: string;
-  seenBy: string[];
-  createdAt: string;
-  updatedAt: string;
+  _id?: string;
+  id?: string;
+  userId?: string;
+  title?: string;
+  message?: string;
+  name?: string;
+  email?: string;
+  profilePicture?: string;
+  phoneNumber?: string;
+  nationality?: string;
+  occupation?: string;
+  experience?: string;
+  about?: string;
 }
 
-// Dispute types
 export interface DisputePayload {
   reason: string;
   description: string;
@@ -87,277 +88,84 @@ interface UserProfileAPIResponse {
   data: UserProfile[];
 }
 
-
 // API Functions
 
-// Get counselor appointments with enhanced debugging
-export async function getCounselorAppointments(
+export const getCounselorAppointments = (
   config?: AxiosRequestConfig
-): Promise<IAPIResult<Appointment[]> | null> {
-  try {
-    const response = await Api.get<AppointmentsAPIResponse>(
-      '/api/service-provider/appointments',
-      config
-    );
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+): Promise<IAPIResult<Appointment[]> | null> =>
+  handleApiRequest<Appointment[]>(() =>
+    Api.get<AppointmentsAPIResponse>('/api/service-provider/appointments', config)
+  );
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Alternative function to get appointments with specific therapist ID
-export async function getCounselorAppointmentsByTherapistId(
+export const getCounselorAppointmentsByTherapistId = (
   therapistId?: string,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<Appointment[]> | null> {
-  try {
-    const endpoint = therapistId 
-      ? `/api/service-provider/appointments?therapistId=${therapistId}`
-      : '/api/service-provider/appointments';
-    
-    const response = await Api.get<AppointmentsAPIResponse>(endpoint, config);
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+): Promise<IAPIResult<Appointment[]> | null> => {
+  const endpoint = therapistId
+    ? `/api/service-provider/appointments?therapistId=${therapistId}`
+    : '/api/service-provider/appointments';
+  return handleApiRequest<Appointment[]>(() =>
+    Api.get<AppointmentsAPIResponse>(endpoint, config)
+  );
+};
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Get user appointments (dashboard data) with enhanced debugging
-export async function getUserAppointments(
+export const getUserAppointments = (
   config?: AxiosRequestConfig
-): Promise<IAPIResult<UserDashboardData> | null> {
-  try {
-    const response = await Api.get<UserDashboardAPIResponse>(
-      '/api/user/appointments',
-      config
-    );
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+): Promise<IAPIResult<UserDashboardData> | null> =>
+  handleApiRequest<UserDashboardData>(() =>
+    Api.get<UserDashboardAPIResponse>('/api/user/appointments', config)
+  );
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Get user profile by user ID
-export async function getUserProfile(
+export const getUserProfile = (
   userId: string,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<UserProfile[]> | null> {
-  try {
-    const response = await Api.get<UserProfileAPIResponse>(
-      `/api/service-provider/appointments/${userId}/profile`,
-      config
-    );
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+): Promise<IAPIResult<UserProfile[]> | null> =>
+  handleApiRequest<UserProfile[]>(() =>
+    Api.get<UserProfileAPIResponse>(`/api/service-provider/appointments/${userId}/profile`, config)
+  );
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Get appointments with specific user
-export async function getAppointmentsWithUser(
+export const getAppointmentsWithUser = (
   userId: string,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string[]> | null> {
-  try {
-    const response = await Api.get<{
-      status: string;
-      message: string;
-      data: string[];
-    }>(`/api/service-provider/appointments/${userId}`, config);
-    
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
+): Promise<IAPIResult<string[]> | null> =>
+  handleApiRequest<string[]>(() =>
+    Api.get<{ status: string; message: string; data: string[] }>(
+      `/api/service-provider/appointments/${userId}`,
+      config
+    )
+  );
 
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
-
-// Download invoice PDF function
 export async function downloadInvoice(
   bookingId: string,
   config?: AxiosRequestConfig
 ): Promise<void> {
-  try {
-    const response = await Api.get(`/api/invoice/${bookingId}/invoice/`, {
-      ...config,
-      responseType: 'blob', // Important: Set response type to blob for PDF
-    });
+  const response = await Api.get(`/api/invoice/${bookingId}/invoice/`, {
+    ...config,
+    responseType: 'blob',
+  });
 
-    // Create blob from response data
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    
-    // Create download URL
-    const downloadUrl = window.URL.createObjectURL(blob);
-    
-    // Create temporary download link
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `invoice-${bookingId}.pdf`;
-    
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    
-    // Clean up
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
-  } catch (e) {
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-    
-    throw {
-      code: statusCode,
-      status: "error",
-      message: errorMessage || "Failed to download invoice",
-      data: undefined,
-    };
-  }
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = `invoice-${bookingId}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
 }
 
-export async function submitDispute(
+export const submitDispute = (
   bookingId: string,
   disputeData: DisputePayload,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<DisputeResponse['data']> | null> {
-  try {
-    const response = await Api.post<DisputeResponse>(
-      `/api/user/disputes/${bookingId}`,
-      disputeData,
-      {
-        ...config,
-        headers: {
-          'Content-Type': 'application/json',
-          ...config?.headers,
-        },
-      }
-    );
-
-    return {
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "Dispute submitted successfully",
-      data: response.data.data,
-    };
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const statusCode = (e as AxiosError).response?.status || 0;
-    const errorMessage =
-      (e as AxiosError<IAPIResult>).response?.data.message ||
-      (e as Error).message;
-
-    return Promise.reject({
-      code: statusCode,
-      status: "error",
-      message: errorMessage,
-      data: undefined,
-    });
-  }
-}
+): Promise<IAPIResult<DisputeResponse['data']> | null> =>
+  handleApiRequest<DisputeResponse['data']>(() =>
+    Api.post<DisputeResponse>(`/api/user/disputes/${bookingId}`, disputeData, {
+      ...config,
+      headers: {
+        'Content-Type': 'application/json',
+        ...config?.headers,
+      },
+    })
+  );

@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IAdminNotification {
   _id: string;
@@ -26,12 +26,6 @@ interface APIMarkReadResponse {
   data: null;
 }
 
-interface APIErrorResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: undefined;
-}
 
 // Get Admin Notifications
 export async function getAdminNotificationsApi(
@@ -58,12 +52,7 @@ export async function getAdminNotificationsApi(
     const errorMessage = error.response?.data?.message || error.message || "Failed to fetch admin notifications";
     const status = error.response?.data?.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -97,12 +86,7 @@ export async function markNotificationAsReadApi(
     const errorMessage = error.response?.data?.message || error.message || "Failed to mark notification as read";
     const status = error.response?.data?.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 

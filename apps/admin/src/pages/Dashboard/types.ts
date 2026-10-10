@@ -1,4 +1,4 @@
-import { Role } from "../../Store/auth/types";
+import { Role } from "../../store/auth/types";
 
 export interface BalanceConfig {
   amount: string;

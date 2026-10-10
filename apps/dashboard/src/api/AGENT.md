@@ -26,6 +26,14 @@ export const getAppointments = (params?: AppointmentFilterParams) =>
   Api.get<AppointmentsResponse>('/api/appointments', { params }).then(res => res.data);
 ```
 
+#### Invariant: Promise Rejection Reasons Must Be `Error` Instances (`prefer-promise-reject-errors`)
+Never reject a Promise with a plain object literal (e.g. `return Promise.reject({ code, status, message })`) or a primitive value.
+Always reject using an `Error` or the shared `ApiError` class:
+```ts
+return Promise.reject(new ApiError(errorMessage, statusCode, status));
+```
+Rejecting with non-`Error` reasons strips stack traces, impairs error monitoring, and fails ESLint's `@typescript-eslint/prefer-promise-reject-errors`.
+
 ### B. Consolidate Duplicate & Split Endpoints
 When refactoring, merge related endpoints into coherent domain modules:
 1. **Appointments:** Merge `Appointment.api.ts` and `Appointments.api.ts` into a single `appointments.api.ts`.

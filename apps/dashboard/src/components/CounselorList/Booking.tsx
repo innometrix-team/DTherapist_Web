@@ -21,6 +21,7 @@ import {
   ITimeSlot,
 } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface BookingSessionProps {
   therapistId: string;
@@ -56,7 +57,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     isLoading: therapistLoading,
     error: therapistError,
   } = useQuery({
-    queryKey: ["therapist", therapistId],
+    queryKey: QUERY_KEYS.therapists.detail(therapistId),
     queryFn: async () => {
       const result = await getTherapistDetailsApi(therapistId);
       if (!result) throw new Error("Request cancelled");
@@ -71,7 +72,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     isLoading: scheduleLoading,
     error: scheduleError,
   } = useQuery({
-    queryKey: ["therapist-schedule", therapistId, scheduleApiSessionType],
+    queryKey: QUERY_KEYS.therapists.schedule(therapistId, scheduleApiSessionType),
     queryFn: async () => {
       const result = await getTherapistScheduleApi(
         therapistId,
@@ -313,7 +314,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     setSelectedTime("");
   };
 
-  const handlePayment = async (): Promise<void> => {
+  const handlePayment = (): void => {
     if (!therapist || !selectedDate || !selectedTime) {
       toast.error("Please select both date and time");
       return;
@@ -348,7 +349,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     } else {
       const bookingData: IBookingRequest = {
         therapistId,
-        sessionType: bookingApiSessionType as "video" | "in-person",
+        sessionType: bookingApiSessionType,
         date: selectedDate,
         startTime: selectedTime,
         endTime,

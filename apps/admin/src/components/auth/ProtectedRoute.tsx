@@ -1,6 +1,6 @@
 // src/components/auth/ProtectedRoute.tsx
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 import { ReactNode } from "react";
 
 interface ProtectedRouteProps {
@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { token } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
   const location = useLocation();
 
   if (!token) {

@@ -1,6 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
-
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface AgoraTokenAPIData {
   uid: number;
@@ -31,9 +30,8 @@ type AgoraTokenAPIResponse = AgoraTokenAPIData & {
   data?: AgoraTokenAPIData;
 };
 
-
 function extractTokenData(raw: AgoraTokenAPIResponse): AgoraTokenAPIData {
-  return raw.data ?? (raw as AgoraTokenAPIData);
+  return raw.data ?? raw;
 }
 
 export async function fetchAgoraRtcToken(
@@ -42,6 +40,7 @@ export async function fetchAgoraRtcToken(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<AgoraRtcTokenResult> | null> {
   try {
+    const extraParams = config?.params as Record<string, unknown> | undefined;
     const response = await Api.get<AgoraTokenAPIResponse>(
       "/api/agora/refresh-token",
       {
@@ -50,7 +49,7 @@ export async function fetchAgoraRtcToken(
           sessionName,
           uid,
           type: "rtc",   
-          ...config?.params,
+          ...extraParams,
         },
       }
     );
@@ -58,12 +57,9 @@ export async function fetchAgoraRtcToken(
     const d = extractTokenData(response.data);
 
     if (!d?.rtcToken) {
-      return Promise.reject({
-        code: response.status,
-        status: "error",
-        message: "rtcToken missing from Agora response",
-        data: undefined,
-      });
+      return Promise.reject(
+        new ApiError("rtcToken missing from Agora response", response.status, "error")
+      );
     }
 
     return {
@@ -84,28 +80,24 @@ export async function fetchAgoraRtcToken(
       (e as AxiosError<IAPIResult>).response?.data.message || (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
-
 
 export async function fetchAgoraRtmToken(
   sessionName: string,
   uid: string | number,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<AgoraRtmTokenResult> | null> {
-  // Convert string uid → number for the backend, guard against NaN.
   const numericUid = typeof uid === "number" ? uid : parseInt(uid, 10);
   if (isNaN(numericUid) || numericUid === 0) {
-    return Promise.reject({
-      code: 0,
-      status: "error",
-      message: `fetchAgoraRtmToken: uid "${uid}" is not a valid non-zero integer.`,
-      data: undefined,
-    });
+    return Promise.reject(
+      new ApiError(`fetchAgoraRtmToken: uid "${uid}" is not a valid non-zero integer.`, 0, "error")
+    );
   }
 
   try {
+    const extraParams = config?.params as Record<string, unknown> | undefined;
     const response = await Api.get<AgoraTokenAPIResponse>(
       "/api/agora/refresh/rtm-token",
       {
@@ -113,7 +105,7 @@ export async function fetchAgoraRtmToken(
         params: {
           sessionName,
           uid: numericUid,
-          ...config?.params,
+          ...extraParams,
         },
       }
     );
@@ -121,12 +113,9 @@ export async function fetchAgoraRtmToken(
     const d = extractTokenData(response.data);
 
     if (!d?.rtmToken) {
-      return Promise.reject({
-        code: response.status,
-        status: "error",
-        message: "rtmToken missing from Agora response",
-        data: undefined,
-      });
+      return Promise.reject(
+        new ApiError("rtmToken missing from Agora response", response.status, "error")
+      );
     }
 
     return {
@@ -147,6 +136,6 @@ export async function fetchAgoraRtmToken(
       (e as AxiosError<IAPIResult>).response?.data.message || (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage, data: undefined });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

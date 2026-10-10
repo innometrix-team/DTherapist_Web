@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { getAllTherapistSchedulesApi } from "../../api/TherapistSchedule.api";
 import { CreateScheduleApi, IScheduleRequestData } from "../../api/Schedule.api";
 import { CancelIcon, CopyIcon, AddIcon } from "../../assets/icons";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface Props {
   therapistId?: string;
@@ -29,7 +30,7 @@ const ViewEditSchedule: React.FC<Props> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["therapistSchedules", therapistId],
+    queryKey: QUERY_KEYS.therapists.schedules(therapistId || ''),
     queryFn: async () => {
       if (!therapistId) return null;
       try {
@@ -122,7 +123,7 @@ const ViewEditSchedule: React.FC<Props> = ({
 
       await handleScheduleUpdate(updateData);
       if (therapistId) {
-        await queryClient.invalidateQueries({ queryKey: ["therapistSchedules", therapistId] });
+        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.schedules(therapistId) });
       }
       toast.success("Schedule updated successfully!");
       setIsEditing(false);
@@ -373,7 +374,9 @@ const ViewEditSchedule: React.FC<Props> = ({
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveChanges}
+                  onClick={() => {
+                    void handleSaveChanges();
+                  }}
                   disabled={isPending}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
                 >

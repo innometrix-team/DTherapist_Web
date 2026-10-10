@@ -28,7 +28,8 @@ const FeliciaChatbot: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
-  const authState = useAuthStore();
+  const role = useAuthStore((s) => s.role);
+  const email = useAuthStore((s) => s.email);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,7 +62,7 @@ const FeliciaChatbot: React.FC = () => {
       const result = await sendChatbotMessage(
         {
           message: messageContent,
-          role: authState.role || 'client',
+          role: role || 'client',
         },
         {
           signal: abortControllerRef.current.signal,
@@ -108,12 +109,12 @@ const FeliciaChatbot: React.FC = () => {
       setBotTyping('');
       abortControllerRef.current = null;
     }
-  }, [inputMessage, isLoading, authState.role]);
+  }, [inputMessage, isLoading, role]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
@@ -234,7 +235,7 @@ const FeliciaChatbot: React.FC = () => {
                       </div>
                       <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                         <span className="text-gray-600 font-bold text-xs">
-                          {authState.email?.charAt(0)?.toUpperCase() || 'U'}
+                          {email?.charAt(0)?.toUpperCase() || 'U'}
                         </span>
                       </div>
                     </div>
@@ -323,7 +324,9 @@ const FeliciaChatbot: React.FC = () => {
                   />
                 </div>
                 <button
-                  onClick={sendMessage}
+                  onClick={() => {
+                    void sendMessage();
+                  }}
                   disabled={!inputMessage.trim() || isLoading}
                   className="bg-primary hover:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
                 >

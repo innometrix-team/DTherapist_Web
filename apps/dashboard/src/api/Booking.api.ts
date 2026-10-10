@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IBookingRequest {
   therapistId: string;
@@ -117,12 +117,7 @@ export default async function createBookingApi(
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -153,12 +148,7 @@ export async function createGroupBookingApi(
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -203,11 +193,6 @@ export async function getBookingStatusApi(
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
