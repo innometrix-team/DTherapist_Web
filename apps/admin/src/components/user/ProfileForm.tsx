@@ -134,8 +134,8 @@ const ProfileForm = ({
     },
     onSuccess: (result) => {
       // Handle case where result is null (cancelled request)
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
-      qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
+      void qc.invalidateQueries({ queryKey: ["admin-users"] });
+      void qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
       if (!result) {
         return;
       }
@@ -208,10 +208,9 @@ const ProfileForm = ({
         );
       },
       onSuccess: (result) => {
-        qc.invalidateQueries({ queryKey: ["admin-users"] });
-        const newUrl =
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (result?.data as any)?.imageUrl || (result as any)?.data?.imageUrl;
+        void qc.invalidateQueries({ queryKey: ["admin-users"] });
+        const resData = result?.data as { profilePicture?: string; imageUrl?: string } | undefined;
+        const newUrl = resData?.profilePicture || resData?.imageUrl;
         if (newUrl) {
           setInitialProfilePicture(newUrl);
           setPreviewUrl(newUrl);
@@ -234,8 +233,8 @@ const ProfileForm = ({
         );
       },
       onSuccess: (result) => {
-        qc.invalidateQueries({ queryKey: ["admin-users"] });
-        qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
+        void qc.invalidateQueries({ queryKey: ["admin-users"] });
+        void qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
         setInitialProfilePicture(null);
         setPreviewUrl(null);
         setProfileImage(null);
@@ -325,7 +324,7 @@ const ProfileForm = ({
           }),
       };
 
-      (async () => {
+      void (async () => {
         await handleProfileUpdate(updateData);
         if (profileImage) {
           await uploadProfilePic({ file: profileImage });
@@ -333,7 +332,7 @@ const ProfileForm = ({
             URL.revokeObjectURL(previewUrl);
           }
         }
-        qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
+        await qc.invalidateQueries({ queryKey: ["user-profile", userData?.id] });
       })();
     },
     [
@@ -387,7 +386,9 @@ const ProfileForm = ({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => {
+        void handleSubmit(onSubmit)(e);
+      }}
       className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
       {/* Profile Image Section */}

@@ -57,7 +57,7 @@ const AdminFlags: React.FC = () => {
     onSuccess: () => {
       toast.success("Flag reviewed successfully");
       closeDialog();
-      queryClient.invalidateQueries({ queryKey: ["admin-flags"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-flags"] });
     },
     onError: (e: Error) =>
       toast.error(e?.message || "Failed to review flag"),
@@ -153,7 +153,9 @@ const AdminFlags: React.FC = () => {
             <span className="font-semibold text-gray-900">{flags.length.toLocaleString()}</span>
           </div>
           <button
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600"
           >
             Refresh
@@ -175,7 +177,9 @@ const AdminFlags: React.FC = () => {
             <ShieldAlert className="w-10 h-10 text-rose-400 mx-auto mb-3" />
             <p className="text-red-600 mb-4">Failed to load flags</p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded text-sm"
             >
               Try Again

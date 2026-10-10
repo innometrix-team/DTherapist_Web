@@ -44,13 +44,13 @@ const Sidebar: React.FC<SidebarPropsWithUserType> = ({
   setSidebarOpen, 
   userType 
 }) => {
-  const { logout } = useAuthStore();
+  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
     logout();
     localStorage.removeItem(STORE_KEYS.AUTH);
-    navigate("/auth");
+    void navigate("/auth");
   }, [logout, navigate]);
 
   const sections = useMemo(() => {

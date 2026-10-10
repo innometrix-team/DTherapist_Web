@@ -10,7 +10,7 @@ import FeliciaChatbot from "../../components/AIChatBot/FeliciaChatbot";
 import { DashboardConfig, DUMMY_DASHBOARD_CONFIG } from "./types";
 
 const Dashboard: React.FC = () => {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const [config, setConfig] = useState<DashboardConfig | null>(null);
   
   // Modal states for reschedule functionality

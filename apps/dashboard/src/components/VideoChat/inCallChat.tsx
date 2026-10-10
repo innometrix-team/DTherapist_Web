@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import socketService from "../../Services/SocketService";
+import socketService from "../../services/SocketService";
 
 interface ChatMessage {
   id: string;

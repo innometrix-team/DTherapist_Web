@@ -4,6 +4,7 @@ import { Article } from './types';
 import { useQuery } from '@tanstack/react-query';
 import { getArticleByIdApi } from '../../api/Articles.api';
 import toast from 'react-hot-toast';
+import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
 interface ArticleDetailPageProps {
   article: Article;
@@ -29,7 +30,7 @@ const ArticleDetailPage: React.FC<ArticleDetailPageProps> = ({ article, onBack }
     isLoading, 
     error 
   } = useQuery({
-    queryKey: ['article', article._id],
+    queryKey: QUERY_KEYS.library.article(article._id),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;

@@ -3,10 +3,10 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ArticlesList from "../../components/articles/ArticlesList";
 import CreateArticle from "../../components/articles/CreateArticle";
 import EditArticle from "../../components/articles/EditArticle";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const LibraryPage: React.FC = () => {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   // Check if user is admin
   const isAdmin = role === "admin";

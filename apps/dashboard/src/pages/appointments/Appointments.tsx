@@ -23,7 +23,7 @@ interface QueryError {
 
 const Appointments: React.FC = () => {
   // Get user role from auth store
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const isCounselor = role === "counselor";
 
   // State for active tab (Upcoming or Passed)
@@ -137,7 +137,7 @@ const Appointments: React.FC = () => {
     setIsModalOpen(false);
     setSelectedSessionId(null);
     // Refetch data when modal closes to get updated information
-    refetch();
+    void refetch();
   };
 
   // Callback functions for SessionTable
@@ -196,7 +196,9 @@ const Appointments: React.FC = () => {
                 : "Unknown error occurred"}
             </p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
             >
               Try Again

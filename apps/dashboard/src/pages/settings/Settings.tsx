@@ -7,7 +7,7 @@ import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   // Define tabs based on user role
   const tabs = useMemo(() => {

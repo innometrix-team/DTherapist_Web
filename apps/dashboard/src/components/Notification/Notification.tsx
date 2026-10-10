@@ -12,6 +12,7 @@ import {
   getNotificationIcon,
 } from "../../api/Notifications.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface UserNotificationsDropdownProps {
   className?: string;
@@ -24,8 +25,8 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const { role, id } = useAuthStore();
-  const currentUserId = id;
+  const role = useAuthStore((s) => s.role);
+  const currentUserId = useAuthStore((s) => s.id);
   const isUser = role === "user";
   const isCounselor = role === "counselor";
   const userType = isCounselor ? "counselor" : "user";
@@ -38,7 +39,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["user-notifications", userType, currentUserId],
+    queryKey: QUERY_KEYS.notifications.user(userType, currentUserId || ''),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -171,7 +172,9 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
               <div className="text-center py-8 px-4">
                 <p className="text-red-600 text-sm mb-2">Failed to load notifications</p>
                 <button
-                  onClick={() => refetch()}
+                  onClick={() => {
+                    void refetch();
+                  }}
                   className="text-primary hover:text-blue-800 text-sm font-medium"
                 >
                   Try Again

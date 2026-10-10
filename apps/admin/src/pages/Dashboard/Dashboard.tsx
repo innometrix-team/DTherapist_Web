@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 import BalanceCard from "../../components/dashboard/BalanceCard";
 import PromoCard from "../../components/dashboard/PromoCard";
 import StatsGrid from "../../components/dashboard/StatsGrid";
@@ -7,7 +7,7 @@ import { DashboardConfig, DUMMY_DASHBOARD_CONFIG } from "./types";
 import StatChart from "../../components/dashboard/StatChart";
 
 const Dashboard: React.FC = () => {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const [config, setConfig] = useState<DashboardConfig | null>(null);
   
   

@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IAdminModerationReport {
   _id: string;
@@ -66,7 +66,7 @@ export default async function AdminModerationApi(
       (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -93,7 +93,7 @@ export async function ReviewReportApi(
       (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -119,6 +119,6 @@ export async function DeleteReportApi(
       (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

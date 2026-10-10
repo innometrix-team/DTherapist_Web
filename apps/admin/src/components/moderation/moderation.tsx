@@ -80,7 +80,7 @@ const AdminModeration: React.FC = () => {
     onSuccess: () => {
       toast.success("Report marked as reviewed");
       setReviewTarget(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-moderation-reports"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-moderation-reports"] });
     },
     onError: (e: Error) =>
       toast.error(e?.message || "Failed to mark as reviewed"),
@@ -91,7 +91,7 @@ const AdminModeration: React.FC = () => {
     onSuccess: () => {
       toast.success("Message deleted successfully");
       setDeleteTarget(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-moderation-reports"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-moderation-reports"] });
     },
     onError: (e: Error) =>
       toast.error(e?.message || "Failed to delete message"),
@@ -175,7 +175,9 @@ const count: number = moderationData?.data?.count ?? rawReports.length;
             <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span>
           </div>
           <button
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600"
           >
             Refresh
@@ -197,7 +199,9 @@ const count: number = moderationData?.data?.count ?? rawReports.length;
             <ShieldAlert className="w-10 h-10 text-rose-400 mx-auto mb-3" />
             <p className="text-red-600 mb-4">Failed to load reports</p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded text-sm"
             >
               Try Again

@@ -20,11 +20,9 @@ type Role = "client" | "therapist" | "user" | "counselor";
 // Zod schema for credential validation
 const credentialSchema = z.object({
   resume: z
-    .any()
-    .refine(
-      (file) => !file || file instanceof File,
-      "Resume must be a valid file"
-    )
+    .custom<File | null | undefined>((val) => val == null || val instanceof File, {
+      message: "Resume must be a valid file",
+    })
     .refine(
       (file) => !file || file.type === "application/pdf",
       "Resume must be a PDF file"
@@ -34,11 +32,9 @@ const credentialSchema = z.object({
       "Resume file size must be less than 5MB"
     ),
   certification: z
-    .any()
-    .refine(
-      (file) => !file || file instanceof File,
-      "Certification must be a valid file"
-    )
+    .custom<File | null | undefined>((val) => val == null || val instanceof File, {
+      message: "Certification must be a valid file",
+    })
     .refine(
       (file) => !file || file.type === "application/pdf",
       "Certification must be a PDF file"
@@ -334,7 +330,12 @@ const CredentialForm: React.FC = () => {
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 md:p-6 space-y-6 w-full">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+        className="bg-white p-4 md:p-6 space-y-6 w-full"
+      >
         <h2 className="text-xl font-semibold text-gray-800">Credential Upload</h2>
 
         {/* Resume Upload Field */}
@@ -349,7 +350,9 @@ const CredentialForm: React.FC = () => {
                   ref={resumeInputRef}
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => handleFileChange(e, "resume")}
+                  onChange={(e) => {
+                    void handleFileChange(e, "resume");
+                  }}
                   disabled={isSubmitting}
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
                 />
@@ -406,7 +409,9 @@ const CredentialForm: React.FC = () => {
                   ref={certificationInputRef}
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => handleFileChange(e, "certification")}
+                  onChange={(e) => {
+                    void handleFileChange(e, "certification");
+                  }}
                   disabled={isSubmitting}
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 disabled:cursor-not-allowed"
                 />

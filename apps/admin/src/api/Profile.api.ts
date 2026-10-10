@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IProfileUpdateData {
   fullName: string;
@@ -133,12 +133,7 @@ export default async function ProfileUpdateApi(
       "An error occurred while updating profile";
     const status = (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -176,12 +171,7 @@ export async function ReviewCertificationApi(
       "An error occurred while updating profile";
     const status = (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -219,12 +209,7 @@ export async function ReviewCVApi(
       "An error occurred while updating profile";
     const status = (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -267,12 +252,7 @@ export async function UploadProfilePictureApi(
     const status =
       (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -304,11 +284,6 @@ export async function RemoveProfilePictureApi(
     const status =
       (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

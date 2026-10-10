@@ -1,5 +1,4 @@
 // src/components/HowItWorks/Steps.tsx
-import React from "react";
 import { steps } from "../utils/constants";
 
 const Steps = () => {

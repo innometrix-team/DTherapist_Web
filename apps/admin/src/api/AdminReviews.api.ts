@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IAdminFlag {
   _id: string;
@@ -77,7 +77,7 @@ export async function GetAdminFlagsApi(
       (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -104,6 +104,6 @@ export async function ReviewFlagApi(
       (e as Error).message;
     const status =
       (e as AxiosError<IAPIResult>).response?.data.status || "error";
-    return Promise.reject({ code: statusCode, status, message: errorMessage });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

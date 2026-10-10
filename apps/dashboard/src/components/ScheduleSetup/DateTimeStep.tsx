@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { CreateScheduleApi, IScheduleRequestData } from "../../api/Schedule.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 const dayNames = [
   "Sunday", "Monday", "Tuesday", "Wednesday",
@@ -65,22 +66,28 @@ const DateTimeStep: React.FC<Props> = ({
 }) => {
   const queryClient = useQueryClient();
   const authId = useAuthStore((state) => state.id);
+  const defaultWeekSlots = (): Slot[][] => Array.from({ length: 7 }, () => []);
+
   const [availability, setAvailability] = useState<Slot[][]>(() => {
     try {
-      return value ? JSON.parse(value) : Array(7).fill([]);
+      if (value) {
+        const parsed = JSON.parse(value) as Slot[][];
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return defaultWeekSlots();
     } catch {
-      return Array(7).fill([]);
+      return defaultWeekSlots();
     }
   });
 
   React.useEffect(() => {
     try {
       if (value) {
-        const parsed = JSON.parse(value);
-        setAvailability(Array.isArray(parsed) ? parsed : Array(7).fill([]));
+        const parsed = JSON.parse(value) as Slot[][];
+        setAvailability(Array.isArray(parsed) ? parsed : defaultWeekSlots());
       }
     } catch {
-      setAvailability(Array(7).fill([]));
+      setAvailability(defaultWeekSlots());
     }
   }, [value]);
 
@@ -92,7 +99,7 @@ const DateTimeStep: React.FC<Props> = ({
   React.useEffect(() => {
     try {
       if (!value) return;
-      const parsed = JSON.parse(value);
+      const parsed = JSON.parse(value) as Slot[][];
       if (Array.isArray(parsed) && parsed.some((daySlots) => Array.isArray(daySlots) && daySlots.length > 0)) {
         hadExistingScheduleRef.current = true;
       }
@@ -252,7 +259,7 @@ const DateTimeStep: React.FC<Props> = ({
       if (canSave) {
         await handleScheduleSubmit(buildScheduleData());
         if (authId) {
-          await queryClient.invalidateQueries({ queryKey: ["therapistSchedules", authId] });
+          await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.schedules(authId) });
         }
         toast.success("Schedule saved successfully!");
       }
@@ -610,7 +617,9 @@ const DateTimeStep: React.FC<Props> = ({
                 Cancel
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={() => {
+                  void handleConfirm();
+                }}
                 disabled={isPending}
                 className="px-6 py-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50"
               >

@@ -6,15 +6,19 @@ import type { SubmitHandler } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { genderOptions } from "../../constant/settings.constants";
+import { genderOptions } from "../../constants/settings.constants";
 import { FaTrash } from "react-icons/fa";
 import { CameraIcon } from "../../assets/icons";
-import ProfileUpdateApi, {
-  IProfileUpdateData,
-} from "../../api/ProfileUpdate.api";
-import ProfileApi from "../../api/Profile.api"; // Import the profile fetching API
+
+
+
+import ProfileApi, {
+  updateProfile as ProfileUpdateApi,
+  type IProfileUpdateData,
+} from "../../api/Profile.api";
 import DeleteAccountApi from "../../api/DeleteAccount.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 // Base schema for common fields (removed email)
 const baseSchema = z.object({
@@ -50,8 +54,8 @@ type ProfileFormData = UserFormData | CounselorFormData;
 const ProfileForm: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role, setAuth } = useAuthStore();
-  const auth = useAuthStore((state) => state);
+  const role = useAuthStore((state) => state.role);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const isCounselor = role === "counselor";
 
   // State for delete account modal
@@ -93,7 +97,7 @@ const ProfileForm: React.FC = () => {
 
   // Fetch existing profile data
   const { data: profileData, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['profile', role],
+    queryKey: QUERY_KEYS.profile.current(role || ''),
     queryFn: () => ProfileApi(role as "user" | "counselor"),
     enabled: !!role,
     retry: 1,
@@ -136,7 +140,7 @@ const ProfileForm: React.FC = () => {
       return ProfileUpdateApi(
         data,
         { signal: controller.signal },
-        auth?.role ?? undefined
+        role ?? undefined
       );
     },
     onSuccess: async (result) => {
@@ -190,7 +194,7 @@ const ProfileForm: React.FC = () => {
       // Update auth token if provided
       if (token) {
         setAuth({
-          role: auth?.role || "user",
+          role: role || "user",
           token: token,
           id: result.data.id,
           email: result.data.email, // Keep this if it's still needed for auth
@@ -206,7 +210,7 @@ const ProfileForm: React.FC = () => {
         URL.revokeObjectURL(previewUrl);
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["profile", role] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.current(role || '') });
     },
     onError: (error) => {
       // Handle different types of errors
@@ -244,7 +248,7 @@ const ProfileForm: React.FC = () => {
 
       // Redirect to login page
       setTimeout(() => {
-        navigate("/login");
+        void navigate("/login");
       }, 1000);
     },
     onError: (error) => {
@@ -332,7 +336,7 @@ const ProfileForm: React.FC = () => {
           }),
       };
 
-      handleProfileUpdate(updateData);
+      void handleProfileUpdate(updateData);
     },
     [handleProfileUpdate, isPending, isSubmitting, profileImage, isCounselor]
   );
@@ -376,7 +380,9 @@ const ProfileForm: React.FC = () => {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => {
+        void handleSubmit(onSubmit)(e);
+      }}
       className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
       <h2 className="text-xl font-semibold text-gray-800">
@@ -667,8 +673,8 @@ const ProfileForm: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  await handleDeleteAccount();
+                onClick={() => {
+                  void handleDeleteAccount();
                 }}
                 disabled={isDeletePending}
                 className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"

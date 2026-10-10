@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { MeetingIcon, ChevronLeftIcon } from '../../assets/icons';
 import { getUserProfile, getAppointmentsWithUser, Appointment } from '../../api/Appointments.api';
+import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
 interface Client {
   id: string;
@@ -28,11 +29,12 @@ const ClientDetail = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Extract appointment data from navigation state
-  const appointmentData = location.state?.appointmentData as Appointment;
+  const state = location.state as { appointmentData?: Appointment } | null;
+  const appointmentData = state?.appointmentData;
 
   // Query for user profile
   const { data: profileData, isLoading: profileLoading, error: profileError } = useQuery({
-    queryKey: ['user-profile', clientId],
+    queryKey: QUERY_KEYS.profile.userProfile(clientId || ''),
     queryFn: () => {
       if (!clientId) return Promise.reject(new Error('No client ID'));
       const controller = new AbortController();
@@ -46,7 +48,7 @@ const ClientDetail = () => {
 
   // Query for appointment history
   const { data: appointmentHistoryData, isLoading: historyLoading } = useQuery({
-    queryKey: ['appointment-history', clientId],
+    queryKey: QUERY_KEYS.appointments.history(clientId || ''),
     queryFn: () => {
       if (!clientId) return Promise.reject(new Error('No client ID'));
       const controller = new AbortController();
@@ -69,7 +71,7 @@ const ClientDetail = () => {
   };
 
   useEffect(() => {
-    const processClientData = async () => {
+    const processClientData = () => {
       try {
         setLoading(true);
         
@@ -92,7 +94,7 @@ const ClientDetail = () => {
           // Use profile data if available
           const profile = profileData.data[0];
           clientData = {
-            id: clientId || profile._id,
+            id: clientId || profile._id || '',
             name: profile.title || 'Unknown Client',
             imageUrl: '/default-avatar.png', // Fallback image
             about: profile.message,
@@ -124,7 +126,7 @@ const ClientDetail = () => {
   }, []);
 
   const handleBackClick = () => {
-    navigate('/appointments');
+    void navigate('/appointments');
   };
 
   const handleStartVideoCall = () => {
@@ -135,16 +137,16 @@ const ClientDetail = () => {
         window.open(appointmentData.action.joinMeetingLink, '_blank');
       } else {
         // Navigate to video call route with the client ID
-        navigate(`/video-call/${client.id}`);
+        void navigate(`/video-call/${client.id}`);
       }
     }
   };
 
   const handleStartChat = () => {
     if (client && appointmentData?.chatId) {
-      navigate(`/chat/${appointmentData.chatId}`);
+      void navigate(`/chat/${appointmentData.chatId}`);
     } else if (client) {
-      navigate(`/chat/${client.id}`);
+      void navigate(`/chat/${client.id}`);
     }
   };
 

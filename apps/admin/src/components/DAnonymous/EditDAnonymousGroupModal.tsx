@@ -67,7 +67,7 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
           showToast("Group updated successfully!");
         }
         
-        queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
+        await queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
         
         // Close modal after a short delay
         setTimeout(() => {

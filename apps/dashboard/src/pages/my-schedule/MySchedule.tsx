@@ -10,6 +10,7 @@ import { IScheduleRequestData } from "../../api/Schedule.api";
 import { getAllTherapistSchedulesApi, IScheduleItem } from "../../api/TherapistSchedule.api";
 import { getTherapistDetailsApi, ITherapist } from "../../api/Therapist.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface Slot {
   startTime: string;
@@ -88,7 +89,7 @@ const hasAnyPricingValue = (pricing: PricingValues) =>
 const MySchedule: React.FC = () => {
   const authId = useAuthStore((state) => state.id);
   const { data: scheduleResponse } = useQuery({
-    queryKey: ["therapistSchedules", authId],
+    queryKey: QUERY_KEYS.therapists.schedules(authId || ''),
     queryFn: async () => {
       if (!authId) return [] as IScheduleItem[];
       const result = await getAllTherapistSchedulesApi(authId);
@@ -97,7 +98,7 @@ const MySchedule: React.FC = () => {
     enabled: !!authId,
   });
   const { data: therapistDetailsResponse } = useQuery({
-    queryKey: ["therapistDetails", authId],
+    queryKey: QUERY_KEYS.therapists.details(authId || ''),
     queryFn: async () => {
       if (!authId) return null;
       const result = await getTherapistDetailsApi(authId);
@@ -160,8 +161,8 @@ const MySchedule: React.FC = () => {
   const transformScheduleData = (): IScheduleRequestData[] => {
     try {
       const availability: Slot[][] = dateTime
-        ? JSON.parse(dateTime)
-        : Array(7).fill([]);
+        ? (JSON.parse(dateTime) as Slot[][])
+        : Array.from({ length: 7 }, () => []);
 
       return availability.flatMap((daySlots, index) => {
         if (daySlots.length === 0) return [];
@@ -378,7 +379,7 @@ const MySchedule: React.FC = () => {
         <PricingStep
           pricing={pricing}
           onPricingChange={setPricing}
-          meetingPreference={(meetingPreference ?? "Video Session") as MeetingPreference}
+          meetingPreference={meetingPreference ?? "Video Session"}
           onBack={handleBackToMenu}
           onSuccess={() => {
             toast.success("Pricing updated!");

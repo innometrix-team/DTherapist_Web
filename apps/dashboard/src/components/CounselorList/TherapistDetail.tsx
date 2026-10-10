@@ -27,6 +27,7 @@ import {
   getTherapistScheduleApi,
 } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface TherapistDetailProps {
   therapistId: string;
@@ -52,7 +53,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     isLoading: therapistLoading,
     error: therapistError,
   } = useQuery({
-    queryKey: ["therapist", therapistId],
+    queryKey: QUERY_KEYS.therapists.detail(therapistId),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -79,7 +80,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     isLoading: reviewsLoading,
     error: reviewsError,
   } = useQuery({
-    queryKey: ["reviews", therapistId],
+    queryKey: QUERY_KEYS.therapists.reviews(therapistId),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -93,7 +94,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
 
   // Fetch schedule to check if group booking is available
   const { data: scheduleResponse } = useQuery({
-    queryKey: ["therapist-schedule", therapistId, "video"],
+    queryKey: QUERY_KEYS.therapists.schedule(therapistId, "video"),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -125,7 +126,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
       toast.success("Review submitted successfully!");
       setNewReview({ rating: 0, comment: "", clientName: "" });
       setShowReviewForm(false);
-      queryClient.invalidateQueries({ queryKey: ["reviews", therapistId] });
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.reviews(therapistId) });
     },
     onError: (error) => {
       toast.error(error.message || "Failed to submit review");
@@ -363,7 +364,12 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 {showReviewForm && (
                   <div className="mb-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
                     <h3 className="font-semibold text-gray-900 mb-4">Leave a Review</h3>
-                    <form onSubmit={handleSubmitReview} className="space-y-4">
+                    <form
+                      onSubmit={(e) => {
+                        void handleSubmitReview(e);
+                      }}
+                      className="space-y-4"
+                    >
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
                         <input
@@ -430,7 +436,9 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                     <p className="text-red-600">Failed to load reviews. Error: {reviewsError.message}</p>
                     <button
-                      onClick={() => queryClient.invalidateQueries({ queryKey: ["reviews", therapistId] })}
+                      onClick={() => {
+                        void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.reviews(therapistId) });
+                      }}
                       className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                     >
                       Retry

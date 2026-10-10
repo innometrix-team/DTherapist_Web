@@ -23,7 +23,8 @@ import {
   CancelBookingApi,
   RescheduleBookingApi,
 } from "../../api/AdminBookings.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface AdminBookingsTableProps {
   className?: string;
@@ -41,7 +42,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
     limit: ITEMS_PER_PAGE,
   });
 
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is admin
@@ -68,7 +69,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
       toast.success("Booking cancelled");
       setCancelOpen(false);
       setActiveCancelId(null);
-      refetch();
+      void refetch();
     },
     onError: (e) => toast.error(e?.message || "Failed to cancel booking"),
   });
@@ -94,7 +95,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
       setRescheduleOpen(false);
       setActiveBookingId(null);
       setRescheduleForm({ date: "", startTime: "", endTime: "" });
-      refetch();
+      void refetch();
     },
     onError: (e) =>
       toast.error(e?.message || "Failed to reschedule booking"),
@@ -112,7 +113,7 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["admin-bookings", filters],
+    queryKey: QUERY_KEYS.bookings.adminList(filters as Record<string, unknown>),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -356,7 +357,9 @@ const AdminBookingsTable: React.FC<AdminBookingsTableProps> = ({
           <div className="text-center py-16 px-4">
             <p className="text-red-600 mb-4">Failed to load bookings</p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
             >
               Try Again

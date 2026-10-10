@@ -74,7 +74,7 @@ const UserDetail = () => {
   );
 
   const handleBackButton = () => {
-    navigate(-1);
+    void navigate(-1);
   };
 
   const role = shouldFetchCredentials ? "counselor" : "client";
@@ -101,7 +101,7 @@ const UserDetail = () => {
     },
     onSuccess: () => {
       toast.success("User deleted successfully");
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      void qc.invalidateQueries({ queryKey: ["admin-users"] });
       handleBackButton();
     },
     onError: (error) => {
@@ -165,7 +165,7 @@ const UserDetail = () => {
         <button
           disabled={isDeleting}
           onClick={() => setShowDeleteDialog(true)}
-          className="bg-[#AE0A0A] text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors"
         >
           Delete User
         </button>

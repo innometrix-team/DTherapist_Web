@@ -12,6 +12,7 @@ import FundWalletApi, {
 } from "../../api/FundWallet.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { useDashboardData } from "../../hooks/useDashboardData";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -23,14 +24,15 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [bankSearchTerm, setBankSearchTerm] = useState("");
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role, email } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
+  const email = useAuthStore((s) => s.email);
 
   // ── Shared dashboard data (single network call, shared with StatsGrid) ──
   const { data: dashboardData, isLoading: isLoadingBalance, invalidate } = useDashboardData();
 
   // ── Banks (counselors only) ──
   const { data: banksData, isLoading: isLoadingBanks } = useQuery({
-    queryKey: ["banks"],
+    queryKey: QUERY_KEYS.wallet.banks,
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -83,7 +85,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       setAccountNumber("");
       setSelectedBank(null);
       setBankSearchTerm("");
-      invalidate(); // refresh shared cache
+      void invalidate(); // refresh shared cache
     },
     onError: (error: { code?: number; message?: string }) => {
       let errorMessage = "Failed to process withdrawal";
@@ -204,7 +206,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("payment") === "success") {
       toast.success("Payment successful! Your wallet has been funded.");
-      invalidate();
+      void invalidate();
       setShowTopUpModal(false);
       setTopUpAmount("");
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -253,7 +255,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
             )}
           </div>
         </div>
-        <div className="absolute top-1/2 transform -translate-y-1/2 right-4 w-12 h-12 bg-[#E2EBF61A] grid place-items-center rounded-full">
+        <div className="absolute top-1/2 transform -translate-y-1/2 right-4 w-12 h-12 bg-white/10 grid place-items-center rounded-full">
           <TimerIcon className="h-6 w-6" />
         </div>
       </div>
@@ -284,7 +286,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
               </div>
               <div className="flex space-x-4">
                 <button
-                  onClick={handleTopUp}
+                  onClick={() => {
+                    void handleTopUp();
+                  }}
                   disabled={isFunding || !topUpAmount || !email}
                   className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
                 >
@@ -394,7 +398,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
               )}
               <div className="flex space-x-4 pt-2">
                 <button
-                  onClick={handleWithdrawSubmit}
+                  onClick={() => {
+                    void handleWithdrawSubmit();
+                  }}
                   disabled={
                     isWithdrawing ||
                     !withdrawAmount ||

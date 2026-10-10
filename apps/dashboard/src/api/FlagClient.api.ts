@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -48,11 +48,6 @@ export async function flagClient(
     const status =
       (e as AxiosError<IAPIResult>).response?.data?.status || "error";
 
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

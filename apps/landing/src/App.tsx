@@ -1,4 +1,3 @@
-import './App.css'
 import { Routes, Route } from "react-router-dom";
 import Index from './pages/Index'
 import PrivacyPolicy from './components/privacy-policy/PrivacyPolicy';
