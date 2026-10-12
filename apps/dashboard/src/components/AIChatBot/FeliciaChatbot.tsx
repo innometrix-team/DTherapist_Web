@@ -1,348 +1,444 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Minus } from 'lucide-react';
-import { useAuthStore } from '../../store/auth/useAuthStore';
-import { sendChatbotMessage } from '../../api/ChatBot.api'; // Import the API service
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { X, Send, Minus, Sparkles, Bot, RotateCcw } from "lucide-react";
+import { useAuthStore } from "../../store/auth/useAuthStore";
+import { sendChatbotMessage } from "../../api/ChatBot.api";
 
 interface Message {
   id: string;
   content: string;
-  sender: 'user' | 'bot';
+  sender: "user" | "bot";
   timestamp: Date;
 }
+
+interface QuickAction {
+  label: string;
+  prompt: string;
+  icon: string;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    label: "Need a Counselor",
+    prompt: "I need help finding the right counselor for my needs.",
+    icon: "👩‍⚕️",
+  },
+  {
+    label: "Mental Health Advice",
+    prompt: "Can you give me practical advice for managing stress and anxiety?",
+    icon: "💡",
+  },
+  {
+    label: "How to Book a Session",
+    prompt: "How does booking and scheduling a therapy session work?",
+    icon: "📅",
+  },
+  {
+    label: "Dealing with Anxiety",
+    prompt: "I am feeling overwhelmed right now. Can you guide me through a calming exercise?",
+    icon: "🧘",
+  },
+  {
+    label: "Talk with Felicia",
+    prompt: "Hello Felicia, how can you help me today?",
+    icon: "💬",
+  },
+];
 
 const FeliciaChatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showQuickPopup, setShowQuickPopup] = useState(true);
+
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      content: 'Hello welcome to Dtherapist. How can I help you?',
-      sender: 'bot',
-      timestamp: new Date()
-    }
+      id: "1",
+      content: "Hello! I am Felicia, your Dtherapist AI care assistant. How are you feeling today?",
+      sender: "bot",
+      timestamp: new Date(),
+    },
   ]);
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [botTyping, setBotTyping] = useState('');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  
+
   const role = useAuthStore((s) => s.role);
   const email = useAuthStore((s) => s.email);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // API-based message sending
-  const sendMessage = useCallback(async () => {
-    if (!inputMessage.trim() || isLoading) return;
+  useEffect(() => {
+    if (isOpen && !isMinimized) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen, isMinimized, scrollToBottom]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputMessage.trim(),
-      sender: 'user',
-      timestamp: new Date()
+  // Clean up ongoing requests on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
     };
+  }, []);
 
-    setMessages(prev => [...prev, userMessage]);
-    const messageContent = inputMessage.trim();
-    setInputMessage('');
-    setIsLoading(true);
-    setBotTyping('');
+  // Send message implementation
+  const handleSendMessage = useCallback(
+    async (textToSend?: string) => {
+      const text = (textToSend || inputMessage).trim();
+      if (!text || isLoading) return;
 
-    // Cancel any ongoing request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    try {
-      const result = await sendChatbotMessage(
-        {
-          message: messageContent,
-          role: role || 'client',
-        },
-        {
-          signal: abortControllerRef.current.signal,
-        }
-      );
-
-      if (result && result.data) {
-        const botMessage: Message = {
-          id: Date.now().toString(),
-          content: result.data || 'I received your message.',
-          sender: 'bot',
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, botMessage]);
-      } else {
-        throw new Error('No response received');
-      }
-
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') {
-        console.log('Request was aborted');
-        return;
-      }
-      
-      console.error('Failed to send message:', error);
-      
-      let errorText = "I'm sorry, I encountered an error. Please try again.";
-      
-      // Handle API error response
-      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        errorText = error.message;
-      }
-      
-      const errorMessage: Message = {
+      const userMsg: Message = {
         id: Date.now().toString(),
-        content: errorText,
-        sender: 'bot',
-        timestamp: new Date()
+        content: text,
+        sender: "user",
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-      setBotTyping('');
-      abortControllerRef.current = null;
-    }
-  }, [inputMessage, isLoading, role]);
+
+      setMessages((prev) => [...prev, userMsg]);
+      setInputMessage("");
+      setIsLoading(true);
+
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        const result = await sendChatbotMessage(
+          {
+            message: text,
+            role: role || "client",
+          },
+          { signal: controller.signal }
+        );
+
+        if (result && result.data) {
+          const botMsg: Message = {
+            id: (Date.now() + 1).toString(),
+            content: result.data || "I am here to support you. How else can I help?",
+            sender: "bot",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, botMsg]);
+        } else {
+          throw new Error("No response from Felicia");
+        }
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "name" in err && err.name === "AbortError") {
+          return;
+        }
+        let errorText = "I'm sorry, I encountered a temporary connection issue. Please try again.";
+        if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+          errorText = err.message;
+        }
+        const errorMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          content: errorText,
+          sender: "bot",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      } finally {
+        setIsLoading(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [inputMessage, isLoading, role]
+  );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void sendMessage();
+      void handleSendMessage();
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    setInputMessage(action);
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+  // Launch from quick actions
+  const handleTriggerQuickAction = (prompt: string) => {
+    setShowQuickPopup(false);
+    setIsOpen(true);
+    setIsMinimized(false);
+    void handleSendMessage(prompt);
   };
 
-  const formatTime = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: false 
+  const handleResetChat = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        content: "Chat restarted. Hello again! How can I assist you right now?",
+        sender: "bot",
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
+  const formatTime = (ts: Date) => {
+    return ts.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // Auto scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, botTyping, scrollToBottom]);
-
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-blue-800 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 z-50"
-        aria-label="Open Felicia AI Chat"
-      >
-        <div className="relative">
-          <img src='/AI-Logo.png' className='bg-primary' alt="" />
-        </div>
-      </button>
-    );
-  }
-
   return (
-    <div className={`fixed bottom-6 right-6 z-50 transition-all duration-300 w-96`}>
-      <div className="bg-white rounded-lg shadow-xl border border-gray-200 flex flex-col h-[500px]">
-        {/* Header */}
-        <div className="bg-primary text-white p-4 rounded-t-lg flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <span className="text-primary font-bold text-sm">
-                <img src='/AI-Logo.png' className='bg-primary' alt="" />
-              </span>
-            </div>
-            <div>
-              <h3 className="font-semibold">Felicia</h3>
-              <p className="text-xs text-blue-100">
-                {isLoading ? 'Thinking...' : 'Ready to help'}
+    <>
+      {/* 1. Fixed Bottom-Right Bot Launcher Container */}
+      <div className="fixed bottom-6 right-6 z-9999 flex flex-col items-end pointer-events-auto">
+        {/* Quick Action Popup when user lands or logs in */}
+        {showQuickPopup && !isOpen && (
+          <div className="mb-3 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-divider p-3.5 space-y-2.5 backdrop-blur-md">
+              <div className="flex items-center justify-between border-b border-divider/40 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-darkerb leading-tight">Felicia AI</h4>
+                    <p className="text-[10px] text-neutral">Online & ready to support you</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPopup(false)}
+                  className="p-1 text-neutral hover:text-darkerb rounded-md hover:bg-offwhite transition-colors cursor-pointer"
+                  title="Dismiss"
+                  aria-label="Dismiss quick actions"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <p className="text-[11px] text-darkerb font-medium leading-relaxed">
+                Welcome to Dtherapist! How can I assist your mental wellness journey right now?
               </p>
+
+              {/* Quick Action Buttons */}
+              <div className="flex flex-col gap-1.5 pt-0.5">
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => handleTriggerQuickAction(action.prompt)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-xl bg-offwhite hover:bg-primary text-darkerb hover:text-white transition-all duration-150 flex items-center justify-between text-xs font-medium cursor-pointer border border-divider/40 group shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm shrink-0">{action.icon}</span>
+                      <span className="group-hover:translate-x-0.5 transition-transform">{action.label}</span>
+                    </div>
+                    <span className="text-[10px] text-neutral group-hover:text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Ask →
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="hover:bg-blue-800 p-1 rounded transition-colors"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-blue-800 p-1 rounded transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        )}
+
+        {/* Launcher Circle Button (Fixed bottom-right, standard click) */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen((prev) => !prev);
+            setShowQuickPopup(false);
+          }}
+          className="w-14 h-14 rounded-full bg-linear-to-tr from-primary to-blue-600 hover:shadow-primary/40 text-white shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95 hover:scale-105 cursor-pointer border-2 border-white relative group"
+          aria-label="Toggle Felicia AI Chat"
+          title="Click to chat with Felicia"
+        >
+          <div className="relative flex items-center justify-center">
+            <img
+              src="/AI-Logo.png"
+              alt="Felicia AI"
+              className="w-7 h-7 object-contain pointer-events-none drop-shadow-xs"
+            />
+            {/* Online Green Pulsing Indicator */}
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse" />
           </div>
-        </div>
+        </button>
+      </div>
 
-        {!isMinimized && (
-          <>
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {messages.map((message) => (
-                <div key={message.id} className="flex flex-col space-y-1">
-                  {message.sender === 'bot' ? (
-                    <div className="flex items-start space-x-2">
-                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <span className="text-white font-bold text-xs">
-                           <img src='/AI-Logo.png' className='bg-primary' alt="F" />
-                          </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="bg-primary text-white p-3 rounded-lg rounded-tl-none max-w-sm">
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1 ml-1">
-                          {formatTime(message.timestamp)}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-end space-x-2">
-                      <div className="flex-1">
-                        <div className="bg-gray-200 text-gray-800 p-3 rounded-lg rounded-tr-none max-w-sm ml-auto">
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                        </div>
-                        <div className="flex items-center justify-end space-x-1 mt-1">
-                          <p className="text-xs text-gray-500">
-                            {formatTime(message.timestamp)}
-                          </p>
-                          <div className="flex space-x-1">
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <span className="text-gray-600 font-bold text-xs">
-                          {email?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+      {/* 2. Fixed Open Chat Window */}
+      {isOpen && (
+        <div
+          className={`fixed bottom-24 right-4 sm:right-6 z-9999 w-[calc(100vw-32px)] sm:w-[380px] max-w-[380px] ${
+            isMinimized ? "h-auto" : "h-[510px]"
+          } bg-white rounded-2xl shadow-2xl border border-divider flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200`}
+        >
+          {/* Chat Header */}
+          <div className="bg-primary text-white p-3.5 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/20 shrink-0">
+                <img src="/AI-Logo.png" alt="Felicia" className="w-5 h-5 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-sm tracking-tight leading-tight truncate">Felicia AI</h3>
+                  <span className="w-2 h-2 rounded-full bg-success shrink-0" />
                 </div>
-              ))}
-
-              {/* Bot Typing Indicator - Streaming Text */}
-              {botTyping && (
-                <div className="flex items-start space-x-2">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-white font-bold text-xs">
-                       <img src='/AI-Logo.png' className='bg-primary' alt="F" />
-                    </span>
-                  </div>
-                  <div className="bg-primary text-white p-3 rounded-lg rounded-tl-none max-w-xs">
-                    <div className="text-sm">{botTyping}<span className="animate-pulse">|</span></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Loading indicator */}
-              {isLoading && !botTyping && (
-                <div className="flex items-start space-x-2">
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-white font-bold text-xs">
-                       <img src='/AI-Logo.png' className='bg-primary' alt="F" />
-                    </span>
-                  </div>
-                  <div className="bg-primary text-white p-3 rounded-lg rounded-tl-none max-w-xs">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Quick Actions */}
-            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-              <div className="flex space-x-2">
-                <button 
-                  onClick={() => handleQuickAction("I need a counsellor")}
-                  className="flex items-center space-x-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full hover:bg-yellow-200 transition-colors"
-                  disabled={isLoading}
-                >
-                  <span>👩‍⚕️</span>
-                  <span>Need a counsellor?</span>
-                </button>
-                <button 
-                  onClick={() => handleQuickAction("i need advice")}
-                  className="flex items-center space-x-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full hover:bg-green-200 transition-colors"
-                  disabled={isLoading}
-                >
-                  <span>💰</span>
-                  <span>Advice</span>
-                </button>
-                <button 
-                  onClick={() => handleQuickAction("i need therapy")}
-                  className="flex items-center space-x-1 text-xs bg-blue-100 text-primary px-2 py-1 rounded-full hover:bg-blue-200 transition-colors"
-                  disabled={isLoading}
-                >
-                  <span>❓</span>
-                  <span>Therapy</span>
-                </button>
+                <p className="text-[11px] text-blue-100/90 truncate">
+                  {isLoading ? "Thinking..." : "Always here to guide & support"}
+                </p>
               </div>
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 relative">
+            {/* Actions: Restart, Minimize, Close */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetChat}
+                className="p-1.5 hover:bg-white/15 rounded-lg text-white/80 hover:text-white transition-colors cursor-pointer"
+                title="Restart conversation"
+                aria-label="Restart conversation"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMinimized((prev) => !prev)}
+                className="p-1.5 hover:bg-white/15 rounded-lg text-white/80 hover:text-white transition-colors cursor-pointer"
+                title={isMinimized ? "Expand" : "Minimize"}
+                aria-label={isMinimized ? "Expand" : "Minimize"}
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 hover:bg-white/15 rounded-lg text-white/80 hover:text-white transition-colors cursor-pointer"
+                title="Close chat"
+                aria-label="Close chat"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {!isMinimized && (
+            <>
+              {/* Message History Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-offwhite/50 select-text">
+                {messages.map((message) => {
+                  const isBot = message.sender === "bot";
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex gap-2.5 items-end ${isBot ? "justify-start" : "justify-end"}`}
+                    >
+                      {isBot && (
+                        <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mb-1">
+                          <Bot className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-2xs ${
+                          isBot
+                            ? "bg-white text-darkerb border border-divider rounded-bl-xs"
+                            : "bg-primary text-white rounded-br-xs"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <span
+                          className={`text-[9px] block text-right mt-1 font-medium ${
+                            isBot ? "text-neutral" : "text-blue-100/80"
+                          }`}
+                        >
+                          {formatTime(message.timestamp)}
+                        </span>
+                      </div>
+
+                      {!isBot && (
+                        <div className="w-7 h-7 rounded-full bg-darkerb text-white font-bold text-xs flex items-center justify-center shrink-0 mb-1 border border-darkerb/20">
+                          {email?.charAt(0)?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Animated Typing Indicator */}
+                {isLoading && (
+                  <div className="flex gap-2.5 items-end justify-start">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mb-1">
+                      <Bot className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="bg-white border border-divider text-darkerb rounded-2xl rounded-bl-xs px-3.5 py-3 shadow-2xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* In-Chat Quick Prompt Chips */}
+              <div className="px-3 py-2 bg-white border-t border-divider/60 overflow-x-auto no-scrollbar flex items-center gap-1.5 shrink-0">
+                {QUICK_ACTIONS.slice(0, 3).map((act) => (
+                  <button
+                    key={act.label}
+                    type="button"
+                    onClick={() => void handleSendMessage(act.prompt)}
+                    disabled={isLoading}
+                    className="shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full bg-offwhite hover:bg-primary hover:text-white text-darkerb border border-divider/40 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {act.icon} {act.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Bar */}
+              <div className="p-3 bg-white border-t border-divider shrink-0">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handleSendMessage();
+                  }}
+                  className="flex items-center gap-2"
+                >
                   <input
                     ref={inputRef}
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your message here..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    onKeyDown={handleKeyPress}
+                    placeholder="Ask Felicia anything..."
+                    className="flex-1 px-3.5 py-2 text-xs bg-offwhite border border-divider rounded-xl text-darkerb placeholder:text-neutral focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     disabled={isLoading}
                   />
-                </div>
-                <button
-                  onClick={() => {
-                    void sendMessage();
-                  }}
-                  disabled={!inputMessage.trim() || isLoading}
-                  className="bg-primary hover:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                  <button
+                    type="submit"
+                    disabled={!inputMessage.trim() || isLoading}
+                    className="p-2 rounded-xl bg-primary hover:bg-darkerb text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-xs cursor-pointer shrink-0"
+                    aria-label="Send message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+
+                {/* Clinical Disclaimer */}
+                <p className="text-[10px] text-neutral text-center mt-2 leading-tight">
+                  Felicia is an AI companion for emotional support, not clinical emergency care.
+                </p>
               </div>
-              
-              {/* Status */}
-              {isLoading && (
-                <p className="text-xs text-blue-500 mt-2">Sending message...</p>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+            </>
+          )}
+        </div>
+      )}
+    </>
   );
 };
 

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FaInstagram, FaFacebook } from "react-icons/fa";
 
 const Footer = () => {
@@ -16,15 +17,14 @@ const Footer = () => {
         {/* Explore Links */}
         <div>
           <h4 className="text-lg font-semibold mb-4">Explore</h4>
-          <ul className="space-y-2 text-sm">
-            <li><a href="#" className="hover:underline">Home</a></li>
-            <li><a href="#" className="hover:underline">About</a></li>
-            <li><a href="#" className="hover:underline">Features</a></li>
-            <li><a href="#" className="hover:underline">FAQs</a></li>
-
-            <li><a href="/privacy-policy" className="hover:underline">Privacy Policy</a></li>
+          <ul className="space-y-2 text-sm text-neutral/80">
+            <li><Link to="/" className="hover:text-white hover:underline transition-colors">Home</Link></li>
+            <li><a href="#home" className="hover:text-white hover:underline transition-colors">About</a></li>
+            <li><a href="#faq" className="hover:text-white hover:underline transition-colors">FAQs</a></li>
+            <li><Link to="/privacy-policy" className="hover:text-white hover:underline transition-colors">Privacy Policy</Link></li>
           </ul>
         </div>
+
 
         {/* Contact Info */}
         <div>

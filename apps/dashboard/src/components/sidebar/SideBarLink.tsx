@@ -23,7 +23,7 @@ export const SidebarLink: React.FC<SidebarLinkProps> = ({ item, onClick }) => {
         "flex items-center px-4 py-4 mb-2 text-sm transition-colors duration-200 ease-in-out rounded-tl-4xl rounded-bl-4xl",
         isActive
           ? "bg-primary text-white border-r-4 border-success font-medium"
-          : "text-neutral hover:text-gray-900 hover:bg-gray-200",
+          : "text-neutral hover:text-darkerb hover:bg-gray-200",
       ].join(" ")}
     >
       {Icon && (
@@ -35,5 +35,6 @@ export const SidebarLink: React.FC<SidebarLinkProps> = ({ item, onClick }) => {
       )}
       <span>{item.label}</span>
     </Link>
+
   );
 };

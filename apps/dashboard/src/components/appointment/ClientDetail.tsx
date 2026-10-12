@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { MeetingIcon, ChevronLeftIcon } from '../../assets/icons';
 import { getUserProfile, getAppointmentsWithUser, Appointment } from '../../api/Appointments.api';
 import { QUERY_KEYS } from '../../configs/queryKeys.config';
+import PageContainer from '../common/PageContainer';
 
 interface Client {
   id: string;
@@ -180,8 +181,8 @@ const ClientDetail = () => {
   }
 
   return (
-    <div className="bg-white min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="bg-gray-50 min-h-screen">
+      <PageContainer>
         {/* Header with back button */}
         <div className="flex items-center mb-6">
           <button 
@@ -286,7 +287,7 @@ const ClientDetail = () => {
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getAllArticlesApi, getArticlesByCategoryApi, getCategoriesApi, IArticle } from '../../api/Articles.api';
 import ArticleCard from './ArticleCard';
 import FilterDropdown from './FilterDropdown';
+import PageContainer from '../common/PageContainer';
 import toast from 'react-hot-toast';
 import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
@@ -233,25 +234,22 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm m-6">
+      <PageContainer>
+        {/* Header */}
         <div 
-          className="h-48 relative overflow-hidden rounded-xl"
+          className="w-full h-24 sm:h-32 lg:h-40 rounded-lg mb-4 sm:mb-6 flex items-center justify-center px-4 sm:px-8 bg-black/50 bg-no-repeat bg-center bg-cover relative overflow-hidden"
           style={{
             backgroundImage: "url('https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
           }}
         >
-          <div className="absolute inset-0 bg-black/40"></div>
-          <div className="relative z-10 flex items-center justify-center h-full">
-            <h1 className="text-4xl font-bold text-white">Articles</h1>
-          </div>
+          <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white relative z-10 text-center">
+            Articles & Resources
+          </h1>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Search and Filter Section */}
+        <div>
+          {/* Search and Filter Section */}
         <div className="mb-8 space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search Bar */}
@@ -378,8 +376,9 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
           </div>
         )}
       </div>
-    </div>
-  );
+    </PageContainer>
+  </div>
+);
 };
 
 export default ArticlesPage;

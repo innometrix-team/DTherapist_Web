@@ -70,9 +70,9 @@ const Sidebar: React.FC<SidebarPropsWithUserType> = ({
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
               } lg:translate-x-0 lg:static lg:inset-auto`}
       >
-        <div className=" p-4 border-b-divider border-b h-16">
-          <Link to="https://dtherapist.com/" className="h-full">
-            <img src="/images/logo.png" className="h-12 md:h-14 w-auto object-contain" />
+        <div className="p-4 border-b-divider border-b h-16 flex items-center">
+          <Link to="/" className="h-full flex items-center">
+            <img src="/images/logo.png" className="h-10 md:h-12 w-auto object-contain" alt="DTherapist" />
           </Link>
         </div>
 
@@ -87,21 +87,22 @@ const Sidebar: React.FC<SidebarPropsWithUserType> = ({
                 />
               ))}
               {i < sections.length - 1 && (
-                <div className=" my-2 border-t border-divider" />
+                <div className="my-2 border-t border-divider" />
               )}
             </React.Fragment>
           ))}
 
-          <div className="w-full pr-4">
+          <div className="w-full pr-4 mt-8 pb-6">
             <button
               onClick={handleLogout}
-              className="max-w-4/6 px-6 py-4 mt-16 mx-auto text-white bg-primary  flex items-center justify-center rounded-lg cursor-pointer"
+              className="w-full px-5 py-3 text-white bg-primary hover:bg-darkerb transition-colors duration-200 flex items-center justify-center rounded-xl cursor-pointer font-medium shadow-xs"
             >
               <LogoutIcon />
-              <span className="ml-2.5 text-sm">Logout</span>
+              <span className="ml-2.5 text-sm font-semibold">Logout</span>
             </button>
           </div>
         </nav>
+
       </div>
 
       {/* Overlay for mobile */}

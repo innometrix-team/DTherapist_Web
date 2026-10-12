@@ -13,6 +13,14 @@ import FundWalletApi, {
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
+import { X } from "lucide-react";
+
+const PRESET_AMOUNTS = [
+  { label: "₦5,000", value: "5000" },
+  { label: "₦10,000", value: "10000" },
+  { label: "₦20,000", value: "20000" },
+  { label: "₦50,000", value: "50000" },
+];
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -229,8 +237,12 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       <div className="bg-primary px-6 py-7 rounded-lg text-white bg-[url(/src/assets/images/bg-balance.png)] relative">
         <div className="space-y-3">
           <div className="font-light">Current Balance</div>
-          <div className="text-2xl font-bold">
-            {isLoadingBalance ? "Loading..." : currentBalance}
+          <div className="text-2xl font-bold min-h-[32px] flex items-center">
+            {isLoadingBalance ? (
+              <div className="h-8 w-36 bg-white/20 rounded-lg animate-pulse" />
+            ) : (
+              currentBalance
+            )}
           </div>
           <div className="space-x-4 space-y-2">
             {actions.includes("topUp") && (
@@ -262,44 +274,95 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
 
       {/* Top-up Modal */}
       {showTopUpModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-80">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-4">Fund Wallet</h3>
+        <div className="fixed inset-0 bg-darkerb/50 backdrop-blur-xs flex items-center justify-center z-80 p-4">
+          <div className="bg-white p-6 sm:p-7 rounded-2xl max-w-md w-full border border-divider shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-divider/60 mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-darkerb tracking-tight">Fund Wallet</h3>
+                <p className="text-xs text-neutral mt-0.5">Add credits to book counseling sessions</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeTopUpModal}
+                disabled={isFunding}
+                className="p-1.5 rounded-lg text-neutral hover:text-darkerb hover:bg-offwhite transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
-                <div className="w-full border border-gray-200 bg-gray-50 rounded px-4 py-2 text-gray-700">
+                <label className="block text-xs font-semibold text-neutral uppercase tracking-wider mb-1.5">
+                  Account Email
+                </label>
+                <div className="w-full border border-divider bg-offwhite/70 rounded-xl px-3.5 py-2.5 text-xs font-medium text-darkerb truncate">
                   {email || "No email found"}
                 </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Amount (₦)</label>
-                <input
-                  type="number"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                  min="1"
-                  autoFocus
-                />
+                <label className="block text-xs font-semibold text-neutral uppercase tracking-wider mb-2">
+                  Select Amount
+                </label>
+
+                {/* Predefined Price Chips */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  {PRESET_AMOUNTS.map((preset) => {
+                    const isSelected = topUpAmount === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => setTopUpAmount(preset.value)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                          isSelected
+                            ? "bg-primary text-white border-primary shadow-xs scale-[1.02]"
+                            : "bg-offwhite text-darkerb hover:bg-primary/10 border-divider/60"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Custom Amount Input Box */}
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-darkerb font-bold text-sm">
+                    ₦
+                  </span>
+                  <input
+                    type="number"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    placeholder="Or enter custom amount"
+                    className="w-full pl-8 pr-4 py-2.5 border border-divider rounded-xl bg-offwhite/50 text-darkerb font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:font-normal placeholder:text-neutral"
+                    min="100"
+                    autoFocus
+                  />
+                </div>
               </div>
-              <div className="flex space-x-4">
+
+              <div className="flex gap-3 pt-2">
                 <button
+                  type="button"
+                  onClick={closeTopUpModal}
+                  disabled={isFunding}
+                  className="flex-1 bg-offwhite hover:bg-gray-200 text-darkerb py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer disabled:opacity-50 border border-divider/40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     void handleTopUp();
                   }}
-                  disabled={isFunding || !topUpAmount || !email}
-                  className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+                  disabled={isFunding || !topUpAmount || !email || Number(topUpAmount) <= 0}
+                  className="flex-1 bg-primary hover:bg-darkerb text-white py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isFunding ? "Processing..." : "Proceed to Payment"}
-                </button>
-                <button
-                  onClick={closeTopUpModal}
-                  disabled={isFunding}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded font-medium disabled:opacity-50"
-                >
-                  Cancel
                 </button>
               </div>
             </div>

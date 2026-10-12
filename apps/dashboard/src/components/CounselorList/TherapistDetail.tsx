@@ -28,6 +28,7 @@ import {
 } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
+import PageContainer from "../common/PageContainer";
 
 interface TherapistDetailProps {
   therapistId: string;
@@ -251,8 +252,8 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl m-auto">
+    <div className="min-h-screen bg-gray-50">
+      <PageContainer>
         <div className="flex items-center mb-8">
           <button onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800">
             <ArrowLeft className="w-5 h-5" />
@@ -522,7 +523,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

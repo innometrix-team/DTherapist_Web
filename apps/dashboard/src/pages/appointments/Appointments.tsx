@@ -9,10 +9,12 @@ import {
 } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
-// Import components
 import TabNavigation from "../../components/appointment/TabNavigation";
 import SessionTable from "../../components/appointment/SessionTable";
 import RescheduleSession from "../../components/appointment/RescheduleSession";
+import { Skeleton, SkeletonTable } from "../../components/common/Skeleton";
+import PageContainer from "../../components/common/PageContainer";
+import { AlertCircle } from "lucide-react";
 
 // Define error types
 interface QueryError {
@@ -163,21 +165,26 @@ const Appointments: React.FC = () => {
     );
   }
 
-  // Loading state
+  // Loading state with layout skeleton
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading appointments...</p>
+      <div className="min-h-screen bg-offwhite p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Skeleton className="w-full h-24 sm:h-32 lg:h-40 rounded-2xl" />
+          <div className="bg-white rounded-2xl shadow-xs border border-divider p-4 sm:p-6 space-y-4">
+            <div className="flex gap-3 border-b border-divider pb-3">
+              <Skeleton className="h-9 w-28 rounded-xl" />
+              <Skeleton className="h-9 w-28 rounded-xl" />
+            </div>
+            <SkeletonTable rows={4} />
+          </div>
         </div>
       </div>
     );
   }
 
-  // Improved error handling - don't show error for aborted requests
+  // Improved error handling
   if (error) {
-    // Check if it's an AbortError or network cancellation
     const queryError = error as QueryError;
     const isAbortError =
       queryError?.name === "AbortError" ||
@@ -187,19 +194,20 @@ const Appointments: React.FC = () => {
 
     if (!isAbortError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">Failed to load appointments</p>
-            <p className="text-gray-600 mb-4">
-              {error instanceof Error
-                ? error.message
-                : "Unknown error occurred"}
+        <div className="min-h-screen bg-offwhite flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-divider p-8 text-center max-w-md w-full shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3 text-red-600">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-darkerb mb-1">Failed to load appointments</h3>
+            <p className="text-xs text-neutral mb-4 leading-relaxed">
+              {error instanceof Error ? error.message : "An unexpected network error occurred."}
             </p>
             <button
               onClick={() => {
                 void refetch();
               }}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+              className="px-5 py-2.5 bg-primary hover:bg-darkerb text-white font-semibold text-xs sm:text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               Try Again
             </button>
@@ -211,7 +219,7 @@ const Appointments: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <PageContainer>
         {/* Header Banner */}
         <div
           className="w-full h-24 sm:h-32 lg:h-40 rounded-lg mb-4 sm:mb-6 flex items-center justify-center px-4 sm:px-8 bg-black/50 bg-no-repeat bg-center bg-cover relative overflow-hidden"
@@ -278,7 +286,7 @@ const Appointments: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
 
       {/* Modal for Rescheduling with High Z-Index */}
       {isModalOpen && selectedSessionId && (

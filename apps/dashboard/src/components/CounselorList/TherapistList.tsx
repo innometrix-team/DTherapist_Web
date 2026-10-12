@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SessionType } from "./types";
-import { ChevronDown, User, Video, MapPin, Users, Loader2 } from "lucide-react";
+import { ChevronDown, User, Video, MapPin, Users, UserX } from "lucide-react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import {
   getTherapistsApi,
@@ -12,6 +12,9 @@ import {
 import { getTherapistScheduleApi } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
+import Skeleton, { SkeletonTable } from "../common/Skeleton";
+import EmptyState from "../common/EmptyState";
+import PageContainer from "../common/PageContainer";
 
 interface TherapistListProps {
   onBookAppointment: (therapistId: string, sessionType: SessionType) => void;
@@ -331,24 +334,25 @@ const TherapistList: React.FC<TherapistListProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div
-        className="relative h-24 sm:h-32 bg-black/50 bg-no-repeat bg-center bg-cover overflow-hidden rounded-lg shadow-sm p-4 sm:p-6 m-4 sm:m-6"
-        style={{
-          backgroundImage:
-            "url(https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637)",
-        }}
-      >
-        <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-white text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
-            Our Counselors
-          </h1>
+      <PageContainer>
+        {/* Hero Section */}
+        <div
+          className="relative w-full h-24 sm:h-32 lg:h-40 bg-black/50 bg-no-repeat bg-center bg-cover overflow-hidden rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6"
+          style={{
+            backgroundImage:
+              "url(https://ik.imagekit.io/rqi1dzw2h/banner.jpg?updatedAt=1746532646637)",
+          }}
+        >
+          <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <h1 className="text-white text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
+              Our Counselors
+            </h1>
+          </div>
         </div>
-      </div>
 
-      <div className="p-4 sm:p-6">
-        {/* Search + Filters */}
+        <div>
+          {/* Search + Filters */}
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
             <div className="relative w-full sm:w-auto sm:min-w-45">
@@ -384,48 +388,58 @@ const TherapistList: React.FC<TherapistListProps> = ({
           )}
         </div>
 
-        {/* Loading */}
+        {/* Loading Skeletons */}
         {therapistsLoading && (
-          <div className="flex items-center justify-center py-8 sm:py-12">
-            <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-600" />
-            <span className="ml-2 text-gray-600 text-sm sm:text-base">
-              Loading counselors...
-            </span>
+          <div className="py-2 space-y-4">
+            <div className="hidden lg:block">
+              <SkeletonTable rows={5} />
+            </div>
+            <div className="lg:hidden space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 bg-white rounded-xl border border-divider shadow-xs space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-9 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Error */}
+        {/* Error State */}
         {therapistsError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center">
-            <p className="text-red-600 mb-4 text-sm sm:text-base">
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-md mx-auto my-4 shadow-xs">
+            <p className="text-red-600 font-semibold mb-3 text-sm sm:text-base">
               Failed to load counselors
             </p>
             <button
               onClick={() => {
                 void refetchTherapists();
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors text-xs font-semibold cursor-pointer shadow-xs"
             >
               Try Again
             </button>
           </div>
         )}
 
-        {/* No results */}
+        {/* Empty State */}
         {!therapistsLoading && !therapistsError && therapists.length === 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 sm:p-12 text-center">
-            <p className="text-gray-600 text-base sm:text-lg">
-              No counselors found
-            </p>
-            {(selectedCategory || searchQuery) && (
-              <button
-                onClick={() => { setSelectedCategory(""); setSearchQuery(""); }}
-                className="mt-4 px-4 py-2 text-blue-600 hover:text-blue-800 transition-colors text-sm"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={UserX}
+            title="No Counselors Found"
+            description="We couldn't find any counselors matching your search query or category filter. Try clearing your filters or selecting a different specialization."
+            actionText={selectedCategory || searchQuery ? "Clear All Filters" : undefined}
+            onActionClick={() => {
+              setSelectedCategory("");
+              setSearchQuery("");
+            }}
+          />
         )}
 
         {/* Desktop Table */}
@@ -620,8 +634,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
           </div>
         )}
       </div>
-    </div>
-  );
+    </PageContainer>
+  </div>
+);
 };
 
 export default TherapistList;

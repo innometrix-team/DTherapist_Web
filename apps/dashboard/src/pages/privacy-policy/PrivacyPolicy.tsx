@@ -1,13 +1,15 @@
 import { policyContent } from "../../constants/policies.constants";
+import PageContainer from "../../components/common/PageContainer";
 
 const PrivacyPolicy: React.FC = () => {
 
    const { updatedAt, headerImage, sections } = policyContent;
 
   return (
-    <div className="p-4 md:p-8 w-full">
-      {/* Header */}
-      <div className="relative w-full h-40 md:h-52 rounded-xl overflow-hidden mb-6">
+    <div className="min-h-screen bg-gray-50">
+      <PageContainer>
+        {/* Header */}
+        <div className="relative w-full h-32 sm:h-40 lg:h-48 rounded-xl overflow-hidden mb-6">
         <img
           src={headerImage}
           alt="Privacy Banner"
@@ -30,8 +32,9 @@ const PrivacyPolicy: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
-  );
+    </PageContainer>
+  </div>
+);
 };
 
 export default PrivacyPolicy;
