@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { FaInstagram, FaFacebook } from "react-icons/fa";
+import { APP_LINKS } from "../constants/links";
 
 const Footer = () => {
   return (
@@ -37,15 +38,15 @@ const Footer = () => {
         <div>
           <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
           <ul className="space-y-2 text-sm">
-            <li><a href="https://www.facebook.com/share/1AfjAd6BWB/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="hover:underline "> <FaFacebook /></a></li>
-            <li><a href="https://www.instagram.com/dtherapist_app?igsh=MWp4OWt1dWtiem11Nw==" target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaInstagram /></a></li>
+            <li><a href={APP_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaFacebook /></a></li>
+            <li><a href={APP_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaInstagram /></a></li>
           </ul>
           <h4 className="text-lg font-semibold mb-4">Download Our App</h4>
           <div className="flex gap-3">
-            <a href="https://apps.apple.com/us/app/dtherapist/id6751411829">
+            <a href={APP_LINKS.appStore} target="_blank" rel="noopener noreferrer">
               <img src='/app-store.png' alt="Download on iOS" className="w-28" />
             </a>
-            <a href="https://play.google.com/store/apps/details?id=com.dtherapistmobile.dtherapistmobile&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
+            <a href={APP_LINKS.playStore} target="_blank" rel="noopener noreferrer">
               <img src='/google-play.png' alt="Download on Android" className="w-28" />
             </a>
           </div>

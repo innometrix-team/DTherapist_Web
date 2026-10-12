@@ -1,4 +1,5 @@
 import { Service, WelcomeFeature, Step, Therapist, Testimonial, Faqs, ServiceDetailsMap } from '../types';
+export { APP_LINKS } from '../constants/links';
 import {
   FaUserMd,
   FaHeart,

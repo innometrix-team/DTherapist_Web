@@ -1,3 +1,5 @@
+import { APP_LINKS } from "../constants/links";
+
 const HeroSection = () => {
   return (
     <section
@@ -17,13 +19,13 @@ const HeroSection = () => {
         </p>
         <div className="flex flex-wrap gap-4 justify-center items-center">
           <a
-            href="https://dashboard.dtherapist.com/"
+            href={APP_LINKS.dashboard}
             className="bg-primary hover:bg-darkerb text-white font-semibold px-7 py-3 rounded-xl inline-flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-transparent"
           >
             Get Started
           </a>
           <a
-            href="https://dashboard.dtherapist.com/"
+            href={APP_LINKS.dashboard}
             className="bg-white/95 hover:bg-offwhite text-darkerb font-semibold px-7 py-3 rounded-xl inline-flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-white/30"
           >
             Consult Us

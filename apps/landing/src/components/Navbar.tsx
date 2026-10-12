@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
+import { APP_LINKS } from "../constants/links";
 
 const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,7 +30,7 @@ const Navbar: React.FC = () => {
           </li>
           <li>
             <a
-              href="https://dashboard.dtherapist.com/appointments"
+              href={APP_LINKS.appointments}
               className="transition-colors hover:text-primary"
             >
               Appointments
@@ -37,7 +38,7 @@ const Navbar: React.FC = () => {
           </li>
           <li>
             <a
-              href="https://dashboard.dtherapist.com/anonymous"
+              href={APP_LINKS.anonymous}
               className="transition-colors hover:text-primary"
             >
               DAnonymous
@@ -53,13 +54,13 @@ const Navbar: React.FC = () => {
         {/* Buttons (Desktop) */}
         <div className="hidden md:flex items-center gap-3">
           <a
-            href="https://dashboard.dtherapist.com/auth/login"
+            href={APP_LINKS.login}
             className="text-sm font-semibold border border-primary text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-all duration-200 inline-flex items-center"
           >
             Login
           </a>
           <a
-            href="https://dashboard.dtherapist.com/auth/signup"
+            href={APP_LINKS.signup}
             className="text-sm font-semibold bg-primary text-white px-5 py-2 rounded-lg hover:bg-darkerb transition-all duration-200 inline-flex items-center shadow-xs"
           >
             Register
@@ -107,14 +108,14 @@ const Navbar: React.FC = () => {
               Home
             </Link>
             <a
-              href="https://dashboard.dtherapist.com/appointments"
+              href={APP_LINKS.appointments}
               className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
               onClick={toggleMenu}
             >
               Appointments
             </a>
             <a
-              href="https://dashboard.dtherapist.com/anonymous"
+              href={APP_LINKS.anonymous}
               className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
               onClick={toggleMenu}
             >
@@ -139,13 +140,13 @@ const Navbar: React.FC = () => {
 
             <div className="flex flex-col gap-3">
               <a
-                href="https://dashboard.dtherapist.com/auth/login"
+                href={APP_LINKS.login}
                 className="text-center font-semibold border border-primary text-primary px-4 py-2.5 rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
               >
                 Login
               </a>
               <a
-                href="https://dashboard.dtherapist.com/auth/signup"
+                href={APP_LINKS.signup}
                 className="text-center font-semibold bg-primary text-white px-4 py-2.5 rounded-lg hover:bg-darkerb transition-all duration-200 shadow-xs"
               >
                 Register
