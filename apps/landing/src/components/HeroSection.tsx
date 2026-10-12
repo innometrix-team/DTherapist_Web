@@ -9,10 +9,6 @@ const HeroSection = () => {
     >
       <div className="absolute inset-0 bg-darkerb/70 backdrop-blur-[2px] rounded-2xl"></div>
       <div className="relative z-10 text-center px-4 py-12 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-semibold tracking-wider uppercase mb-5 border border-white/20">
-          <span className="w-2 h-2 rounded-full bg-success"></span>
-          <span>Verified Mental Health Care</span>
-        </div>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white drop-shadow-xs">
           Empowering Healing, Nurturing Growth
         </h1>
@@ -38,4 +34,4 @@ const HeroSection = () => {
   );
 };
 
-export default HeroSection;
+export default HeroSection;
