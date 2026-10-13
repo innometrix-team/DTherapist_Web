@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IAdminBooking {
   _id: string;
@@ -31,12 +31,6 @@ interface APIResponse {
   data: IAdminBooking[];
 }
 
-interface APIErrorResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: undefined;
-}
 
 export interface IAdminBookingQueryParams {
   page?: number;
@@ -143,12 +137,7 @@ export async function getAdminBookingsApi(
     const errorMessage = error.response?.data?.message || error.message || "Failed to fetch admin bookings";
     const status = error.response?.data?.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -244,20 +233,21 @@ export function getAdminTabColor(tab: IAdminBooking['tab']): string {
 }
 
 export async function CancelBookingApi(
-      bookingId: string,
+  bookingId: string,
   config?: AxiosRequestConfig
 ): Promise<IAPIResult | null> {
   try {
+    const response = await Api.patch<{ status?: string; message?: string }>(
+      `/api/admin/bookings/${bookingId}/cancel`,
+      {},
+      config
+    );
     
-    const response = await Api.patch( `/api/admin/bookings/${bookingId}/cancel`, {
-      ...config,
-    });
-    
-    return Promise.resolve({
+    return {
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "success",
-    });
+    };
   } catch (e) {
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
@@ -269,12 +259,7 @@ export async function CancelBookingApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -286,15 +271,17 @@ export async function RescheduleBookingApi(data:
 ): Promise<IAPIResult | null> {
   try {
     
-    const response = await Api.patch( `/api/admin/bookings/${data.bookingId}/reschedule`, data.payload, {
-      ...config,
-    });
+    const response = await Api.patch<{ status?: string; message?: string }>(
+      `/api/admin/bookings/${data.bookingId}/reschedule`,
+      data.payload,
+      config
+    );
     
-    return Promise.resolve({
+    return {
       code: response.status,
       status: response.data.status,
       message: response.data.message ?? "success",
-    });
+    };
   } catch (e) {
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
@@ -306,11 +293,6 @@ export async function RescheduleBookingApi(data:
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

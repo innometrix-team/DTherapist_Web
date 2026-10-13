@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // Types for Chatbot API
 export interface ChatbotMessage {
@@ -15,6 +15,14 @@ export interface SendChatbotMessageRequest {
   role?: string; // Optional role parameter
 }
 
+interface StreamResponseLike {
+  pipe?: (dest: unknown) => unknown;
+  on: (
+    event: string,
+    listener: ((chunk: Uint8Array) => void) | (() => void) | ((error: Error) => void)
+  ) => void;
+}
+
 // Send a message to the AI chatbot
 export async function sendChatbotMessage(
   data: SendChatbotMessageRequest,
@@ -27,15 +35,15 @@ export async function sendChatbotMessage(
       config
     );
     
-    return Promise.resolve({
+    return {
       code: response.status,
       status: 'success',
       message: "Response received successfully",
       data: response.data.reply
-    });
+    };
   } catch (e) {
     if (axios.isCancel(e)) {
-      return Promise.resolve(null);
+      return null;
     }
 
     const statusCode = (e as AxiosError).response?.status || 0;
@@ -44,12 +52,7 @@ export async function sendChatbotMessage(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -60,7 +63,7 @@ export async function sendChatbotMessageStreaming(
   config?: AxiosRequestConfig
 ): Promise<IAPIResult<string> | null> {
   try {
-    const response = await Api.post(
+    const response = await Api.post<unknown>(
       '/api/chatbot/chat',
       data,
       {
@@ -73,23 +76,24 @@ export async function sendChatbotMessageStreaming(
       }
     );
 
+    const streamData = response.data as StreamResponseLike | null | undefined;
+
     // Handle streaming response if supported
-    if (response.data && typeof response.data.pipe === 'function') {
+    if (streamData && typeof streamData.pipe === 'function' && typeof streamData.on === 'function') {
       let fullResponse = '';
       
-      return new Promise((resolve, reject) => {
-        response.data.on('data', (chunk: Uint8Array) => {
+      return new Promise<IAPIResult<string>>((resolve, reject) => {
+        streamData.on('data', (chunk: Uint8Array) => {
           const decoder = new TextDecoder();
           const token = decoder.decode(chunk);
           fullResponse += token;
           
-          // Call the token callback for real-time updates
           if (onToken) {
             onToken(token);
           }
         });
 
-        response.data.on('end', () => {
+        streamData.on('end', () => {
           resolve({
             code: response.status,
             status: 'success',
@@ -98,28 +102,23 @@ export async function sendChatbotMessageStreaming(
           });
         });
 
-        response.data.on('error', (error: Error) => {
-          reject({
-            code: 500,
-            status: 'error',
-            message: error.message,
-            data: undefined
-          });
+        streamData.on('error', (error: Error) => {
+          reject(new ApiError(error.message, 500, 'error'));
         });
       });
     } else {
       // Fallback to regular response
       const result = response.data as ChatbotResponse;
-      return Promise.resolve({
+      return {
         code: response.status,
         status: 'success',
         message: "Response received successfully",
-        data: result.reply
-      });
+        data: result?.reply || ''
+      };
     }
   } catch (e) {
     if (axios.isCancel(e)) {
-      return Promise.resolve(null);
+      return null;
     }
 
     const statusCode = (e as AxiosError).response?.status || 0;
@@ -128,11 +127,6 @@ export async function sendChatbotMessageStreaming(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

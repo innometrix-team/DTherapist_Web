@@ -1,5 +1,4 @@
 // src/components/ServiceCards/ServiceList.tsx
-import React from 'react';
 import ServiceCard from './ServiceCard';
 import { services } from '../../utils/constants';
 

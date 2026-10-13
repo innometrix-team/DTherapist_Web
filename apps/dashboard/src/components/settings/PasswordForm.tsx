@@ -116,7 +116,7 @@ const PasswordForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<PasswordFormData> = useCallback(
     (data) => {
-      handlePasswordChange({
+      void handlePasswordChange({
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
       });
@@ -132,7 +132,9 @@ const PasswordForm: React.FC = () => {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => {
+        void handleSubmit(onSubmit)(e);
+      }}
       className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
       <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>

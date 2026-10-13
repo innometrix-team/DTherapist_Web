@@ -23,9 +23,9 @@ const PromoCard: React.FC<PromoConfig> = ({ title, subtitle, ctaLabel }) => {
     <div className="bg-white rounded-lg flex justify-between items-center col-span-2 lg:pr-16">
       <div className="p-6">
         {formattedTitle}
-        <p className="text-[#716D6D] max-w-sm text-lg mt-2">{subtitle}</p>
+        <p className="text-neutral max-w-sm text-lg mt-2">{subtitle}</p>
 
-        <button className="mt-3 text-[#716D6D] text-xs inline-flex bg-[#F7F7F8] px-4 py-3 rounded-lg">
+        <button className="mt-3 text-neutral text-xs inline-flex bg-offwhite px-4 py-3 rounded-lg">
           {ctaLabel} <CounselorIcon className="ml-2" />
         </button>
       </div>

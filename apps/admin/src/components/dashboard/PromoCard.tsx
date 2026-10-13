@@ -25,7 +25,7 @@ const PromoCard: React.FC<PromoConfig> = ({ title, ctaLabel }) => {
         {formattedTitle}
         
 
-        <button className="mt-3 text-[#716D6D] text-xs inline-flex bg-[#F7F7F8] px-4 py-3 rounded-lg">
+        <button className="mt-3 text-neutral text-xs inline-flex bg-offwhite px-4 py-3 rounded-lg">
           {ctaLabel} <CounselorIcon className="ml-2" />
         </button>
       </div>

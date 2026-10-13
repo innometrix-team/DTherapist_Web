@@ -3,11 +3,12 @@ import ProfileForm from "../../components/settings/ProfileForm";
 import CredentialForm from "../../components/settings/CredentialForm";
 import PasswordForm from "../../components/settings/PasswordForm";
 import BankDetailsForm from "../../components/settings/BankDetailsForm";
+import PageContainer from "../../components/common/PageContainer";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   // Define tabs based on user role
   const tabs = useMemo(() => {
@@ -52,28 +53,32 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="w-full mx-auto p-6 md:p-10 space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Settings</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <PageContainer className="space-y-8">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-darkerb tracking-tight mb-2">Settings</h1>
+        </div>
 
-      <div className="flex border-b border-gray-200 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`mr-8 pb-2 text-sm font-medium ${
-              activeTab === tab.id ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600"
-            }`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`mr-8 pb-3 text-sm font-semibold transition-colors shrink-0 cursor-pointer ${
+                activeTab === tab.id
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-neutral hover:text-darkerb"
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        {renderForm()}
-      </div>
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6">
+          {renderForm()}
+        </div>
+      </PageContainer>
     </div>
   );
 };

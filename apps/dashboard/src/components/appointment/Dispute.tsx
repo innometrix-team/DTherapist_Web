@@ -30,7 +30,8 @@ const DisputePage: React.FC = () => {
   const location = useLocation();
   const { bookingId } = useParams<{ bookingId: string }>();
   
-  const appointment = location.state?.appointment as Appointment | undefined;
+  const state = location.state as { appointment?: Appointment } | null;
+  const appointment = state?.appointment;
 
   const [formData, setFormData] = useState<DisputeFormData>({
     reason: "",
@@ -46,7 +47,7 @@ const DisputePage: React.FC = () => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
+      reader.onerror = () => reject(new Error("Failed to read file"));
     });
   };
 
@@ -78,7 +79,7 @@ const DisputePage: React.FC = () => {
     },
     onSuccess: () => {
       toast.success("Dispute submitted successfully");
-      navigate("/appointments");
+      void navigate("/appointments");
     },
     onError: (error: unknown) => {
       let errorMessage = "Failed to submit dispute";
@@ -111,7 +112,7 @@ const DisputePage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -216,7 +217,9 @@ const DisputePage: React.FC = () => {
           </h2>
           <p className="text-gray-600 mb-6">Booking ID is missing</p>
           <button
-            onClick={() => navigate("/appointments")}
+            onClick={() => {
+              void navigate("/appointments");
+            }}
             className="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
           >
             Back to Appointments
@@ -236,7 +239,9 @@ const DisputePage: React.FC = () => {
               Submit Dispute
             </h1>
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                void navigate(-1);
+              }}
               className="text-gray-500 hover:text-gray-700 transition-colors"
             >
               <svg
@@ -446,7 +451,9 @@ const DisputePage: React.FC = () => {
             <div className="flex gap-4 pt-4">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  void navigate(-1);
+                }}
                 className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 disabled={disputeMutation.isPending}
               >

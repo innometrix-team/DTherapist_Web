@@ -3,7 +3,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { serviceDetails } from '../../utils/constants';
 import { ServiceModalProps } from '../../types';
-import { Link } from 'react-router-dom';
+import { APP_LINKS } from '../../constants/links';
 
 
 const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, service }) => {
@@ -113,13 +113,12 @@ const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, service })
               Take the first step towards better mental health. Our qualified therapists are here to support you.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              
-                  <Link to="https://dashboard.dtherapist.com/" className="bg-primary hover:bg-blue-800 text-white px-6 py-2 rounded-lg transition-colors">
-
+              <a
+                href={APP_LINKS.dashboard}
+                className="bg-primary hover:bg-darkerb text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-center inline-flex items-center justify-center shadow-xs"
+              >
                 Book a Session
-                </Link>
-
-                  
+              </a>
             </div>
           </section>
         </div>

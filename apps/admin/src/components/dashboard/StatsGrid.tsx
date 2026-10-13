@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { TimerIcon, UptrendIcon } from "../../assets/icons";
 import { StatCardConfig } from "../../pages/Dashboard/types";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface StatsGridProps {
   stats?: StatCardConfig[];
@@ -11,7 +11,7 @@ interface StatsGridProps {
 
 const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   // Check if user is admin
   const isAdmin = role === "admin";
@@ -202,14 +202,14 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
             className="bg-white flex p-6 lg:p-4 rounded-lg justify-between grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(25%-12px)] shadow-[0px_4px_10px_0px_#00000008]"
           >
             <div>
-              <div className="text-lg text-[#B3B3B3]">{stat.label}</div>
+              <div className="text-lg text-neutral">{stat.label}</div>
               <div className="text-2xl font-bold my-3">{stat.value}</div>
               <div className="text-xs">
                 <UptrendIcon
                   className={`inline w-4 ${
                     stat.trendUp === false
                       ? "text-red-500 transform rotate-180"
-                      : "text-[#014CB1]"
+                      : "text-primary"
                   }`}
                 />
                 <span
@@ -221,7 +221,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
                 </span>
               </div>
             </div>
-            <div className="text-[#014CB1] w-14 h-14 rounded-full bg-[#014CB11A] grid place-items-center self-center">
+            <div className="text-primary w-14 h-14 rounded-full bg-primary/10 grid place-items-center self-center">
               <TimerIcon className="w-1/2" />
             </div>
           </div>

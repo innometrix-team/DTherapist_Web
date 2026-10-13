@@ -1,25 +1,30 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import tailwindcss from "@tailwindcss/vite";
 import svgr from "vite-plugin-svgr";
 
-
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(),
-     tailwindcss(), svgr({
+  plugins: [
+    react(),
+    tailwindcss(),
+    svgr({
       svgrOptions: {
         svgo: false,
-      }
-    })],
-    build: {
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        vendor: ['react', 'react-dom'],
-        // Split large libraries into separate chunks
-      }
-    }
-  }
-},
+      },
+    }),
+  ],
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'query-vendor': ['@tanstack/react-query'],
+          'agora-vendor': ['agora-rtc-sdk-ng'],
+          'socket-vendor': ['socket.io-client'],
+        },
+      },
+    },
+  },
 });

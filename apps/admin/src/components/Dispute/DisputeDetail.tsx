@@ -15,17 +15,15 @@ import {
 import { 
   getDisputeApi, 
   resolveDisputeApi,
-  IResolveDisputeData,
-  IBookingDetails,
-  IUserDetails
+  IResolveDisputeData
 } from "../../api/Dispute.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const DisputeDetail: React.FC = () => {
   const { disputeId } = useParams<{ disputeId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   const [selectedAction, setSelectedAction] = useState<"refund" | "release" | "none">("refund");
   const [resolutionNotes, setResolutionNotes] = useState("");
@@ -62,14 +60,14 @@ const DisputeDetail: React.FC = () => {
   // Resolve dispute mutation
   const resolveDisputeMutation = useMutation({
     mutationFn: (data: IResolveDisputeData) => 
-      disputeId ? resolveDisputeApi(disputeId, data) : Promise.reject("No dispute ID"),
+      disputeId ? resolveDisputeApi(disputeId, data) : Promise.reject(new Error("No dispute ID")),
     onSuccess: () => {
       showToast("Dispute resolved successfully!");
-      queryClient.invalidateQueries({ queryKey: ["disputes"] });
-      queryClient.invalidateQueries({ queryKey: ["dispute", disputeId] });
+      void queryClient.invalidateQueries({ queryKey: ["disputes"] });
+      void queryClient.invalidateQueries({ queryKey: ["dispute", disputeId] });
       
       setTimeout(() => {
-        navigate("/admin/disputes");
+        void navigate("/admin/disputes");
       }, 1500);
     },
     onError: (error: Error) => {
@@ -167,7 +165,9 @@ const DisputeDetail: React.FC = () => {
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">Failed to load dispute details</p>
           <button
-            onClick={() => navigate("/admin/disputes")}
+            onClick={() => {
+              void navigate("/admin/disputes");
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Disputes
@@ -184,28 +184,28 @@ const DisputeDetail: React.FC = () => {
   // Type guards and helpers
   const getClientName = () => {
     if (typeof dispute.clientId === 'object' && dispute.clientId !== null) {
-      return (dispute.clientId as IUserDetails).fullName || "Unknown Client";
+      return dispute.clientId.fullName || "Unknown Client";
     }
     return "Unknown Client";
   };
 
   const getTherapistName = () => {
     if (typeof dispute.therapistId === 'object' && dispute.therapistId !== null) {
-      return (dispute.therapistId as IUserDetails).fullName || "Unknown Therapist";
+      return dispute.therapistId.fullName || "Unknown Therapist";
     }
     return "Unknown Therapist";
   };
 
   const getBookingPrice = () => {
     if (typeof dispute.bookingId === 'object' && dispute.bookingId !== null) {
-      return (dispute.bookingId as IBookingDetails).price;
+      return dispute.bookingId.price;
     }
     return undefined;
   };
 
   const getBookingDate = () => {
     if (typeof dispute.bookingId === 'object' && dispute.bookingId !== null) {
-      const booking = dispute.bookingId as IBookingDetails;
+      const booking = dispute.bookingId;
       if (booking.date) {
         const date = new Date(booking.date);
         return date.toLocaleDateString('en-US', {
@@ -220,7 +220,7 @@ const DisputeDetail: React.FC = () => {
 
   const getBookingTime = () => {
     if (typeof dispute.bookingId === 'object' && dispute.bookingId !== null) {
-      const booking = dispute.bookingId as IBookingDetails;
+      const booking = dispute.bookingId;
       if (booking.startTime && booking.endTime) {
         return `${booking.startTime} - ${booking.endTime}`;
       }
@@ -235,7 +235,9 @@ const DisputeDetail: React.FC = () => {
         <div className="absolute inset-0 bg-black/50"></div>
         <div className="relative z-10 flex flex-col justify-center h-full px-6">
           <button
-            onClick={() => navigate("/disputes")}
+            onClick={() => {
+              void navigate("/disputes");
+            }}
             className="inline-flex items-center text-white mb-2 hover:underline"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -317,8 +319,8 @@ const DisputeDetail: React.FC = () => {
                       <span className="text-sm font-medium text-gray-700">Client</span>
                     </div>
                     <p className="text-gray-900">{getClientName()}</p>
-                    {typeof dispute.clientId === 'object' && (dispute.clientId as IUserDetails).email && (
-                      <p className="text-sm text-gray-500 mt-1">{(dispute.clientId as IUserDetails).email}</p>
+                    {typeof dispute.clientId === 'object' && dispute.clientId.email && (
+                      <p className="text-sm text-gray-500 mt-1">{dispute.clientId.email}</p>
                     )}
                   </div>
 
@@ -328,8 +330,8 @@ const DisputeDetail: React.FC = () => {
                       <span className="text-sm font-medium text-gray-700">Therapist</span>
                     </div>
                     <p className="text-gray-900">{getTherapistName()}</p>
-                    {typeof dispute.therapistId === 'object' && (dispute.therapistId as IUserDetails).email && (
-                      <p className="text-sm text-gray-500 mt-1">{(dispute.therapistId as IUserDetails).email}</p>
+                    {typeof dispute.therapistId === 'object' && dispute.therapistId.email && (
+                      <p className="text-sm text-gray-500 mt-1">{dispute.therapistId.email}</p>
                     )}
                   </div>
                 </div>
@@ -367,13 +369,13 @@ const DisputeDetail: React.FC = () => {
                       </div>
                     )}
 
-                    {typeof dispute.bookingId === 'object' && (dispute.bookingId as IBookingDetails).status && (
+                    {typeof dispute.bookingId === 'object' && dispute.bookingId.status && (
                       <div className="flex items-center">
                         <AlertCircle className="w-5 h-5 text-gray-400 mr-3" />
                         <div>
                           <p className="text-sm text-gray-500">Booking Status</p>
                           <p className="text-gray-900 capitalize">
-                            {(dispute.bookingId as IBookingDetails).status}
+                            {dispute.bookingId.status}
                           </p>
                         </div>
                       </div>

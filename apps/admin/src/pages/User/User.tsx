@@ -172,7 +172,7 @@ function User() {
   };
 
   const handleOpenUser = (userId: string) => {
-    navigate(`/user/${userId}`);
+    void navigate(`/user/${userId}`);
   };
 
   if (isLoading) {

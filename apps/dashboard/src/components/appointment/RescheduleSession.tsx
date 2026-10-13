@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/auth/useAuthStore';
 import { getTherapistScheduleApi, ITimeSlot } from '../../api/TherapistSchedule.api';
 import { rescheduleBookingApi, IUserRescheduleRequest, ICounselorRescheduleRequest } from '../../api/Reschedule.api';
 import { getCounselorAppointments, getUserAppointments, Appointment } from '../../api/Appointments.api';
+import { QUERY_KEYS } from '../../configs/queryKeys.config';
 
 interface RescheduleSessionProps {
   sessionId: string;
@@ -25,7 +26,8 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
   onClose 
 }) => {
   // Get user role from auth store
-  const { role, id: userId } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
+  const userId = useAuthStore((s) => s.id);
   const isCounselor = role === 'counselor';
   
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -38,7 +40,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     isLoading: appointmentsLoading,
     error: appointmentsError
   } = useQuery({
-    queryKey: isCounselor ? ['counselor-appointments'] : ['user-appointments'],
+    queryKey: isCounselor ? QUERY_KEYS.appointments.counselorList : QUERY_KEYS.appointments.userList,
     queryFn: async () => {
       if (isCounselor) {
         return await getCounselorAppointments();
@@ -102,7 +104,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     isLoading: scheduleLoading, 
     error: scheduleError 
   } = useQuery({
-    queryKey: ['therapist-schedule', therapistId, sessionType],
+    queryKey: QUERY_KEYS.therapists.schedule(therapistId || '', sessionType),
     queryFn: async () => {
       if (!therapistId) throw new Error('Therapist ID required');
       const result = await getTherapistScheduleApi(therapistId, sessionType);
@@ -308,7 +310,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     setSelectedTimeSlot(timeSlot);
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (!session || !selectedDate || !selectedTimeSlot) {
       toast.error('Please select both date and time');
       return;

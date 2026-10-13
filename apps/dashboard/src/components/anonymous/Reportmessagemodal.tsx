@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Dialog, DialogContent, DialogTitle, TextField, MenuItem } from "@mui/material";
 import { X } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const reportReasons = [
@@ -36,7 +35,7 @@ export default function ReportMessageModal({
   messagePreview,
 }: ReportMessageModalProps) {
   const {
-    control,
+    register,
     handleSubmit,
     reset,
     formState: { errors },
@@ -47,6 +46,8 @@ export default function ReportMessageModal({
       description: "",
     },
   });
+
+  if (!open) return null;
 
   const handleClose = () => {
     if (!isLoading) {
@@ -61,33 +62,25 @@ export default function ReportMessageModal({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        style: {
-          borderRadius: "16px",
-          padding: "8px",
-        },
-      }}
-    >
-      <DialogTitle>
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border border-gray-100">
+        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
           <h3 className="text-xl font-semibold text-gray-900">Report Message</h3>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 text-gray-500 hover:text-gray-700"
           >
-            <X size={20} className="text-gray-500" />
+            <X size={20} />
           </button>
         </div>
-      </DialogTitle>
 
-      <DialogContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(handleFormSubmit)(e);
+          }}
+          className="space-y-4 pt-4"
+        >
           {/* Message Preview */}
           {messagePreview && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
@@ -105,34 +98,25 @@ export default function ReportMessageModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Reason <span className="text-red-500">*</span>
             </label>
-            <Controller
-              name="reason"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Select a reason"
-                  error={!!errors.reason}
-                  helperText={errors.reason?.message}
-                  disabled={isLoading}
-                  SelectProps={{
-                    displayEmpty: true,
-                  }}
-                >
-                  <MenuItem value="" disabled>
-                    Select a reason
-                  </MenuItem>
-                  {reportReasons.map((reason) => (
-                    <MenuItem key={reason.value} value={reason.value}>
-                      {reason.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
+            <select
+              {...register("reason")}
+              disabled={isLoading}
+              className={`w-full border rounded-lg p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.reason ? "border-red-500" : "border-gray-300"
+              }`}
+            >
+              <option value="" disabled>
+                Select a reason
+              </option>
+              {reportReasons.map((reason) => (
+                <option key={reason.value} value={reason.value}>
+                  {reason.label}
+                </option>
+              ))}
+            </select>
+            {errors.reason && (
+              <p className="text-xs text-red-500 mt-1">{errors.reason.message}</p>
+            )}
           </div>
 
           {/* Description Textarea */}
@@ -140,23 +124,18 @@ export default function ReportMessageModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description <span className="text-red-500">*</span>
             </label>
-            <Controller
-              name="description"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  multiline
-                  rows={4}
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Please provide details about why you're reporting this message..."
-                  error={!!errors.description}
-                  helperText={errors.description?.message}
-                  disabled={isLoading}
-                />
-              )}
+            <textarea
+              {...register("description")}
+              rows={4}
+              disabled={isLoading}
+              placeholder="Please provide details about why you're reporting this message..."
+              className={`w-full border rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              }`}
             />
+            {errors.description && (
+              <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -165,20 +144,20 @@ export default function ReportMessageModal({
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {isLoading ? "Reporting..." : "Report Message"}
             </button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

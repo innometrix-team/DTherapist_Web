@@ -14,7 +14,7 @@ import {
   getAdminStatusText,
   getAdminTypeColor,
 } from "../../api/AdminTransactions.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface AdminTransactionsTableProps {
   className?: string;
@@ -33,7 +33,7 @@ const AdminTransactionsTable: React.FC<AdminTransactionsTableProps> = ({
     limit: ITEMS_PER_PAGE,
   });
 
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Check if user is admin
@@ -240,7 +240,9 @@ const AdminTransactionsTable: React.FC<AdminTransactionsTableProps> = ({
           <div className="text-center py-16 px-4">
             <p className="text-red-600 mb-4">Failed to load transactions</p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
             >
               Try Again

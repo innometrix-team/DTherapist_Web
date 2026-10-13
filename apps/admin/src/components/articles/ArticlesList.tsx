@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Search } from "lucide-react";
 import { getArticlesApi, getCategoriesApi } from "../../api/Articles.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const ArticlesList: React.FC = () => {
   const navigate = useNavigate();
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
@@ -98,12 +98,12 @@ const ArticlesList: React.FC = () => {
 
   // Handle navigation to create article
   const handleCreateArticle = () => {
-    navigate("/library/create-article");
+    void navigate("/library/create-article");
   };
 
   // Handle navigation to edit article
   const handleOpenArticle = (articleId: string) => {
-    navigate(`/library/edit-article/${articleId}`);
+    void navigate(`/library/edit-article/${articleId}`);
   };
 
   // Format date
@@ -169,7 +169,9 @@ const ArticlesList: React.FC = () => {
           <p className="text-red-600 text-sm">Failed to load articles</p>
           <p className="text-red-500 text-xs mt-1">Please refresh the page</p>
           <button 
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             className="mt-2 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
           >
             Retry

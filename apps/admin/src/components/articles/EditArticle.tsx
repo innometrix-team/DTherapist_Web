@@ -18,7 +18,7 @@ import {
   removeImageApi,
   IArticleEditData 
 } from "../../api/Articles.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const categories = [
   "Trauma",
@@ -33,7 +33,7 @@ const EditArticle: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -102,7 +102,7 @@ const EditArticle: React.FC = () => {
       if (response?.data) {
         setFeaturedImage(response.data.imageUrl);
         // Refetch article to ensure UI updates
-        queryClient.invalidateQueries({ queryKey: ["article", id] });
+        void queryClient.invalidateQueries({ queryKey: ["article", id] });
       }
       setIsUploading(false);
     },
@@ -118,7 +118,7 @@ const EditArticle: React.FC = () => {
     onSuccess: () => {
       setFeaturedImage("");
       // Refetch article to ensure UI updates
-      queryClient.invalidateQueries({ queryKey: ["article", id] });
+      void queryClient.invalidateQueries({ queryKey: ["article", id] });
     },
     onError: (error) => {
       console.error("Failed to remove image:", error);
@@ -130,9 +130,9 @@ const EditArticle: React.FC = () => {
     mutationFn: ({ id, articleData }: { id: string, articleData: IArticleEditData }) => 
       editArticleApi(id, articleData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
-      queryClient.invalidateQueries({ queryKey: ["article", id] });
-      navigate("/library");
+      void queryClient.invalidateQueries({ queryKey: ["articles"] });
+      void queryClient.invalidateQueries({ queryKey: ["article", id] });
+      void navigate("/library");
     },
     onError: (error) => {
       console.error("Failed to update article:", error);
@@ -143,8 +143,8 @@ const EditArticle: React.FC = () => {
   const deleteArticleMutation = useMutation({
     mutationFn: (articleId: string) => deleteArticleApi(articleId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
-      navigate("/library");
+      void queryClient.invalidateQueries({ queryKey: ["articles"] });
+      void navigate("/library");
     },
     onError: (error) => {
       console.error("Failed to delete article:", error);
@@ -230,7 +230,7 @@ const EditArticle: React.FC = () => {
 
   // Handle back navigation
   const handleBack = () => {
-    navigate("/library");
+    void navigate("/library");
   };
 
   // If not admin, show unauthorized message

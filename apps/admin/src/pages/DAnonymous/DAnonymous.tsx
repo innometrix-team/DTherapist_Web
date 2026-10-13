@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { Users, Plus, Grid3X3, Settings } from "lucide-react";
 import DAnonymousGroupsList from "../../components/DAnonymous/DAnonymousGroupsList";
 import CreateDAnonymousGroup from "../../components/DAnonymous/CreateDAnonymousGroup";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 type ViewMode = 'list' | 'create';
 
 const DAnonymous: React.FC = () => {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const [currentView, setCurrentView] = useState<ViewMode>('list');
 
   // Check if user is admin

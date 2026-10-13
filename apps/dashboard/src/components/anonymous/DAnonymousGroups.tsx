@@ -38,7 +38,7 @@ const DAnonymousGroups = ({ groups, onGroupSelect }: DAnonymousGroupsProps) => {
       // Mark as read at open time so unread clears immediately
       setLastReadAt(group._id, Date.now());
       onGroupSelect();
-      navigate(`/anonymous/${group._id}`);
+      void navigate(`/anonymous/${group._id}`);
     },
     [navigate, onGroupSelect, setLastReadAt]
   );

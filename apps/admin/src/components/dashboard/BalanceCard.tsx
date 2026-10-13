@@ -11,7 +11,7 @@ import FundWalletApi, {
   IWithdrawRequest 
 } from "../../api/FundWallet.api";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -26,7 +26,8 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
   const [showBanksList, setShowBanksList] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { role, email } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
+  const email = useAuthStore((s) => s.email);
 
   // Determine user type based on role
   const userType = role === "admin" ? "admin" : "admin";
@@ -37,11 +38,10 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
     refetch: refetchBalance,
   } = useQuery({
     queryKey: ["dashboard", userType],
-    queryFn: async () => {
+    queryFn: () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
-     
+      return null;
     },
     retry: 3,
     refetchOnWindowFocus: false,
@@ -146,7 +146,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
       setShowWithdrawModal(false);
       resetWithdrawForm();
       // Refetch admin balance
-      refetchAdminBalance();
+      void refetchAdminBalance();
     },
     onError: (error) => {
       toast.error(error.message || "Failed to process withdrawal");
@@ -270,9 +270,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
     if (paymentStatus === 'success') {
       toast.success("Payment successful! Your wallet has been funded.");
       if (userType === "admin") {
-        refetchAdminBalance();
+        void refetchAdminBalance();
       } else {
-        refetchBalance();
+        void refetchBalance();
       }
       // Close the modal if it's open
       setShowTopUpModal(false);
@@ -332,7 +332,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
             )}
           </div> */}
         </div>
-        <div className="absolute top-1/2 transform -translate-y-1/2 right-4 w-12 h-12 bg-[#E2EBF61A] grid place-items-center rounded-full">
+        <div className="absolute top-1/2 transform -translate-y-1/2 right-4 w-12 h-12 bg-white/10 grid place-items-center rounded-full">
           <TimerIcon className="h-6 w-6" />
         </div>
       </div>
@@ -368,7 +368,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
               </div>
               <div className="flex space-x-4">
                 <button
-                  onClick={handleTopUp}
+                  onClick={() => {
+                    void handleTopUp();
+                  }}
                   disabled={isFunding || !topUpAmount || !email}
                   className="flex-1 bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
                 >
@@ -507,7 +509,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
               {/* Action Buttons */}
               <div className="flex space-x-4">
                 <button
-                  onClick={handleWithdrawSubmit}
+                  onClick={() => {
+                    void handleWithdrawSubmit();
+                  }}
                   disabled={
                     isWithdrawing || 
                     !withdrawAmount || 

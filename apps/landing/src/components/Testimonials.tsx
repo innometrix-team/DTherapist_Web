@@ -42,7 +42,7 @@ const Testimonials: React.FC<TestimonialsProps> = ({ testimonials = testimonialD
             className="bg-gray-50 rounded-xl p-6 shadow hover:shadow-md transition-all"
           >
             <div className="flex items-center text-yellow-500 mb-2">
-              {[...Array(stars)].map((_, i) => (
+              {Array.from({ length: stars }).map((_, i) => (
                 <FaStar key={i} className="text-sm" />
               ))}
             </div>
@@ -67,7 +67,7 @@ const Testimonials: React.FC<TestimonialsProps> = ({ testimonials = testimonialD
           {testimonials.map(({ name, title, date, feedback, image, stars }, index) => (
             <div key={index} className="bg-gray-50 rounded-xl p-6 shadow mx-2">
               <div className="flex items-center text-yellow-500 mb-2">
-                {[...Array(stars)].map((_, i) => (
+                {Array.from({ length: stars }).map((_, i) => (
                   <FaStar key={i} className="text-sm" />
                 ))}
               </div>

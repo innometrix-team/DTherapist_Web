@@ -55,10 +55,31 @@ const DAnonymous = () => {
         </div>
 
         {isLoading ? (
-          <div className="p-4 text-center text-gray-500">Loading...</div>
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-2 rounded-xl">
+                <div className="w-11 h-11 rounded-full bg-gray-200 animate-pulse shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-32 bg-gray-200 rounded-md animate-pulse" />
+                  <div className="h-3 w-44 bg-gray-200 rounded-md animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : isError ? (
-          <div className="p-4 text-center text-red-500">
-            Failed to load groups.
+          <div className="p-6 text-center">
+            <p className="text-xs text-red-500 mb-2">Failed to load groups.</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="p-6 text-center text-neutral text-xs">
+            No support groups available at the moment.
           </div>
         ) : (
           <DAnonymousGroups

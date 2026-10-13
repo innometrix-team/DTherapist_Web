@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Send, Reply, X, MoreVertical } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -62,13 +61,13 @@ export default function DAnonymousChat() {
     onSuccess: () => setJoined(true),
     onError: (error) => {
       toast.error(error?.message || "Failed to join group");
-      navigate("/anonymous");
+      void navigate("/anonymous");
     },
   });
 
   useEffect(() => {
     if (groupId) {
-      joinGroup({ groupId });
+      void joinGroup({ groupId });
     }
     return () => joinAbortRef.current?.abort();
   }, [groupId, joinGroup]);
@@ -120,12 +119,10 @@ export default function DAnonymousChat() {
         },
         { signal: controller.signal }
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (promise as any).abort = () => controller.abort();
-      return promise;
+      return Object.assign(promise, { abort: () => controller.abort() });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
       reset();
@@ -181,7 +178,7 @@ export default function DAnonymousChat() {
       toast.success("User blocked successfully");
       setOpenMenuId(null);
       // Optionally refresh messages to remove blocked user's messages
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
     },
@@ -203,7 +200,7 @@ export default function DAnonymousChat() {
       toast.success("User unblocked successfully");
       setOpenMenuId(null);
       // Optionally refresh messages
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
     },
@@ -223,7 +220,7 @@ export default function DAnonymousChat() {
     },
     onSuccess: () => {
       toast.success("Message deleted successfully");
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.groups.messages(groupId!),
       });
       setOpenMenuId(null);
@@ -285,7 +282,7 @@ export default function DAnonymousChat() {
   }, [openMenuId]);
 
   if (!groupId) {
-    navigate("/anonymous");
+    void navigate("/anonymous");
     return null;
   }
 
@@ -314,7 +311,7 @@ export default function DAnonymousChat() {
   }
 
   if (!group) {
-    navigate("/anonymous");
+    void navigate("/anonymous");
     return null;
   }
 
@@ -341,7 +338,9 @@ export default function DAnonymousChat() {
 
         <div className="flex items-center bg-black/75 relative flex-1 p-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              void navigate(-1);
+            }}
             className="p-2 text-white hover:text-gray-700 md:hidden -ml-2"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -354,7 +353,7 @@ export default function DAnonymousChat() {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-semibold text-white text-lg">{group.name}</h2>
-            <p className="text-xs text-[#C2C2C2] mb-1 font-medium">
+            <p className="text-xs text-neutral mb-1 font-medium">
               {group.description}
             </p>
           </div>
@@ -500,7 +499,7 @@ export default function DAnonymousChat() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      deleteMutation.mutate({ groupId: groupId!, _id: msg._id });
+                                      deleteMutation.mutate({ groupId: groupId, _id: msg._id });
                                     }}
                                     disabled={deleteMutation.isPending}
                                     className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 last:rounded-b-lg disabled:opacity-50"
@@ -561,24 +560,30 @@ export default function DAnonymousChat() {
         </div>
       )}
 
-      <div className="bg-[#F7FAFF] p-4 border-t border-gray-200">
+      <div className="bg-offwhite p-4 border-t border-gray-200">
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={(e) => {
+            void handleSubmit(onSubmit)(e);
+          }}
           className="flex items-center space-x-3"
         >
-          <Input
-            multiline
-            maxRows={3}
-            fullWidth
-            disableUnderline
+          <textarea
+            rows={1}
             {...register("content")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleSubmit(onSubmit)(e);
+              }
+            }}
             placeholder={
               replyingTo 
                 ? `Reply to ${replyingTo.alias || "Anonymous"}...` 
                 : "Type a message"
             }
-            className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-base lg:text-sm"
-            error={!!errors.content}
+            className={`flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-base lg:text-sm resize-none ${
+              errors.content ? "text-red-500" : ""
+            }`}
           />
           <button
             type="submit"

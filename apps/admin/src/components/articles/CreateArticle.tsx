@@ -12,7 +12,7 @@ import {
   removeImageApi,
   IArticleCreateData 
 } from "../../api/Articles.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const categories = [
   "Trauma",
@@ -26,7 +26,7 @@ const categories = [
 const CreateArticle: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -73,8 +73,8 @@ const CreateArticle: React.FC = () => {
   const createArticleMutation = useMutation({
     mutationFn: (articleData: IArticleCreateData) => createArticleApi(articleData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
-      navigate("/library");
+      void queryClient.invalidateQueries({ queryKey: ["articles"] });
+      void navigate("/library");
     },
     onError: (error) => {
       console.error("Failed to create article:", error);
@@ -150,7 +150,7 @@ const CreateArticle: React.FC = () => {
 
   // Handle back navigation
   const handleBack = () => {
-    navigate("/library");
+    void navigate("/library");
   };
 
   // If not admin, show unauthorized message

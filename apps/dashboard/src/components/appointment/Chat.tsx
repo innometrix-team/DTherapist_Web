@@ -3,7 +3,6 @@ import { ArrowLeft, Send, User } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Input } from "@mui/material";
 
 // Import your existing APIs and types
 import { Appointment } from "../../api/Appointments.api";
@@ -14,8 +13,9 @@ import {
   ChatMessage,
 } from "../../api/Chat.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
-import socketService from "../../Services/SocketService";
+import socketService from "../../services/SocketService";
 import { formatMessageTime, groupMessagesByDate } from "../../utils/Date.utils";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 // Types - Updated to match IMessage interface from DAnonymousChat
 interface Message {
@@ -78,11 +78,10 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
   const navigate = useNavigate();
 
   // Auth and user info
-  const { id, role, token } = useAuthStore();
+  const currentUserId = useAuthStore((s) => s.id);
+  const role = useAuthStore((s) => s.role);
+  const token = useAuthStore((s) => s.token);
   const isCounselor = role === "counselor";
-
-  // Get user ID safely
-  const currentUserId = id;
 
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -168,7 +167,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
     isLoading: chatHistoryLoading,
     error: chatHistoryError,
   } = useQuery({
-    queryKey: ["chat-history", chatId],
+    queryKey: QUERY_KEYS.chat.history(chatId || ''),
     queryFn: async () => {
       if (!chatId) return null;
       const controller = new AbortController();
@@ -255,7 +254,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
       }
     };
 
-    initializeSocket();
+    void initializeSocket();
 
     return () => {
       abortControllerRef.current?.abort();
@@ -339,7 +338,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
     [messages]
   );
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!newMessage.trim() || !recipient || sendMessageMutation.isPending)
       return;
 
@@ -382,7 +381,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
     if (onBack) {
       onBack();
     } else {
-      navigate("/appointments");
+      void navigate("/appointments");
     }
   };
 
@@ -462,7 +461,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
               {recipient.name}
             </h2>
             <div className="flex items-center space-x-2">
-              <p className="text-xs text-[#C2C2C2] mb-1 font-medium">
+              <p className="text-xs text-neutral mb-1 font-medium">
                 {recipient.occupation}
               </p>
               {!isConnectedToSocket && (
@@ -516,17 +515,20 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
       </div>
 
       {/* Input section matching DAnonymousChat - Fixed */}
-      <div className="bg-[#F7FAFF] p-4 border-t border-gray-200 shrink-0">
+      <div className="bg-offwhite p-4 border-t border-gray-200 shrink-0">
         <form onSubmit={handleSubmit} className="flex items-center space-x-3">
-          <Input
-            multiline
-            maxRows={3}
-            fullWidth
-            disableUnderline
+          <textarea
+            rows={1}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleSubmit(e);
+              }
+            }}
             placeholder={`Type a message to ${recipient.name}...`}
-            className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-base lg:text-sm"
+            className="flex-1 px-4 py-3 bg-transparent border-0 focus:outline-none text-base lg:text-sm resize-none"
             disabled={!isConnectedToSocket || sendMessageMutation.isPending}
           />
           <button

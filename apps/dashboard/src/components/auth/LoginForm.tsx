@@ -19,6 +19,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const locationState = location.state as { from?: string } | null;
   const setAuth = useAuthStore((state) => state.setAuth);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -83,7 +84,7 @@ function LoginForm() {
 
       // Navigate to the intended page or dashboard
       // Use replace: true to prevent going back to login page
-      navigate(from, { replace: true });
+      void navigate(from, { replace: true });
     },
     onError: (error) => {
       toast.error(error.message || "Login failed");
@@ -92,7 +93,7 @@ function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginFormData> = useCallback(
     (data) => {
-      handleLogin({
+      void handleLogin({
         email: data.email,
         password: data.password,
         rememberMe: data.rememberMe,
@@ -115,7 +116,12 @@ function LoginForm() {
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Login to account</h2>
 
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+      >
         <div>
           <input
             type="email"
@@ -211,7 +217,7 @@ function LoginForm() {
           Don't have an account?{" "}
           <Link
             to="/auth/signup"
-            state={{ from: location.state?.from }} // Pass along the return URL to signup
+            state={{ from: locationState?.from }} // Pass along the return URL to signup
             className="text-blue-700 font-semibold"
           >
             Signup

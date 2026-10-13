@@ -18,6 +18,9 @@ import {
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { getCached, setCache } from "../../utils/AppointmentsCache.utils";
 import PostCallReviewModal from "../../components/appointment/Postcallreviewmodal";
+import { CalendarPlus, History, AlertCircle } from "lucide-react";
+import { SkeletonTable } from "../common/Skeleton";
+import EmptyState from "../common/EmptyState";
 
 interface SessionTableProps {
   type: "upcoming" | "passed";
@@ -44,7 +47,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
   const [reviewAppointment, setReviewAppointment] = useState<Appointment | null>(null);
 
   const navigate = useNavigate();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const isCounselor = role === "counselor";
 
   const cacheKey = isCounselor ? "counselor-appointments" : "user-appointments";
@@ -131,17 +134,17 @@ const SessionTable: React.FC<SessionTableProps> = ({
         if (cached) {
           setAllAppointments(cached);
           setFetchState("success");
-          fetchFromNetwork(true);
+          await fetchFromNetwork(true);
           return;
         }
       }
-      fetchFromNetwork(false);
+      await fetchFromNetwork(false);
     },
     [role, cacheKey, fetchFromNetwork],
   );
 
   useEffect(() => {
-    if (role) loadAppointments();
+    if (role) void loadAppointments();
   }, [role, loadAppointments]);
 
   useEffect(() => {
@@ -185,7 +188,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
         const token = appointment.action.agoraToken?.token;
         const uid = appointment.action.agoraToken?.uid;
         if (appId && channel && token) {
-          navigate(`/video/${appointment.bookingId}`, {
+          void navigate(`/video/${appointment.bookingId}`, {
             state: {
               agora: { appId, channel, token, uid: typeof uid === "number" ? uid : 0 },
               appointment,
@@ -197,13 +200,13 @@ const SessionTable: React.FC<SessionTableProps> = ({
         break;
       }
       case "chat":
-        navigate(`chat/${appointment.chatId ?? appointment.bookingId}`);
+        void navigate(`chat/${appointment.chatId ?? appointment.bookingId}`);
         break;
       case "reschedule":
         onReschedule?.(appointment.bookingId);
         break;
       case "dispute":
-        navigate(`/dispute/${appointment.bookingId}`, { state: { appointment } });
+        void navigate(`/dispute/${appointment.bookingId}`, { state: { appointment } });
         break;
       case "sessionReview":
         openReviewModal(appointment);
@@ -232,21 +235,22 @@ const SessionTable: React.FC<SessionTableProps> = ({
   }
 
   if (fetchState === "loading") {
-    return (
-      <div className="text-center py-8 px-4 text-gray-500">
-        <div className="text-sm sm:text-base">Loading {type} appointments...</div>
-      </div>
-    );
+    return <SkeletonTable rows={4} />;
   }
 
   if (fetchState === "error" && fetchError) {
     return (
-      <div className="text-center py-8 px-4 text-red-500">
-        <div className="text-sm sm:text-base mb-4">Failed to load appointments</div>
-        <div className="text-xs text-gray-600 mb-4">Error: {fetchError}</div>
+      <div className="bg-red-50/80 border border-red-200 rounded-2xl p-6 sm:p-8 text-center max-w-md mx-auto my-4 shadow-xs">
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3 text-red-600">
+          <AlertCircle className="w-6 h-6" />
+        </div>
+        <h3 className="font-bold text-darkerb text-base mb-1">Failed to load appointments</h3>
+        <p className="text-xs text-neutral mb-4 leading-relaxed">{fetchError}</p>
         <button
-          onClick={() => loadAppointments(true)}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+          onClick={() => {
+            void loadAppointments(true);
+          }}
+          className="px-4 py-2 bg-primary hover:bg-darkerb text-white font-semibold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer shadow-xs"
         >
           Try Again
         </button>
@@ -255,10 +259,34 @@ const SessionTable: React.FC<SessionTableProps> = ({
   }
 
   if (fetchState === "success" && appointments.length === 0) {
+    if (type === "upcoming") {
+      return (
+        <EmptyState
+          icon={CalendarPlus}
+          title="No Upcoming Appointments"
+          description={
+            isCounselor
+              ? "You do not have any upcoming counseling sessions scheduled. New bookings from clients will appear here."
+              : "You don't have any therapy sessions scheduled right now. Browse our directory of certified counselors to find the right therapist for you."
+          }
+          actionText={isCounselor ? undefined : "Browse Counselors"}
+          actionLink={isCounselor ? undefined : "/counselor"}
+        />
+      );
+    }
+
     return (
-      <div className="text-center py-8 px-4 text-gray-500">
-        <div className="text-sm sm:text-base">No {type} appointments to display.</div>
-      </div>
+      <EmptyState
+        icon={History}
+        title="No Completed Sessions"
+        description={
+          isCounselor
+            ? "Your completed client sessions, notes, and records will be archived here once concluded."
+            : "You haven't completed any sessions yet. Once your sessions wrap up, their history and invoices will show up here."
+        }
+        actionText={isCounselor ? undefined : "Find a Counselor"}
+        actionLink={isCounselor ? undefined : "/counselor"}
+      />
     );
   }
 
@@ -337,7 +365,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                           <>
                             <button
                               className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                              onClick={() => handleActionClick("startMeeting", appointment)}
+                              onClick={() => {
+                                void handleActionClick("startMeeting", appointment);
+                              }}
                             >
                               <MeetingIcon className="w-4 h-4 mr-2" />
                               <span>Start Meeting</span>
@@ -345,7 +375,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             {appointment.chatId && (
                               <button
                                 className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                                onClick={() => handleActionClick("chat", appointment)}
+                                onClick={() => {
+                                  void handleActionClick("chat", appointment);
+                                }}
                               >
                                 <ChatIcon className="w-4 h-4 mr-2" />
                                 <span>Chat</span>
@@ -353,7 +385,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             )}
                             <button
                               className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors"
-                              onClick={() => handleActionClick("reschedule", appointment)}
+                              onClick={() => {
+                                void handleActionClick("reschedule", appointment);
+                              }}
                             >
                               <RescheduleIcon className="w-4 h-4 mr-2" />
                               <span>Reschedule</span>
@@ -363,7 +397,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                           <>
                             <button
                               className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() => handleActionClick("downloadInvoice", appointment)}
+                              onClick={() => {
+                                void handleActionClick("downloadInvoice", appointment);
+                              }}
                               disabled={downloadingInvoice === appointment.bookingId}
                             >
                               <WithdrawIcon className="w-4 h-4 mr-2" />
@@ -376,7 +412,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             {isCounselor && (
                               <button
                                 className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
-                                onClick={() => handleActionClick("sessionReview", appointment)}
+                                onClick={() => {
+                                  void handleActionClick("sessionReview", appointment);
+                                }}
                               >
                                 <FlagActionIcon className="w-4 h-4 mr-2" />
                                 <span>Session Review</span>
@@ -386,7 +424,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                             {!isCounselor && (
                               <button
                                 className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-red-50 transition-colors text-red-600"
-                                onClick={() => handleActionClick("dispute", appointment)}
+                                onClick={() => {
+                                  void handleActionClick("dispute", appointment);
+                                }}
                               >
                                 <ChatIcon className="w-4 h-4 mr-2" />
                                 <span>Dispute</span>
@@ -444,7 +484,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 <div className="flex flex-wrap gap-2">
                   <button
                     className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() => handleActionClick("startMeeting", appointment)}
+                    onClick={() => {
+                      void handleActionClick("startMeeting", appointment);
+                    }}
                   >
                     <MeetingIcon className="w-4 h-4 mr-1" />
                     <span className="truncate">Meeting</span>
@@ -452,7 +494,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   {appointment.chatId && (
                     <button
                       className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                      onClick={() => handleActionClick("chat", appointment)}
+                      onClick={() => {
+                        void handleActionClick("chat", appointment);
+                      }}
                     >
                       <ChatIcon className="w-4 h-4 mr-1" />
                       <span className="truncate">Chat</span>
@@ -460,7 +504,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   )}
                   <button
                     className="flex items-center px-3 py-2 bg-primary text-white rounded-md text-xs font-medium hover:bg-blue-800 transition-colors flex-1 min-w-0 justify-center"
-                    onClick={() => handleActionClick("reschedule", appointment)}
+                    onClick={() => {
+                      void handleActionClick("reschedule", appointment);
+                    }}
                   >
                     <RescheduleIcon className="w-4 h-4 mr-1" />
                     <span className="truncate">Reschedule</span>
@@ -470,7 +516,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                 <div className="flex gap-2 flex-wrap">
                   <button
                     className="flex items-center justify-center flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => handleActionClick("downloadInvoice", appointment)}
+                    onClick={() => {
+                      void handleActionClick("downloadInvoice", appointment);
+                    }}
                     disabled={downloadingInvoice === appointment.bookingId}
                   >
                     <WithdrawIcon className="w-4 h-4 mr-2" />
@@ -481,7 +529,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   {isCounselor && (
                     <button
                       className="flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm font-medium transition-colors"
-                      onClick={() => handleActionClick("sessionReview", appointment)}
+                      onClick={() => {
+                        void handleActionClick("sessionReview", appointment);
+                      }}
                     >
                       <FlagActionIcon className="w-4 h-4 mr-2" />
                       Review
@@ -491,7 +541,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   {!isCounselor && (
                     <button
                       className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
-                      onClick={() => handleActionClick("dispute", appointment)}
+                      onClick={() => {
+                        void handleActionClick("dispute", appointment);
+                      }}
                     >
                       <ChatIcon className="w-4 h-4 mr-2" />
                       Dispute

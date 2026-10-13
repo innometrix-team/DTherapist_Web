@@ -2,10 +2,10 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import DisputesList from "../../components/Dispute/DisputeList";
 import DisputeDetail from "../../components/Dispute/DisputeDetail";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const DisputesPage: React.FC = () => {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const isAdmin = role === "admin";
 
   // Redirect non-admin users

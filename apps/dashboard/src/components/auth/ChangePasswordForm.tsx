@@ -34,7 +34,7 @@ const calculatePasswordStrength = (password: string): { score: number; level: "w
   const levels: ("weak" | "fair" | "good" | "strong")[] = ["weak", "weak", "fair", "good", "strong", "strong"];
   return {
     score,
-    level: levels[Math.min(score, 5)] as "weak" | "fair" | "good" | "strong",
+    level: levels[Math.min(score, 5)],
     feedback: feedback.slice(0, 2),
   };
 };
@@ -91,7 +91,7 @@ const ChangePasswordForm = () => {
         return;
       }
       toast.success("Password changed successfully!");
-      navigate("/auth/login");
+      void navigate("/auth/login");
     },
     onError: (error) => {
       toast.error(error.message);
@@ -109,7 +109,7 @@ const ChangePasswordForm = () => {
         return;
       }
 
-      handleChangePassword({
+      void handleChangePassword({
         token: token,
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
@@ -121,7 +121,7 @@ const ChangePasswordForm = () => {
   useEffect(() => {
     if (!token) {
       toast.error("Invalid or missing reset token");
-      navigate("/auth/forgot-password");
+      void navigate("/auth/forgot-password");
     }
   }, [token, navigate]);
 
@@ -151,7 +151,12 @@ const ChangePasswordForm = () => {
       <p className="text-gray-500 text-sm">
         Update your account password to keep your account secure.
       </p>
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+      >
         <div>
           <div className="relative">
             <input

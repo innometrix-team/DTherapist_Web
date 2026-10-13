@@ -35,7 +35,7 @@ const calculatePasswordStrength = (password: string): { score: number; level: "w
   const levels: ("weak" | "fair" | "good" | "strong")[] = ["weak", "weak", "fair", "good", "strong", "strong"];
   return {
     score,
-    level: levels[Math.min(score, 5)] as "weak" | "fair" | "good" | "strong",
+    level: levels[Math.min(score, 5)],
     feedback: feedback.slice(0, 2),
   };
 };
@@ -91,7 +91,7 @@ function SignUpForm() {
   
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [showPassword, setShowPassword] = useState(false);
 
   const { mutateAsync: handleSignup, isPending } = useMutation({
@@ -121,7 +121,7 @@ function SignUpForm() {
         fullName: variables.fullName, // Always pass the full name
       });
 
-      navigate(`/auth/verify-email?${searchParams.toString()}`);
+      void navigate(`/auth/verify-email?${searchParams.toString()}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -134,7 +134,7 @@ function SignUpForm() {
         return;
       }
 
-      handleSignup({
+      void handleSignup({
         email: data.email,
         fullName: data.fullName,
         password: data.password,
@@ -154,7 +154,12 @@ function SignUpForm() {
   return (
     <div className="max-w-md w-full mx-auto space-y-4">
       <h2 className="text-3xl font-bold">Create free account</h2>
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          void handleSubmit(onSubmit)(e);
+        }}
+      >
         <div>
           <input
             type="text"
@@ -175,8 +180,8 @@ function SignUpForm() {
             autoCapitalize="none"
             autoCorrect="off"
             {...register("email", {
-              setValueAs: (value) =>
-                typeof value === "string" ? value.toLowerCase() : value,
+              setValueAs: (value: unknown) =>
+                typeof value === "string" ? value.toLowerCase() : "",
             })}
             className="w-full border border-gray-300 rounded px-4 py-2 lowercase"
           />

@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { token } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
   const location = useLocation();
 
   if (!token) {

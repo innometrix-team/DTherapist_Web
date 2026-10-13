@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Calendar } from 'lucide-react';
 import { useQuery } from "@tanstack/react-query";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface ChartData {
   month: string;
@@ -21,7 +21,7 @@ const StatChart: React.FC = () => {
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const [statisticsData, setStatisticsData] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
 
   const years = [ currentYear - 4,currentYear - 3,currentYear - 2, currentYear - 1, currentYear];
   const isAdmin = role === "admin";
@@ -48,7 +48,7 @@ const StatChart: React.FC = () => {
   });
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       if (isAdmin && adminDashboardData) {
         // Add proper null checks for nested properties
         if (!adminDashboardData.trends || 

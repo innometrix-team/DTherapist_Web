@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IAdminTransaction {
   transactionId: string;
@@ -27,12 +27,6 @@ interface APIResponse {
   data: IAdminTransaction[];
 }
 
-interface APIErrorResponse {
-  code: number;
-  status: string;
-  message: string;
-  data: undefined;
-}
 
 export interface IAdminTransactionQueryParams {
   page?: number;
@@ -119,12 +113,7 @@ export async function getAdminTransactionHistoryApi(
     const errorMessage = error.response?.data?.message || error.message || "Failed to fetch admin transaction history";
     const status = error.response?.data?.status || "error";
     
-    return Promise.reject<APIErrorResponse>({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 

@@ -12,6 +12,7 @@ import {
   getStatusColor,
   getTypeColor,
 } from "../../api/Transactions.api";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 interface TransactionHistoryTableProps {
   className?: string;
@@ -38,7 +39,7 @@ const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["transactions", filters],
+    queryKey: QUERY_KEYS.wallet.transactions(filters),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -206,7 +207,9 @@ const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
           Transaction History
         </h2>
         <button
-          onClick={() => refetch()}
+          onClick={() => {
+            void refetch();
+          }}
           disabled={isFetching}
           className="bg-gray-500 hover:bg-gray-600 text-white font-medium px-3 sm:px-4 py-2 rounded text-sm disabled:opacity-50 w-full sm:w-auto"
         >
@@ -294,7 +297,9 @@ const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
               Failed to load transactions
             </p>
             <button
-              onClick={() => refetch()}
+              onClick={() => {
+                void refetch();
+              }}
               className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
             >
               Try Again

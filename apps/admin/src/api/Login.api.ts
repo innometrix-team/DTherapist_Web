@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 export interface IRequestData {
   email: string;
@@ -46,11 +46,6 @@ export default async function LoginApi(data: IRequestData, config?: AxiosRequest
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
     const status =  (e as AxiosError<IAPIResult>).response?.data.status || "error"
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

@@ -21,6 +21,8 @@ import {
   ITimeSlot,
 } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
+import PageContainer from "../common/PageContainer";
 
 interface BookingSessionProps {
   therapistId: string;
@@ -56,7 +58,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     isLoading: therapistLoading,
     error: therapistError,
   } = useQuery({
-    queryKey: ["therapist", therapistId],
+    queryKey: QUERY_KEYS.therapists.detail(therapistId),
     queryFn: async () => {
       const result = await getTherapistDetailsApi(therapistId);
       if (!result) throw new Error("Request cancelled");
@@ -71,7 +73,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     isLoading: scheduleLoading,
     error: scheduleError,
   } = useQuery({
-    queryKey: ["therapist-schedule", therapistId, scheduleApiSessionType],
+    queryKey: QUERY_KEYS.therapists.schedule(therapistId, scheduleApiSessionType),
     queryFn: async () => {
       const result = await getTherapistScheduleApi(
         therapistId,
@@ -313,7 +315,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     setSelectedTime("");
   };
 
-  const handlePayment = async (): Promise<void> => {
+  const handlePayment = (): void => {
     if (!therapist || !selectedDate || !selectedTime) {
       toast.error("Please select both date and time");
       return;
@@ -348,7 +350,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     } else {
       const bookingData: IBookingRequest = {
         therapistId,
-        sessionType: bookingApiSessionType as "video" | "in-person",
+        sessionType: bookingApiSessionType,
         date: selectedDate,
         startTime: selectedTime,
         endTime,
@@ -464,9 +466,9 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     (!isGroupSession || validGroupEmails.length > 0);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto p-4 sm:p-8">
-        <div className="bg-white rounded-lg shadow-sm">
+    <div className="min-h-screen bg-gray-50">
+      <PageContainer>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {/* Header */}
           <div className="flex items-center justify-between m-6 sm:mb-8 pb-6 border-b border-gray-200">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -788,7 +790,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

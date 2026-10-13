@@ -11,12 +11,12 @@ import {
   uploadDAnonymousGroupImageApi,
   IDAnonymousGroupCreateData 
 } from "../../api/DAnonymous.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const CreateDAnonymousGroup: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -73,11 +73,11 @@ const CreateDAnonymousGroup: React.FC = () => {
           showToast("Group created successfully!");
         }
         
-        queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
+        await queryClient.invalidateQueries({ queryKey: ["danonymous-groups"] });
         
         // Navigate back to groups list after a short delay
         setTimeout(() => {
-          navigate("/danonymous");
+          void navigate("/danonymous");
         }, 1500);
         
       } catch (imageError) {
@@ -86,7 +86,7 @@ const CreateDAnonymousGroup: React.FC = () => {
         
         // Still navigate back even if image failed
         setTimeout(() => {
-          navigate("/danonymous");
+          void navigate("/danonymous");
         }, 2000);
       } finally {
         setIsCreating(false);
@@ -147,7 +147,7 @@ const CreateDAnonymousGroup: React.FC = () => {
 
   // Handle back navigation
   const handleBack = () => {
-    navigate("/danonymous");
+    void navigate("/danonymous");
   };
 
   // If not admin, show unauthorized message

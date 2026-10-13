@@ -1,5 +1,4 @@
-import React from 'react';
-import TermsAndConditions from '../../components/terms&condition/TermsAndConditions';
+import TermsAndConditions from '../../components/terms-and-conditions/TermsAndConditions';
 
 const TermsPage: React.FC = () => {
   return (

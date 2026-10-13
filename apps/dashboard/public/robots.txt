@@ -1,0 +1,18 @@
+# Robots.txt for DTherapist Dashboard
+User-agent: *
+Allow: /auth/login
+Allow: /auth/signup
+Allow: /auth/forgot-password
+Allow: /terms-and-conditions
+Disallow: /counselor
+Disallow: /appointments
+Disallow: /appointments/
+Disallow: /library
+Disallow: /settings
+Disallow: /my-schedule
+Disallow: /anonymous
+Disallow: /chat/
+Disallow: /video/
+Disallow: /dispute/
+
+Sitemap: https://dashboard.dtherapist.com/sitemap.xml

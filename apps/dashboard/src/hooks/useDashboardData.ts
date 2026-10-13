@@ -11,7 +11,7 @@ export const DASHBOARD_QUERY_KEY = (userType: string) => ["dashboard", userType]
  * React Query deduplicates the network request automatically.
  */
 export function useDashboardData() {
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const queryClient = useQueryClient();
   const abortControllerRef = useRef<AbortController | null>(null);
 

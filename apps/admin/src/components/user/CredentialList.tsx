@@ -190,7 +190,7 @@ export default function CredentialList({
         });
       },
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+        void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
       },
     }
   );
@@ -204,7 +204,7 @@ export default function CredentialList({
       return ReviewCVApi({ userId, status: vars.status, note: vars.note });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+      void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
     },
   });
 

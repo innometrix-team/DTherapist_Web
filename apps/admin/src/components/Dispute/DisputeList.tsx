@@ -10,11 +10,11 @@ import {
   Search
 } from "lucide-react";
 import { getDisputesApi } from "../../api/Dispute.api";
-import { useAuthStore } from "../../Store/auth/useAuthStore";
+import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const DisputesList: React.FC = () => {
   const navigate = useNavigate();
-  const { role } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "resolved" | "rejected">("all");
 
@@ -83,7 +83,7 @@ const DisputesList: React.FC = () => {
 
   // Handle view dispute
   const handleViewDispute = (disputeId: string) => {
-    navigate(disputeId);
+    void navigate(disputeId);
   };
 
   // If not admin, show unauthorized message

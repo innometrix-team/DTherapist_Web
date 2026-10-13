@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { IAPIResult } from "./Api";
+import Api, { ApiError, IAPIResult } from "./Api";
 
 // DAnonymous Group interfaces
 export interface IDAnonymousGroup {
@@ -82,12 +82,7 @@ export async function getDAnonymousGroupsApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -120,12 +115,7 @@ export async function getDAnonymousGroupApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -158,12 +148,7 @@ export async function createDAnonymousGroupApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -197,12 +182,7 @@ export async function editDAnonymousGroupApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -235,12 +215,7 @@ export async function deleteDAnonymousGroupApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -279,12 +254,7 @@ export async function uploadDAnonymousGroupImageApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
 
@@ -319,11 +289,6 @@ export async function removeDAnonymousGroupImageApi(
       (e as Error).message;
     const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
     
-    return Promise.reject({
-      code: statusCode,
-      status,
-      message: errorMessage,
-      data: undefined,
-    });
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

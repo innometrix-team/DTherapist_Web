@@ -49,8 +49,15 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
             .map((_, i) => (
               <div
                 key={i}
-                className="bg-gray-200 animate-pulse p-6 lg:p-4 rounded-lg grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(33.33%-10px)] shadow-[0px_4px_10px_0px_#00000008] h-24"
-              />
+                className="bg-white border border-divider/60 p-6 lg:p-4 rounded-2xl flex justify-between items-center grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(33.33%-10px)] shadow-xs animate-pulse"
+              >
+                <div className="space-y-2.5 flex-1 pr-4">
+                  <div className="h-4 w-24 bg-gray-200 rounded-md" />
+                  <div className="h-7 w-20 bg-gray-200 rounded-md" />
+                  <div className="h-3 w-32 bg-gray-200 rounded-md" />
+                </div>
+                <div className="w-14 h-14 rounded-full bg-gray-200 shrink-0" />
+              </div>
             ))}
         </div>
       </div>
@@ -87,13 +94,13 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
             className="bg-white flex p-6 lg:p-4 rounded-lg justify-between grow-0 shrink-0 basis-auto w-[70%] md:w-1/2 lg:w-[calc(33.33%-10px)] shadow-[0px_4px_10px_0px_#00000008]"
           >
             <div>
-              <div className="text-lg text-[#B3B3B3]">{stat.label}</div>
+              <div className="text-lg text-neutral">{stat.label}</div>
               <div className="text-2xl font-bold my-3">{stat.value}</div>
               <div className="text-xs">
                 <UptrendIcon className="inline text-primary w-4" /> {stat.trend}
               </div>
             </div>
-            <div className="text-primary w-14 h-14 rounded-full bg-[#014CB11A] grid place-items-center self-center">
+            <div className="text-primary w-14 h-14 rounded-full bg-primary/10 grid place-items-center self-center">
               <TimerIcon className="w-1/2" />
             </div>
           </div>
