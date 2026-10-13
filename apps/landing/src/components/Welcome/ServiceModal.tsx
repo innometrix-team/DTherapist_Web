@@ -18,7 +18,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({ isOpen, onClose, service })
   
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center h-ful">
+    <div className="fixed inset-0 z-50 flex items-center justify-center h-full">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm "
