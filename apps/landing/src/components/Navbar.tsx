@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
 import { APP_LINKS } from "../constants/links";
@@ -9,6 +9,29 @@ const Navbar: React.FC = () => {
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };
+
+  // Close mobile menu if window resizes to desktop breakpoint
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && menuOpen) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [menuOpen]);
+
+  // Prevent background scroll when mobile drawer is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
 
   return (
     <>
@@ -81,88 +104,93 @@ const Navbar: React.FC = () => {
             )}
           </button>
         </div>
+      </nav>
 
-        {/* Mobile Menu Drawer */}
+      {/* Overlay (rendered outside nav to avoid backdrop-blur inheritance) */}
+      {menuOpen && (
         <div
-          className={`fixed top-0 right-0 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-40 ${
-            menuOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div className="flex flex-col p-6 gap-5 text-sm font-medium">
-            <div className="flex items-center justify-between pb-4 border-b border-divider">
-              <span className="font-bold text-darkerb text-base">Menu</span>
-              <button
-                onClick={toggleMenu}
-                aria-label="Close menu"
-                className="p-1 rounded-lg hover:bg-offwhite transition-colors"
-              >
-                <FiX className="text-xl text-primary" />
-              </button>
-            </div>
+          className="fixed inset-0 bg-darkerb/60 backdrop-blur-xs z-[90] md:hidden"
+          onClick={toggleMenu}
+          aria-hidden="true"
+        />
+      )}
 
-            <Link
-              to="/"
-              className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+      {/* Mobile Menu Drawer (rendered outside nav with guaranteed 100% solid white background) */}
+      <div
+        className={`fixed top-0 right-0 h-full w-72 bg-white shadow-2xl transition-all duration-300 ease-in-out z-[100] md:hidden ${
+          menuOpen
+            ? "translate-x-0 opacity-100 visible pointer-events-auto"
+            : "translate-x-full opacity-0 invisible pointer-events-none"
+        }`}
+        style={{ backgroundColor: "#ffffff" }}
+        aria-hidden={!menuOpen}
+      >
+        <div className="flex flex-col h-full bg-white p-6 gap-5 text-sm font-medium overflow-y-auto" style={{ backgroundColor: "#ffffff" }}>
+          <div className="flex items-center justify-between pb-4 border-b border-divider">
+            <span className="font-bold text-darkerb text-base">Menu</span>
+            <button
               onClick={toggleMenu}
+              aria-label="Close menu"
+              className="p-1 rounded-lg hover:bg-offwhite transition-colors"
             >
-              Home
-            </Link>
+              <FiX className="text-xl text-primary" />
+            </button>
+          </div>
+
+          <Link
+            to="/"
+            className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+            onClick={toggleMenu}
+          >
+            Home
+          </Link>
+          <a
+            href={APP_LINKS.appointments}
+            className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+            onClick={toggleMenu}
+          >
+            Appointments
+          </a>
+          <a
+            href={APP_LINKS.anonymous}
+            className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+            onClick={toggleMenu}
+          >
+            DAnonymous
+          </a>
+          <a
+            href="#faq"
+            className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+            onClick={toggleMenu}
+          >
+            FAQs
+          </a>
+          <Link
+            to="/privacy-policy"
+            className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
+            onClick={toggleMenu}
+          >
+            Privacy Policy
+          </Link>
+
+          <hr className="border-divider my-2" />
+
+          <div className="flex flex-col gap-3 mt-auto">
             <a
-              href={APP_LINKS.appointments}
-              className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
-              onClick={toggleMenu}
+              href={APP_LINKS.login}
+              className="text-center font-semibold border border-primary text-primary px-4 py-2.5 rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
             >
-              Appointments
+              Login
             </a>
             <a
-              href={APP_LINKS.anonymous}
-              className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
-              onClick={toggleMenu}
+              href={APP_LINKS.signup}
+              className="text-center font-semibold bg-primary text-white px-4 py-2.5 rounded-lg hover:bg-darkerb transition-all duration-200 shadow-xs"
             >
-              DAnonymous
+              Register
             </a>
-            <a
-              href="#faq"
-              className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
-              onClick={toggleMenu}
-            >
-              FAQs
-            </a>
-            <Link
-              to="/privacy-policy"
-              className="text-darkerb font-semibold hover:text-primary transition-colors py-1"
-              onClick={toggleMenu}
-            >
-              Privacy Policy
-            </Link>
-
-            <hr className="border-divider my-2" />
-
-            <div className="flex flex-col gap-3">
-              <a
-                href={APP_LINKS.login}
-                className="text-center font-semibold border border-primary text-primary px-4 py-2.5 rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
-              >
-                Login
-              </a>
-              <a
-                href={APP_LINKS.signup}
-                className="text-center font-semibold bg-primary text-white px-4 py-2.5 rounded-lg hover:bg-darkerb transition-all duration-200 shadow-xs"
-              >
-                Register
-              </a>
-            </div>
           </div>
         </div>
-
-        {/* Overlay */}
-        {menuOpen && (
-          <div
-            className="fixed inset-0 bg-darkerb/40 backdrop-blur-xs z-30"
-            onClick={toggleMenu}
-          />
-        )}
-      </nav>
+      </div>
     </>
   );
 };

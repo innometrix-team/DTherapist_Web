@@ -9,7 +9,7 @@ const HeroSection = () => {
           "url('https://ik.imagekit.io/rqi1dzw2h/homepage/home1.png?updatedAt=1746018233090')",
       }}
     >
-      <div className="absolute inset-0 bg-darkerb/70 backdrop-blur-[2px] rounded-2xl"></div>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] rounded-2xl"></div>
       <div className="relative z-10 text-center px-4 py-12 max-w-3xl mx-auto">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white drop-shadow-xs">
           Empowering Healing: Connect with Licensed Therapists &amp; Counselors
