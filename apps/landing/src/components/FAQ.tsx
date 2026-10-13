@@ -16,7 +16,7 @@ const FAQ: React.FC = () => {
         <div>
           <img
             src="https://ik.imagekit.io/rqi1dzw2h/homepage/faq1.png?updatedAt=1746018181149"
-            alt="FAQ Illustration"
+            alt="DTherapist mental health counseling and therapy support FAQ"
             className="w-full h-[300px] md:h-[500px] rounded-xl shadow-md object-cover"
           />
         </div>

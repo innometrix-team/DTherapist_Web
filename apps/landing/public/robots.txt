@@ -1,0 +1,5 @@
+# Robots.txt for DTherapist Landing
+User-agent: *
+Allow: /
+
+Sitemap: https://dtherapist.com/sitemap.xml

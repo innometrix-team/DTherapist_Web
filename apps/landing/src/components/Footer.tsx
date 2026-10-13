@@ -38,8 +38,8 @@ const Footer = () => {
         <div>
           <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
           <ul className="space-y-2 text-sm">
-            <li><a href={APP_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaFacebook /></a></li>
-            <li><a href={APP_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hover:underline"> <FaInstagram /></a></li>
+            <li><a href={APP_LINKS.facebook} target="_blank" rel="noopener noreferrer" aria-label="Follow DTherapist on Facebook" className="hover:underline"> <FaFacebook /></a></li>
+            <li><a href={APP_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Follow DTherapist on Instagram" className="hover:underline"> <FaInstagram /></a></li>
           </ul>
           <h4 className="text-lg font-semibold mb-4">Download Our App</h4>
           <div className="flex gap-3">

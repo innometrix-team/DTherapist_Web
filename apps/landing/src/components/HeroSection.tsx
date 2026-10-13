@@ -12,10 +12,10 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-darkerb/70 backdrop-blur-[2px] rounded-2xl"></div>
       <div className="relative z-10 text-center px-4 py-12 max-w-3xl mx-auto">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-5 tracking-tight text-white drop-shadow-xs">
-          Empowering Healing, Nurturing Growth
+          Empowering Healing: Connect with Licensed Therapists &amp; Counselors
         </h1>
         <p className="text-sm sm:text-base md:text-lg mb-8 max-w-2xl mx-auto text-white/90 leading-relaxed font-normal">
-          We connect you to licensed professionals committed to helping you live your best, healthiest life with total privacy and compassion.
+          We connect you with qualified mental health professionals committed to helping you live your best, healthiest life with total privacy, confidentiality, and compassion.
         </p>
         <div className="flex flex-wrap gap-4 justify-center items-center">
           <a

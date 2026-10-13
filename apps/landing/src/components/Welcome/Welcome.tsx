@@ -10,9 +10,9 @@ const Welcome: React.FC = () => {
       {/* Header */}
       <div className="text-center mb-10">
         <h5 className="text-sm font-bold text-primary">Welcome to DTherapist</h5>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-black max-w-2xl mx-auto mt-2">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-black max-w-2xl mx-auto mt-2">
           Caring Today For A Healthier Mind
-        </h1>
+        </h2>
       </div>
 
       {/* Content Grid */}
@@ -37,7 +37,7 @@ const Welcome: React.FC = () => {
         <div>
           <img
             src="https://ik.imagekit.io/rqi1dzw2h/homepage/home5.jpg?updatedAt=1746018015880"
-            alt="Therapist welcome"
+            alt="Professional therapist consultation session on DTherapist"
             className="w-full h-full object-cover rounded-2xl shadow-md max-h-[500px]"
           />
         </div>
