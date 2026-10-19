@@ -55,11 +55,7 @@ const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
   const transactions = actualData?.transactions || [];
   const totalTransactions = actualData?.total || 0;
 
-  // Debug logging
-  console.log('Raw transaction data:', transactionData);
-  console.log('Actual API data:', actualData);
-  console.log('Extracted transactions:', transactions);
-  console.log('Total transactions:', totalTransactions);
+
   
   const totalPages = Math.ceil(totalTransactions / (filters.limit || ITEMS_PER_PAGE));
 

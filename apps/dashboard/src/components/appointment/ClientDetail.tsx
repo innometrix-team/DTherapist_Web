@@ -132,7 +132,7 @@ const ClientDetail = () => {
 
   const handleStartVideoCall = () => {
     if (client) {
-      console.log(`Starting video call with ${client.name}`);
+     
       // Check if there's a meeting link from appointment data
       if (appointmentData?.action?.joinMeetingLink) {
         window.open(appointmentData.action.joinMeetingLink, '_blank');

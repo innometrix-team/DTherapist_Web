@@ -21,7 +21,6 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'query-vendor': ['@tanstack/react-query'],
-          'pdf-vendor': ['@react-pdf-viewer/core', '@react-pdf-viewer/default-layout'],
         },
       },
     },

@@ -147,10 +147,6 @@ const Appointments: React.FC = () => {
     handleOpenModal(appointmentId);
   };
 
-  const handleDownloadInvoice = (appointmentId: string) => {
-    console.log(`Downloading invoice for appointment: ${appointmentId}`);
-    // Additional logic for invoice download can be added here
-  };
 
   // Don't render if no role
   if (!role) {
@@ -281,7 +277,6 @@ const Appointments: React.FC = () => {
               <SessionTable
                 key="passed-sessions"
                 type="passed"
-                onDownloadInvoice={handleDownloadInvoice}
               />
             )}
           </div>

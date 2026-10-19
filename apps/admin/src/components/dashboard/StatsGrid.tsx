@@ -104,7 +104,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
       ? calculateTrend(adminDashboardData.trends.withdrawals)
       : { trend: "No trend data", trendUp: true };
 
-    console.log(adminDashboardData);
+
 
     const adminStats: StatCardConfig[] = [
       {

@@ -52,18 +52,18 @@ interface APIResponse<T> {
 // Create a review
 export default async function createReviewApi(
   data: IReviewRequest,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<IAPIResult<ICreateReviewResponse> | null> {
   try {
     const response = await Api.post<APIResponse<ICreateReviewResponse>>(
-      '/api/user/reviews',
+      "/api/user/reviews",
       data,
-      { ...config }
+      { ...config },
     );
-    
+
     // Handle both nested and flat response structures for create review
     let reviewData: ICreateReviewResponse;
-    
+
     if (response.data.data) {
       // Nested structure
       reviewData = response.data.data;
@@ -71,21 +71,21 @@ export default async function createReviewApi(
       // Flat structure with review property
       reviewData = {
         review: response.data.review,
-        message: response.data.message
+        message: response.data.message,
       };
     } else {
       // Fallback - treat the entire response.data as the review
       reviewData = {
         review: response.data as unknown as IReview,
-        message: response.data.message
+        message: response.data.message,
       };
     }
-    
+
     return Promise.resolve({
       code: response.status,
       status: response.data.status || "success",
       message: response.data.message ?? "success",
-      data: reviewData
+      data: reviewData,
     });
   } catch (e) {
     if (axios.isCancel(e)) {
@@ -96,7 +96,8 @@ export default async function createReviewApi(
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
     return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
@@ -104,46 +105,38 @@ export default async function createReviewApi(
 // FIXED: Get reviews for a specific therapist
 export async function getTherapistReviewsApi(
   therapistId: string,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<IAPIResult<IReviewsListResponse> | null> {
   try {
     const response = await Api.get<APIResponse<IReviewsListResponse>>(
       `/api/user/reviews/${encodeURIComponent(therapistId)}`,
-      { ...config }
+      { ...config },
     );
-    
-    // DEBUG: Log the raw response to see what we're actually getting
-    console.log('Raw API Response:', {
-      status: response.status,
-      data: response.data,
-      headers: response.headers,
-      config: response.config.url
-    });
-    
+
     // FIXED: Handle both nested and flat response structures
     let reviewsData: IReviewsListResponse;
-    
+
     if (response.data.data) {
       // Nested structure: { status: "success", message: "...", data: { reviews: [...] } }
-      console.log('Using nested structure');
+
       reviewsData = response.data.data;
     } else if (response.data.reviews) {
       // Flat structure: { message: "...", reviews: [...] }
-      console.log('Using flat structure');
+
       reviewsData = {
         reviews: response.data.reviews,
         totalCount: response.data.totalCount || response.data.reviews.length,
         averageRating: response.data.averageRating || 0,
-        ratingDistribution: response.data.ratingDistribution || {}
+        ratingDistribution: response.data.ratingDistribution || {},
       };
     } else {
       // Fallback: empty reviews
-      console.log('No reviews found in response, using fallback');
+
       reviewsData = {
         reviews: [],
         totalCount: 0,
         averageRating: 0,
-        ratingDistribution: {}
+        ratingDistribution: {},
       };
     }
 
@@ -151,14 +144,13 @@ export async function getTherapistReviewsApi(
       code: response.status,
       status: response.data.status || "success",
       message: response.data.message ?? "success",
-      data: reviewsData
+      data: reviewsData,
     };
-    
-    console.log('Final result:', result);
+
     return Promise.resolve(result);
   } catch (e) {
-    console.error('Error in getTherapistReviewsApi:', e);
-    
+    console.error("Error in getTherapistReviewsApi:", e);
+
     if (axios.isCancel(e)) {
       return Promise.resolve(null);
     }
@@ -167,7 +159,8 @@ export async function getTherapistReviewsApi(
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
     return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }
@@ -175,24 +168,26 @@ export async function getTherapistReviewsApi(
 // FIXED: Get all reviews (for admin or user's own reviews)
 export async function getAllReviewsApi(
   params?: { page?: number; limit?: number; userId?: string },
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<IAPIResult<IReviewsListResponse> | null> {
   try {
     const searchParams = new URLSearchParams();
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.userId) searchParams.append("userId", params.userId);
 
     const queryString = searchParams.toString();
-    const url = queryString ? `/api/user/reviews?${queryString}` : '/api/user/reviews';
+    const url = queryString
+      ? `/api/user/reviews?${queryString}`
+      : "/api/user/reviews";
 
     const response = await Api.get<APIResponse<IReviewsListResponse>>(url, {
       ...config,
     });
-    
+
     // FIXED: Handle both nested and flat response structures
     let reviewsData: IReviewsListResponse;
-    
+
     if (response.data.data) {
       // Nested structure
       reviewsData = response.data.data;
@@ -202,7 +197,7 @@ export async function getAllReviewsApi(
         reviews: response.data.reviews,
         totalCount: response.data.totalCount || response.data.reviews.length,
         averageRating: response.data.averageRating || 0,
-        ratingDistribution: response.data.ratingDistribution || {}
+        ratingDistribution: response.data.ratingDistribution || {},
       };
     } else {
       // Fallback
@@ -210,7 +205,7 @@ export async function getAllReviewsApi(
         reviews: [],
         totalCount: 0,
         averageRating: 0,
-        ratingDistribution: {}
+        ratingDistribution: {},
       };
     }
 
@@ -218,7 +213,7 @@ export async function getAllReviewsApi(
       code: response.status,
       status: response.data.status || "success",
       message: response.data.message ?? "success",
-      data: reviewsData
+      data: reviewsData,
     });
   } catch (e) {
     if (axios.isCancel(e)) {
@@ -229,7 +224,8 @@ export async function getAllReviewsApi(
     const errorMessage =
       (e as AxiosError<IAPIResult>).response?.data.message ||
       (e as Error).message;
-    const status = (e as AxiosError<IAPIResult>).response?.data.status || "error";
+    const status =
+      (e as AxiosError<IAPIResult>).response?.data.status || "error";
     return Promise.reject(new ApiError(errorMessage, statusCode, status));
   }
 }

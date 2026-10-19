@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, Loader2, ShieldAlert, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { ICertificate } from "../../api/GetUsers.api";
 import { ReviewCertificationApi, ReviewCVApi } from "../../api/Profile.api";
-import { Worker, Viewer } from "@react-pdf-viewer/core";
-import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+
+// Lazy-load so pdf.js is only downloaded when a PDF is actually previewed.
+const PdfPreview = lazy(() => import("./PdfPreview"));
 
 export type UserDocumentStatus = "pending" | "approved" | "rejected";
 
@@ -174,8 +173,6 @@ export default function CredentialList({
   );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
-
   const { mutate: reviewCertification, isPending: approvingCert } = useMutation(
     {
       mutationFn: async (vars: {
@@ -308,12 +305,15 @@ export default function CredentialList({
                 </div>
               ) : (
                 <div className="h-full">
-                  <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-                    <Viewer
-                      fileUrl={previewUrl}
-                      plugins={[defaultLayoutPluginInstance]}
-                    />
-                  </Worker>
+                  <Suspense
+                    fallback={
+                      <div className="flex h-full items-center justify-center text-neutral">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading viewer…
+                      </div>
+                    }
+                  >
+                    <PdfPreview fileUrl={previewUrl} />
+                  </Suspense>
                 </div>
               )}
             </div>
