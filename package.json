@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "build:admin": "npm --prefix apps/admin run build",
-    "build:dashboard": "npm --prefix apps/dashboard run build",
-    "build:landing": "npm --prefix apps/landing run build"
+    "build:admin": "node init && npm --prefix apps/admin run build",
+    "build:dashboard": "node init && npm --prefix apps/dashboard run build",
+    "build:landing": "node init && npm --prefix apps/landing run build"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -69,11 +69,6 @@ const DisputePage: React.FC = () => {
         attachments: attachmentBase64,
       };
 
-      console.log('Sending JSON payload:', {
-        reason: payload.reason,
-        description: payload.description,
-        attachmentsCount: payload.attachments.length
-      });
       
       return submitDispute(bookingId, payload);
     },
