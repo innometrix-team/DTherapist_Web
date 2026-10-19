@@ -51,7 +51,6 @@ const Dashboard: React.FC = () => {
   }, [role]);
 
   const handleReschedule = (sessionId: string) => {
-    console.log("Reschedule session:", sessionId);
     setSelectedSessionId(sessionId);
     setIsRescheduleModalOpen(true);
   };
@@ -61,10 +60,6 @@ const Dashboard: React.FC = () => {
     setSelectedSessionId(null);
   };
 
-  const handleDownloadInvoice = (appointmentId: string) => {
-    console.log(`Downloading invoice for appointment: ${appointmentId}`);
-    // Add invoice download logic here
-  };
 
   if (!config) {
     return (
@@ -104,7 +99,6 @@ const Dashboard: React.FC = () => {
               <SessionTable 
                 type="upcoming"
                 onReschedule={handleReschedule}
-                onDownloadInvoice={handleDownloadInvoice}
               />
             </div>
           </div>
