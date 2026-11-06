@@ -6,10 +6,14 @@ export const QUERY_KEYS = {
   profile: {
     current: (userType: string) => ['profile', userType] as const,
     userProfile: (typeOrId: string) => ['user-profile', typeOrId] as const,
+    professionalBodies: ['profile', 'professional-bodies'] as const,
+    professionRequest: ['profile', 'profession-request'] as const,
+    credentials: ['profile', 'credentials'] as const,
   },
   appointments: {
     all: ['appointments'] as const,
     userList: ['appointments', 'user'] as const,
+    userListFiltered: (status?: string) => ['appointments', 'user', status] as const,
     counselorList: ['appointments', 'counselor'] as const,
     detail: (id: string) => ['appointments', 'detail', id] as const,
     withUser: (userId: string) => ['appointments', 'user', userId] as const,
@@ -17,12 +21,19 @@ export const QUERY_KEYS = {
   },
   therapists: {
     all: ['therapists'] as const,
-    list: (selectedCategory?: string, searchQuery?: string, currentPage?: number) =>
-      ['therapists', selectedCategory, searchQuery, currentPage] as const,
+    list: (
+      selectedCategory?: string,
+      searchQuery?: string,
+      currentPage?: number,
+      professionalCategory?: string
+    ) =>
+      ['therapists', selectedCategory, searchQuery, currentPage, professionalCategory] as const,
     categories: ['categories'] as const,
     detail: (id: string) => ['therapist', id] as const,
-    schedule: (therapistId: string, sessionType: string) =>
-      ['therapist-schedule', therapistId, sessionType] as const,
+    schedule: (therapistId: string, sessionType: string, date?: string) =>
+      date
+        ? (['therapist-schedule', therapistId, sessionType, date] as const)
+        : (['therapist-schedule', therapistId, sessionType] as const),
     schedules: (therapistId: string) => ['therapistSchedules', therapistId] as const,
     details: (therapistId: string) => ['therapistDetails', therapistId] as const,
     reviews: (therapistId: string) => ['reviews', therapistId] as const,

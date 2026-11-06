@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
 import LoadingFallback from "./components/common/LoadingFallback";
+import OfflineBanner from "./components/common/OfflineBanner";
 import { Toaster } from "react-hot-toast";
 
 // Lazy-loaded route components for optimized bundle splitting
@@ -15,6 +16,7 @@ const Settings = lazy(() => import("./pages/settings/Settings"));
 const MySchedule = lazy(() => import("./pages/my-schedule/MySchedule"));
 const DAnonymous = lazy(() => import("./pages/danonymous/DAnonymous"));
 const DAnonymousChat = lazy(() => import("./components/anonymous/DAnonymousChat"));
+const DAnonymousEmptyState = lazy(() => import("./components/anonymous/DAnonymousEmptyState"));
 const PrivacyPolicy = lazy(() => import("./pages/privacy-policy/PrivacyPolicy"));
 const ChatWrapper = lazy(() => import("./pages/ChatWrapper/ChatWrapper"));
 const DisputePage = lazy(() => import("./components/appointment/Dispute"));
@@ -26,10 +28,12 @@ const LoginForm = lazy(() => import("./components/auth/LoginForm"));
 const ForgotPassword = lazy(() => import("./components/auth/ForgotPassword"));
 const EmailVerification = lazy(() => import("./components/auth/EmailVerification"));
 const ChangePasswordForm = lazy(() => import("./components/auth/ChangePasswordForm"));
+const NotFound = lazy(() => import("./pages/not-found/NotFound"));
 
 function App() {
   return (
     <>
+      <OfflineBanner />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Protected Routes */}
@@ -43,6 +47,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="counselor" element={<Counselor />} />
+            <Route path="professionals" element={<Counselor />} />
             <Route path="appointments" element={<Appointments />} />
             <Route
               path="appointments/client-details/:clientId"
@@ -52,7 +57,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="my-schedule" element={<MySchedule />} />
             <Route path="anonymous" element={<DAnonymous />}>
-              <Route index />
+              <Route index element={<DAnonymousEmptyState />} />
               <Route path=":groupId" element={<DAnonymousChat />} />
             </Route>
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -72,6 +77,9 @@ function App() {
             <Route path="verify-email" element={<EmailVerification />} />
             <Route path="change-password" element={<ChangePasswordForm />} />
           </Route>
+
+          {/* 404 Catch All */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <Toaster position="top-center" reverseOrder={false} />

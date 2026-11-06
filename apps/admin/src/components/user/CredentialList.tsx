@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, Loader2, ShieldAlert, X } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ICertificate } from "../../api/GetUsers.api";
-import { ReviewCertificationApi, ReviewCVApi } from "../../api/Profile.api";
+import { ReviewCertificationApi, ReviewCVApi, ReviewProfessionalBodyCertificateApi } from "../../api/Profile.api";
 
 // Lazy-load so pdf.js is only downloaded when a PDF is actually previewed.
 const PdfPreview = lazy(() => import("./PdfPreview"));
@@ -168,9 +168,9 @@ export default function CredentialList({
   userId,
 }: CredentialListProps) {
   const qc = useQueryClient();
-  const [rejectOpen, setRejectOpen] = useState<null | { kind: "cv" | "cert" }>(
-    null
-  );
+  const [rejectOpen, setRejectOpen] = useState<null | {
+    kind: "cv" | "cert" | "profCert";
+  }>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { mutate: reviewCertification, isPending: approvingCert } = useMutation(
@@ -205,23 +205,50 @@ export default function CredentialList({
     },
   });
 
-  const approving = approvingCert || approvingCV;
+  const { mutate: reviewProfCert, isPending: approvingProfCert } = useMutation({
+    mutationFn: async (vars: {
+      status: "approved" | "rejected";
+      note?: string;
+    }) => {
+      if (!userId) throw new Error("Missing userId");
+      return ReviewProfessionalBodyCertificateApi({
+        userId,
+        status: vars.status,
+        note: vars.note,
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+    },
+  });
 
-  const approveDoc = (kind: "cv" | "cert") =>
-    kind === "cv"
-      ? reviewCV({ status: "approved" })
-      : reviewCertification({ status: "approved" });
+  const approving = approvingCert || approvingCV || approvingProfCert;
 
-  const rejectDoc = (kind: "cv" | "cert", note?: string) =>
-    kind === "cv"
-      ? reviewCV({ status: "rejected", note })
-      : reviewCertification({ status: "rejected", note });
+  const approveDoc = (kind: "cv" | "cert" | "profCert") => {
+    if (kind === "cv") {
+      reviewCV({ status: "approved" });
+    } else if (kind === "cert") {
+      reviewCertification({ status: "approved" });
+    } else {
+      reviewProfCert({ status: "approved" });
+    }
+  };
+
+  const rejectDoc = (kind: "cv" | "cert" | "profCert", note?: string) => {
+    if (kind === "cv") {
+      reviewCV({ status: "rejected", note });
+    } else if (kind === "cert") {
+      reviewCertification({ status: "rejected", note });
+    } else {
+      reviewProfCert({ status: "rejected", note });
+    }
+  };
 
   const items = useMemo(
     () => [
       {
         key: "cv" as const,
-        title: "CV/Resume",
+        title: "CV / Resume",
         doc: credentialsData?.cvUrl,
         status: credentialsData?.cvStatus ?? "pending",
         note: credentialsData?.cvNote,
@@ -233,6 +260,15 @@ export default function CredentialList({
         doc: credentialsData?.certificationUrl,
         status: credentialsData?.certificationStatus ?? "pending",
         note: credentialsData?.certificationNote,
+      },
+
+      {
+        key: "profCert" as const,
+        title: "Professional Body Certificate",
+        doc: credentialsData?.professionalBodyCertificateUrl,
+        status:
+          credentialsData?.professionalBodyCertificateStatus ?? "pending",
+        note: credentialsData?.professionalBodyCertificateNote,
       },
     ],
     [credentialsData]
@@ -248,6 +284,51 @@ export default function CredentialList({
 
   return (
     <div className="space-y-3">
+      {credentialsData?.compliance && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 border border-gray-200 rounded-md text-xs sm:text-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-700">Compliance Status:</span>
+            <span
+              className={`px-2 py-0.5 rounded-full ring-1 font-medium capitalize ${
+                credentialsData.compliance.status === "approved" ||
+                credentialsData.compliance.status === "compliant"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                  : credentialsData.compliance.status === "rejected"
+                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                  : "bg-amber-50 text-amber-700 ring-amber-200"
+              }`}
+            >
+              {credentialsData.compliance.status || "Pending"}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-gray-600">
+            <span>
+              Bookings:{" "}
+              <strong
+                className={
+                  credentialsData.compliance.canAcceptNewBookings
+                    ? "text-emerald-600"
+                    : "text-amber-600"
+                }
+              >
+                {credentialsData.compliance.canAcceptNewBookings
+                  ? "Active"
+                  : "Disabled"}
+              </strong>
+            </span>
+            {credentialsData.compliance.provisionalDeadline && (
+              <span>
+                Deadline:{" "}
+                <strong>
+                  {new Date(
+                    credentialsData.compliance.provisionalDeadline
+                  ).toLocaleDateString()}
+                </strong>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       {items.map((row) => (
         <DocRow
           key={row.key}

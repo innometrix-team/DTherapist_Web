@@ -16,6 +16,8 @@ import { LocalVideoTile, RemoteTile } from "./components/VideoTiles";
 import { ControlBar } from "./components/ControlBar";
 import { SessionExpiredOverlay } from "./components/SessionExpiredOverlay";
 import { useCallTimer } from "./hooks/useCallTimer";
+import { env } from "../../configs/env.config";
+import { useScreenCaptureMonitor } from "../../hooks/useScreenCaptureMonitor";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,8 @@ const VideoCallPage: React.FC = () => {
     state?.agora?.channel,
   );
   const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
+
+  useScreenCaptureMonitor(channel ? `call:${channel}` : null);
   const [isLoadingToken, setIsLoadingToken] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinStep, setJoinStep] = useState<string>("Connecting…");
@@ -104,7 +108,7 @@ const VideoCallPage: React.FC = () => {
     useCallTimer(state?.appointment, isJoined);
 
   useEffect(() => {
-    if (!appId) setAppId(import.meta.env.VITE_AGORA_APP_ID);
+    if (!appId) setAppId(env.AGORA_APP_ID);
     if (!channel) setChannel(state?.agora?.channel);
     if (!uid) setUid(state?.agora?.uid ?? 0);
   }, []); // eslint-disable-line

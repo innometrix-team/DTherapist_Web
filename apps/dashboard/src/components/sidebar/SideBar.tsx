@@ -1,18 +1,18 @@
 import React, { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { LogoutIcon } from "../../assets/icons";
-import { useAuthStore } from "../../store/auth/useAuthStore";
 import { NavGroup } from "../layout/types";
 import { SidebarLink } from "./SideBarLink";
 import { SidebarProps } from "./types";
-import { STORE_KEYS } from "../../configs/store.config";
 import { useNavigate } from "react-router-dom";
+import { clearAuthSession } from "../../utils/authSession.utils";
+import { logout as logoutApi } from "../../api/auth.api";
 
 const NAV_ITEMS: Record<"user" | "counselor", NavGroup> = {
   user: {
     primary: [
       { to: "/", label: "Dashboard" },
-      { to: "/counselor", label: "Counselors" },
+      { to: "/counselor", label: "Professionals" },
       { to: "/appointments", label: "Appointments" },
       { to: "/anonymous", label: "DAnonymous", matchNested: true },
       { to: "/library", label: "Library" },
@@ -44,14 +44,16 @@ const Sidebar: React.FC<SidebarPropsWithUserType> = ({
   setSidebarOpen, 
   userType 
 }) => {
-  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
-    logout();
-    localStorage.removeItem(STORE_KEYS.AUTH);
-    void navigate("/auth");
-  }, [logout, navigate]);
+    void logoutApi()
+      .catch(() => {})
+      .finally(() => {
+        clearAuthSession();
+        void navigate("/auth");
+      });
+  }, [navigate]);
 
   const sections = useMemo(() => {
     const navGroup = NAV_ITEMS[userType];

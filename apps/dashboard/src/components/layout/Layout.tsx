@@ -1,27 +1,31 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Outlet, useLocation, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { MenuIcon, UserIcon } from "../../assets/icons";
 import Sidebar from "../sidebar/SideBar";
-import ProfileApi from "../../api/Profile.api";
+import ProfileApi, { type IProfile } from "../../api/Profile.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import UserNotificationsDropdown from "../Notification/Notification";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import FeliciaChatbot from "../AIChatBot/FeliciaChatbot";
+import { useNotificationListener } from "../../hooks/useNotificationListener";
+import ErrorBoundary from "../common/ErrorBoundary";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const role = useAuthStore((s) => s.role);
+  const storedCategory = useAuthStore((s) => s.professionalCategory);
+  const setProfessionalCategory = useAuthStore((s) => s.setProfessionalCategory);
 
   // Determine user type based on role
   const userType = role === "counselor" ? "counselor" : "user";
 
   // Query to fetch user profile
-  const { data: profileData, isLoading: profileLoading } = useQuery({
+  const { data: profileData, isLoading: profileLoading } = useQuery<IProfile>({
     queryKey: QUERY_KEYS.profile.userProfile(userType),
-    queryFn: async () => {
+    queryFn: async (): Promise<IProfile> => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
@@ -39,6 +43,37 @@ const Layout: React.FC = () => {
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Sync profile-returned professionalCategory to auth store
+  const categoryValue: unknown = profileData?.professionalCategory;
+  const category =
+    categoryValue === "psychologist" || categoryValue === "counselor"
+      ? categoryValue
+      : undefined;
+
+  useEffect(() => {
+    if (category === "psychologist" && storedCategory !== "psychologist") {
+      setProfessionalCategory("psychologist");
+    } else if (category === "counselor" && storedCategory !== "counselor") {
+      setProfessionalCategory("counselor");
+    }
+  }, [category, storedCategory, setProfessionalCategory]);
+
+  // Global real-time and push notification listener
+  useNotificationListener();
+
+  const isPsychologist =
+    category === "psychologist" || storedCategory === "psychologist";
+
+  const roleLabel = useMemo(() => {
+    if (userType === "user") {
+      return "Client";
+    }
+    if (isPsychologist) {
+      return "Psychologist";
+    }
+    return "Counselor";
+  }, [userType, isPsychologist]);
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -133,7 +168,7 @@ const Layout: React.FC = () => {
                   {profileData?.fullName || "My Account"}
                 </span>
                 <span className="text-[11px] text-neutral capitalize">
-                  {userType === "counselor" ? "Counselor" : "Client"}
+                  {roleLabel}
                 </span>
               </div>
             </Link>
@@ -142,7 +177,9 @@ const Layout: React.FC = () => {
 
 
         <main className="flex-1 overflow-y-auto bg-offwhite">
-          <Outlet />
+          <ErrorBoundary name="this page">
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

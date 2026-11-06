@@ -2,9 +2,10 @@
  * Centralized application, dashboard, store, and social links for DTherapist.
  */
 
-const DASHBOARD_BASE_URL =
+const rawDashboardUrl =
   (import.meta.env.VITE_DASHBOARD_URL as string | undefined) ||
   "https://dashboard.dtherapist.com";
+const DASHBOARD_BASE_URL = rawDashboardUrl.replace(/\/+$/, "");
 
 export const APP_LINKS = {
   // Dashboard & Auth

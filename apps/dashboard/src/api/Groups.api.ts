@@ -1,406 +1,238 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import Api, { ApiError, IAPIResult } from "./Api";
+import { AxiosRequestConfig } from "axios";
+import { z } from "zod";
+import Api, { IAPIResult, handleApiRequest } from "./Api";
 
-export interface IGroup {
-  _id: string;
-  name: string;
-  description: string;
-  image: string;
-  createdAt: string;
-}
+// Zod Schemas for Runtime Validation
+export const GroupSchema = z.object({
+  _id: z.string(),
+  name: z.string().default(""),
+  description: z.string().default(""),
+  image: z.string().default(""),
+  createdAt: z.string().default(""),
+});
 
-interface APIResponse {
-  status: string;
-  message: string;
-  data: IGroup[];
-}
+export type IGroup = z.infer<typeof GroupSchema>;
+export const GroupsArraySchema = z.array(GroupSchema);
 
-interface GetGroupsApiResponse {
-  message: string;
-}
+export const ReplyToSchema = z.object({
+  _id: z.string(),
+  alias: z.string().optional(),
+  content: z.string(),
+});
 
-interface IGroupMessagesRequestData {
+export type IReplyTo = z.infer<typeof ReplyToSchema>;
+
+export const MessageUserIdSchema = z.preprocess((val) => {
+  if (typeof val === "string") return val;
+  if (val && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    if (typeof obj._id === "string") return obj._id;
+    if (typeof obj.id === "string") return obj.id;
+  }
+  return "";
+}, z.string().default(""));
+
+export const MessageSchema = z.object({
+  _id: z.string(),
+  content: z.string().default(""),
+  createdAt: z.string().default(""),
+  userId: MessageUserIdSchema,
+  groupId: z.string().optional(),
+  alias: z.string().optional(),
+  replyTo: ReplyToSchema.nullable().optional(),
+  isOwnMessage: z.boolean().optional(),
+});
+
+export type IMessage = z.infer<typeof MessageSchema>;
+export const MessagesArraySchema = z.array(MessageSchema);
+
+export interface IGroupMessagesRequestData {
   groupId: string;
 }
 
-// Updated reply structure
-export interface IReplyTo {
-  _id: string;
-  alias?: string;
-  content: string;
-}
-
-export interface IMessage {
-  _id: string;
-  content: string;
-  createdAt: string;
-  userId: string; // Changed from senderId to userId to match API response
-  groupId?: string;
-  alias?: string;
-  replyTo?: IReplyTo | null;
-  isOwnMessage?: boolean; // This will be computed on the client side
-}
-
-interface GroupMessagesAPIResponse {
-  message: string;
-  messages: IMessage[];
-}
-
-interface ISendGroupMessageRequestData {
+export interface ISendGroupMessageRequestData {
   groupId: string;
   content: string;
   replyTo?: string | null;
+  parentAuthorId?: string;
 }
 
-interface IMessageData {
-  _id: string;
-  content: string;
-  groupId: string;
-  userId: string;
-  alias?: string;
-  createdAt: string;
-  updatedAt: string;
-  replyTo?: string | null;
-  isOwnMessage?: boolean; // This will be computed on the client side
-  __v?: number;
-}
+export const MessageDataSchema = z.object({
+  _id: z.string(),
+  content: z.string().default(""),
+  groupId: z.string().default(""),
+  userId: MessageUserIdSchema,
+  alias: z.string().optional(),
+  createdAt: z.string().default(""),
+  updatedAt: z.string().optional().default(""),
+  replyTo: z.string().nullable().optional(),
+  isOwnMessage: z.boolean().optional(),
+  __v: z.number().optional(),
+});
 
-interface SendGroupMessageApiResponse {
-  message: string;
-  data: IMessageData;
-}
+export type IMessageData = z.infer<typeof MessageDataSchema>;
 
-// Report message interface
-interface IReportMessageRequestData {
+export interface IReportMessageRequestData {
   groupId: string;
   _id: string;
   reason: string;
   description: string;
 }
 
-interface ReportMessageApiResponse {
-  message: string;
-}
-
-// Block/Unblock user interface
-interface IBlockUserRequestData {
+export interface IBlockUserRequestData {
   userId: string;
 }
 
-interface BlockUserApiResponse {
-  message: string;
-}
-
-// Delete message interface
-interface IDeleteMessageRequestData {
+export interface IDeleteMessageRequestData {
   groupId: string;
   _id: string;
 }
 
-interface DeleteMessageApiResponse {
-  message: string;
-}
-
-// Define an interface for error response data
-interface ErrorResponseData {
-  error?: string;
+interface GroupMessagesAPIResponse {
   message?: string;
-  status?: string;
+  messages: IMessage[];
 }
 
-// Helper function to extract error message from response
-function getErrorMessage(error: AxiosError): string {
-  const responseData = error.response?.data as ErrorResponseData;
+const GroupMessagesResponseSchema = z.object({
+  message: z.string().optional(),
+  messages: MessagesArraySchema.default([]),
+});
 
-  // Check for different error message formats
-  if (responseData?.error) {
-    return responseData.error;
-  }
-  if (responseData?.message) {
-    return responseData.message;
-  }
-
-  // Fallback to default error message
-  return error.message || "An unexpected error occurred";
+interface SimpleMessageResponse {
+  message?: string;
+  data?: string | { message?: string };
 }
 
-export async function GetGroupsApi(
+const extractMessage = (res: SimpleMessageResponse, fallback: string): string => {
+  if (typeof res?.data === "string" && res.data.length > 0) return res.data;
+  if (res?.data && typeof res.data === "object" && typeof res.data.message === "string") {
+    return res.data.message;
+  }
+  return res?.message ?? fallback;
+};
+
+// API Functions
+export const GetGroupsApi = (
   config?: AxiosRequestConfig
-): Promise<IAPIResult<IGroup[]> | null> {
-  try {
-    const response = await Api.get<APIResponse>("/api/group/getGroups", {
-      ...config,
-    });
+): Promise<IAPIResult<IGroup[]> | null> =>
+  handleApiRequest<IGroup[]>(
+    () => Api.get("/api/group/getGroups", config),
+    undefined,
+    GroupsArraySchema
+  );
 
-    return Promise.resolve({
-      code: response.status,
-      status: response.data.status,
-      message: response.data.message ?? "success",
-      data: response.data.data,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
-
-export async function JoinGroupApi(
+export const JoinGroupApi = (
   groupId: string,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string> | null> {
-  try {
-    const response = await Api.post<GetGroupsApiResponse>(
-      `/api/group/${groupId}/join`,
-      null,
-      {
-        ...config,
-      }
-    );
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () => Api.post(`/api/group/${groupId}/join`, {}, config),
+    (raw) => extractMessage(raw, "Joined group successfully")
+  );
 
-    return Promise.resolve({
-      code: response.status,
-      status:
-        response.status === 200 || response.status === 201
-          ? "success"
-          : "error",
-      message: response.data.message ?? "Joined group successfully",
-      data: response.data.message,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
-
-export async function GetGroupMessagesApi(
+export const GetGroupMessagesApi = (
   data: IGroupMessagesRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<IMessage[]> | null> {
-  try {
-    const response = await Api.get<GroupMessagesAPIResponse>(
-      `/api/group/${data.groupId}/messages`,
-      {
-        ...config,
-      }
-    );
+): Promise<IAPIResult<IMessage[]> | null> =>
+  handleApiRequest<GroupMessagesAPIResponse, IMessage[]>(
+    () => Api.get(`/api/group/${data.groupId}/messages`, config),
+    (raw) => raw.messages ?? [],
+    GroupMessagesResponseSchema
+  );
 
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "Group messages fetched",
-      data: response.data.messages,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
-
-export async function SendGroupMessageApi(
+export const SendGroupMessageApi = (
   data: ISendGroupMessageRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<IMessageData> | null> {
-  try {
-    const payload: { content: string; replyTo?: string | null } = {
-      content: data.content,
-    };
+): Promise<IAPIResult<IMessageData> | null> => {
+  const payload: {
+    content: string;
+    replyTo?: string | null;
+    parentAuthorId?: string;
+  } = {
+    content: data.content,
+  };
 
-    // Only include replyTo if it exists
-    if (data.replyTo) {
-      payload.replyTo = data.replyTo;
-    }
-
-    const response = await Api.post<SendGroupMessageApiResponse>(
-      `/api/group/${data.groupId}/message`,
-      payload,
-      {
-        ...config,
-      }
-    );
-
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "Message sent",
-      data: response.data.data,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
+  if (data.replyTo) {
+    payload.replyTo = data.replyTo;
   }
-}
 
-export async function ReportGroupMessageApi(
+  if (data.parentAuthorId) {
+    payload.parentAuthorId = data.parentAuthorId;
+  }
+
+  return handleApiRequest<IMessageData>(
+    () => Api.post(`/api/group/${data.groupId}/message`, payload, config),
+    undefined,
+    MessageDataSchema
+  );
+};
+
+export const ReportGroupMessageApi = (
   data: IReportMessageRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string> | null> {
-  try {
-    const payload = {
-      reason: data.reason,
-      description: data.description,
-    };
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () =>
+      Api.post(
+        `/api/group/${data.groupId}/messages/${data._id}/report`,
+        { reason: data.reason, description: data.description },
+        config
+      ),
+    (raw) => extractMessage(raw, "Message reported successfully")
+  );
 
-    const response = await Api.post<ReportMessageApiResponse>(
-      `/api/group/${data.groupId}/messages/${data._id}/report`,
-      payload,
-      {
-        ...config,
-      }
-    );
-
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "Message reported successfully",
-      data: response.data.message,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
+export interface IGroupBlockItem {
+  blockId: string;
+  alias: string;
 }
 
-export async function BlockUserApi(
+export const BlockAuthorApi = (
+  messageId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<{ blockId: string }> | null> =>
+  handleApiRequest<{ blockId: string }>(
+    () => Api.post(`/api/group/messages/${messageId}/block-author`, {}, config)
+  );
+
+export const GetGroupBlocksApi = (
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<IGroupBlockItem[]> | null> =>
+  handleApiRequest<IGroupBlockItem[]>(
+    () => Api.get(`/api/group/blocks`, config)
+  );
+
+export const UnblockAuthorApi = (
+  blockId: string,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () => Api.delete(`/api/group/blocks/${blockId}`, config),
+    (raw) => extractMessage(raw, "Author unblocked successfully")
+  );
+
+export const BlockUserApi = (
   data: IBlockUserRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string> | null> {
-  try {
-    const response = await Api.post<BlockUserApiResponse>(
-      `/api/group/block/${data.userId}`,
-      null,
-      {
-        ...config,
-      }
-    );
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () => Api.post(`/api/group/block/${data.userId}`, {}, config),
+    (raw) => extractMessage(raw, "User blocked successfully")
+  );
 
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "User blocked successfully",
-      data: response.data.message,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
-
-export async function UnblockUserApi(
+export const UnblockUserApi = (
   data: IBlockUserRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string> | null> {
-  try {
-    const response = await Api.delete<BlockUserApiResponse>(
-      `/api/group/block/${data.userId}`,
-      {
-        ...config,
-      }
-    );
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () => Api.delete(`/api/group/block/${data.userId}`, config),
+    (raw) => extractMessage(raw, "User unblocked successfully")
+  );
 
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "User unblocked successfully",
-      data: response.data.message,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
-
-export async function DeleteOwnMessageApi(
+export const DeleteOwnMessageApi = (
   data: IDeleteMessageRequestData,
   config?: AxiosRequestConfig
-): Promise<IAPIResult<string> | null> {
-  try {
-    const response = await Api.delete<DeleteMessageApiResponse>(
-      `/api/group/groups/${data.groupId}/messages/${data._id}`,
-      {
-        ...config,
-      }
-    );
-
-    return Promise.resolve({
-      code: response.status,
-      status: "success",
-      message: response.data.message ?? "Message deleted successfully",
-      data: response.data.message,
-    });
-  } catch (e) {
-    if (axios.isCancel(e)) {
-      return Promise.resolve(null);
-    }
-
-    const axiosError = e as AxiosError;
-    const statusCode = axiosError.response?.status || 0;
-    const errorMessage = getErrorMessage(axiosError);
-    const status =
-      (axiosError.response?.data as ErrorResponseData)?.status || "error";
-
-    return Promise.reject(new ApiError(errorMessage, statusCode, status));
-  }
-}
+): Promise<IAPIResult<string> | null> =>
+  handleApiRequest<SimpleMessageResponse, string>(
+    () => Api.delete(`/api/group/groups/${data.groupId}/messages/${data._id}`, config),
+    (raw) => extractMessage(raw, "Message deleted successfully")
+  );

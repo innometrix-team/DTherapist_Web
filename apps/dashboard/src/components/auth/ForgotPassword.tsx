@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,11 +67,16 @@ function ForgotPassword() {
   }, []);
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-4">
-      <h2 className="text-3xl font-bold">Forgot Password</h2>
-      <p className="text-gray-500 text-sm">
-        Enter the email address associated with your account.
-      </p>
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+          Reset your password
+        </h1>
+        <p className="text-sm text-gray-500 mt-2">
+          Enter the email associated with your account and we&apos;ll send you a verification code.
+        </p>
+      </div>
+
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -78,24 +84,44 @@ function ForgotPassword() {
         }}
       >
         <div>
+          <label
+            htmlFor="email"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+          >
+            Email Address
+          </label>
           <input
+            id="email"
             type="email"
-            placeholder="Email Address"
+            placeholder="name@example.com"
+            autoCapitalize="none"
+            autoCorrect="off"
             {...register("email")}
-            className="w-full border border-gray-300 rounded px-4 py-2"
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all lowercase"
           />
           {errors.email && (
-            <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+            <p className="text-red-600 text-xs mt-1.5">{errors.email.message}</p>
           )}
         </div>
+
         <button
           type="submit"
           disabled={isSubmitting || isPending}
-          className="w-fit bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+          className="w-full py-3.5 px-4 bg-primary hover:bg-darkerb text-white font-semibold rounded-lg text-sm sm:text-base transition-colors shadow-xs cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
         >
-          {isSubmitting || isPending ? "Sending..." : "Send Reset Link"}
+          {isSubmitting || isPending ? "Sending code..." : "Send Reset Code"}
         </button>
       </form>
+
+      <div className="mt-8 text-center">
+        <Link
+          to="/auth/login"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-darkerb transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to log in</span>
+        </Link>
+      </div>
     </div>
   );
 }

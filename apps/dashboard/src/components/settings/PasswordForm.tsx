@@ -12,6 +12,7 @@ import type { SubmitHandler } from "react-hook-form";
 // Zod schema for password validation
 const passwordSchema = z
   .object({
+    currentPassword: z.string().min(1, "Please enter your current password"),
     newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters long")
@@ -29,6 +30,7 @@ const passwordSchema = z
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
 const PasswordForm: React.FC = () => {
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const abortControllerRef = useRef<AbortController>(null);
@@ -45,6 +47,7 @@ const PasswordForm: React.FC = () => {
   } = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
+      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -73,7 +76,7 @@ const PasswordForm: React.FC = () => {
 
         // Handle case where result.data doesn't exist or is null
         if (!result.data) {
-          toast.success(result.message || "Password updated successfully!");
+          toast.success(result.message || "Password updated successfully!", { id: "password-update" });
           reset();
           return;
         }
@@ -99,7 +102,7 @@ const PasswordForm: React.FC = () => {
           });
         }
 
-        toast.success(result.message || "Password updated successfully!");
+        toast.success(result.message || "Password updated successfully!", { id: "password-update" });
         reset();
       },
       onError: (error) => {
@@ -138,6 +141,41 @@ const PasswordForm: React.FC = () => {
       className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
       <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
+
+      {/* Current Password Field */}
+      <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+        <label
+          htmlFor="currentPassword"
+          className="text-sm font-medium text-gray-700 w-full md:w-40 shrink-0 md:pt-2"
+        >
+          Current Password
+        </label>
+        <div className="flex-1 max-w-full md:max-w-md">
+          <div className="relative">
+            <input
+              id="currentPassword"
+              type={showCurrentPassword ? "text" : "password"}
+              placeholder="Enter current password"
+              {...register("currentPassword")}
+              disabled={isSubmitting}
+              className={`w-full px-4 py-2 bg-gray-100 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.currentPassword ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            <span
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"
+              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+            >
+              {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
+          </div>
+          {errors.currentPassword && (
+            <p className="text-red-500 text-xs mt-1">
+              {errors.currentPassword.message}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* New Password Field */}
       <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">

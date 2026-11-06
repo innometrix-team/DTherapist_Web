@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { MenuIcon, UserIcon } from "../../assets/icons";
 import Sidebar from "../sidebar/SideBar";
 import NotificationsDropdown from "../Notifications/NotificationsDropdown";
+import ErrorBoundary from "../common/ErrorBoundary";
 
 const Layout: React.FC = () => {
   const { pathname } = useLocation();
@@ -37,7 +38,9 @@ const Layout: React.FC = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto bg-offwhite">
-          <Outlet />
+          <ErrorBoundary name="this page">
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

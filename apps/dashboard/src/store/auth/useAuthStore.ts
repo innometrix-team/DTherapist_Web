@@ -11,11 +11,14 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       name: null,
       email: null, 
+      professionalCategory: null,
       setRole: (role) => set({ role }),
       setToken: (token) => set({ token }),
       setEmail: (email) => set({ email }), 
-      setAuth: ({ role, token, id, email, name }) => set({ role, token, id, email, name }), 
-      logout: () => set({ role: null, token: null, id: null, email: null }), 
+      setProfessionalCategory: (professionalCategory) => set({ professionalCategory }),
+      setAuth: ({ role, token, id, email, name, professionalCategory }) =>
+        set({ role, token, id, email, name, professionalCategory: professionalCategory ?? null }), 
+      logout: () => set({ role: null, token: null, id: null, email: null, professionalCategory: null }), 
     }),
     {
       name: STORE_KEYS.AUTH,

@@ -79,7 +79,9 @@ Every app (`apps/landing/src/index.css`, `apps/dashboard/src/index.css`, `apps/a
   - Never call `useEffect` (or any React hook) inside nested functions, helper methods, loops, event handlers, or conditionals.
   - All hooks must be invoked strictly at the top level of the component or custom hook before any conditional statements or early returns.
   - Side effects should be cleanly isolated; extract complex data fetching or event listener logic into custom hooks (`useAppointmentSession.ts`).
-- **Strict TypeScript:** No `any` types. All props and states must be explicitly typed.
+- **Strict TypeScript & Proper Typing:** No `any` types. All props, states, schemas, and API contracts must be properly and strictly typed with zero type errors. Always ensure form validation schemas and resolver types match their form data interfaces without union mismatches or broken inferences.
+- **Mandatory Type Checks:** Always run a full type check (`npm run build` / `tsc -b`) in the target app before concluding any task.
+- **Clarification Invariant (Ask First When Unsure):** If you are unsure about any type definition, requirement, schema structure, or domain behavior, **always ask the user for clarification** instead of guessing or introducing partial types.
 - **Unused Declarations:** Do not leave unused imports or variables (e.g. unused `import React from 'react'`), as TypeScript's `noUnusedLocals` will fail Vite builds (`tsc -b`).
 
 ### C. State Management (Zustand v5)
@@ -172,15 +174,18 @@ npx markdownlint docs/                  # Lint markdown documentation
 
 ### Mode B: Code Refactoring & Engineering Tasks
 - ✅ **Always do:**
-  - Verify type safety before and after changes by running `npm run build` (`tsc -b`).
+  - Verify complete type safety before and after changes by running `npm run build` (`tsc -b`). Everything must be strictly and properly typed with 0 errors.
   - Maintain backward compatibility of routes, API contracts, and user flows.
   - Consolidate duplicate code and remove dead imports/unused variables.
   - Ensure all styles use the global synchronized theme tokens.
+  - If you are ever unsure about types, contracts, design decisions, or requirements, **always ask the user for clarification** first.
+  - Rely on existing conversation context for requirements instead of re-reading `FRONTEND_HANDOFF.md`.
 - ⚠️ **Ask first:**
   - Before deleting or merging duplicate API endpoints/files.
   - Before introducing new third-party npm packages.
   - Before altering URL routes in React Router.
 - 🚫 **Never do:**
+  - Read or re-read `FRONTEND_HANDOFF.md` since full context of requirements is already retained in memory/context.
   - Commit or edit secrets/credentials in `.env` files.
   - Suppress TypeScript errors with `@ts-ignore` or `any` without explicit justification.
   - Break Vercel SPA routing rules in `vercel.json`.

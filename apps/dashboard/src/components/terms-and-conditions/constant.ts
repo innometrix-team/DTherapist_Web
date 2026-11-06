@@ -21,7 +21,7 @@ export interface TermsData {
 }
 
 export const COUNSELOR_TERMS: TermsData = {
-  title: "Terms and Conditions of Service for Professional Counselors",
+  title: "Terms and Conditions of Service for Mental Health Professionals",
   sections: [
     {
       id: "eligibility",
@@ -42,12 +42,12 @@ export const COUNSELOR_TERMS: TermsData = {
         "Maintain the highest standards of professionalism, confidentiality, and ethical conduct in all interactions",
         "Participate in ongoing training and professional development as may be reasonably required by DTherapist",
         "Promptly report any suspected data breaches or security incidents to DTherapist",
-        "Understand and consent that DTherapist may, at its discretion, monitor and review counselor interactions for compliance, quality assurance, and client safety purposes",
+        "Understand and consent that DTherapist may, at its discretion, monitor and review professional interactions for compliance, quality assurance, and client safety purposes",
       ],
     },
     {
       id: "rights",
-      title: "Counselor Rights",
+      title: "Professional Rights",
       icon: Users,
       content: [
         "Request access, modification, or deletion of personal information in accordance with applicable data protection laws",
@@ -72,7 +72,7 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Fees and Compensation",
       icon: CreditCard,
       content: [
-        "DTherapist compensates counselors for sessions conducted through the platform according to the established payment structure",
+        "DTherapist compensates professionals for sessions conducted through the platform according to the established payment structure",
         "All financial transactions must occur through DTherapist's official payment system to ensure transparency and security",
       ],
     },
@@ -81,9 +81,9 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Termination",
       icon: AlertTriangle,
       content: [
-        "DTherapist reserves the right to suspend or terminate a Counselor's account with or without prior notice in the event of non-compliance, misconduct, or policy breach",
+        "DTherapist reserves the right to suspend or terminate a Professional's account with or without prior notice in the event of non-compliance, misconduct, or policy breach",
         "DTherapist may temporarily suspend access pending the outcome of any investigation or dispute",
-        "Counselors who wish to leave the platform must provide 30 days' written notice to ensure proper closure of ongoing client sessions",
+        "Professionals who wish to leave the platform must provide 30 days' written notice to ensure proper closure of ongoing client sessions",
       ],
     },
     {
@@ -91,7 +91,7 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Intellectual Property",
       icon: Shield,
       content: [
-        "Counselors grant DTherapist a non-exclusive, worldwide, royalty-free license to use professional profiles, names, and images for legitimate platform-related purposes, including client matching and promotional materials",
+        "Professionals grant DTherapist a non-exclusive, worldwide, royalty-free license to use professional profiles, names, and images for legitimate platform-related purposes, including client matching and promotional materials",
         "DTherapist retains ownership of its trademarks, logos, software, and proprietary materials",
       ],
     },
@@ -100,7 +100,7 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Indemnification",
       icon: AlertTriangle,
       content: [
-        "Counselors agree to indemnify and hold harmless DTherapist, its affiliates, and personnel from any claims, losses, or damages arising from:",
+        "Professionals agree to indemnify and hold harmless DTherapist, its affiliates, and personnel from any claims, losses, or damages arising from:",
         "• Breach of these Terms",
         "• Professional negligence or misconduct",
         "• Unauthorized disclosure of confidential information",
@@ -117,15 +117,15 @@ export const COUNSELOR_TERMS: TermsData = {
     },
     {
       id: "counselor-cancellation",
-      title: "Counselor Cancellation Policy",
+      title: "Professional Cancellation Policy",
       icon: Clock,
       content: [
         "DTherapist values professionalism and reliability. To ensure fairness and maintain scheduling integrity, the following policy applies:",
-        "If a Counselor cancels a session, the client will be promptly notified and offered one of the following options:",
-        "• Reschedule with the same counselor at a mutually convenient time (no extra cost)",
-        "• Be matched with another available counselor for the same appointment slot",
+        "If a Professional cancels a session, the client will be promptly notified and offered one of the following options:",
+        "• Reschedule with the same professional at a mutually convenient time (no extra cost)",
+        "• Be matched with another available professional for the same appointment slot",
         "• Receive a full refund if neither option is acceptable",
-        "Counselor Responsibilities:",
+        "Professional Responsibilities:",
         "• Provide timely notice of cancellations or rescheduling",
         "• Communicate respectfully and professionally with clients and DTherapist staff",
         "This policy ensures continuity of care, respects clients' time, and maintains an efficient scheduling system",
@@ -142,25 +142,25 @@ export const COUNSELOR_TERMS: TermsData = {
         "• 12–23 hours before: 30% charge of the session fee",
         "• 6–11 hours before: 50% charge of the session fee",
         "• Less than 6 hours or no-show: 100% of the session fee",
-        "If a counselor cancels a session, clients will be notified promptly and may:",
-        "• Reschedule with the same or another counselor, or",
+        "If a professional cancels a session, clients will be notified promptly and may:",
+        "• Reschedule with the same or another professional, or",
         "• Request a full refund",
-        "Purpose: To ensure fairness, effective scheduling, and respect for both client and counselor commitments",
+        "Purpose: To ensure fairness, effective scheduling, and respect for both client and professional commitments",
       ],
     },
     {
       id: "payment-structure",
-      title: "Counselor Payment Structure Policy",
+      title: "Professional Payment Structure Policy",
       icon: CreditCard,
       content: [
-        "DTherapist recognizes and values the contributions of its professional counselors",
+        "DTherapist recognizes and values the contributions of its licensed professionals",
         "The revenue from each client session is shared as follows:",
-        "• Counselor: 65% of the session fee",
+        "• Professional: 65% of the session fee",
         "• DTherapist: 35% of the session fee",
-        "Purpose: This structure ensures fair compensation for counselors while supporting operational costs such as client support, marketing, and platform maintenance",
+        "Purpose: This structure ensures fair compensation for professionals while supporting operational costs such as client support, marketing, and platform maintenance",
         "Payment Terms:",
         "• Payments are processed weekly",
-        "• Transaction summaries will be visible on the counselor's dashboard",
+        "• Transaction summaries will be visible on the professional's dashboard",
         "• DTherapist reserves the right to review and adjust the revenue split or payment schedule as necessary, with prior notice",
       ],
     },
@@ -171,7 +171,7 @@ export const COUNSELOR_TERMS: TermsData = {
       content: [
         "DTherapist maintains a fair and transparent dispute resolution process for issues arising from counseling sessions",
         "Eligibility: A client may file a dispute if:",
-        "• The counselor fails to attend a scheduled session, or",
+        "• The professional fails to attend a scheduled session, or",
         "• The session is unsatisfactory due to incomplete service, technical issues, or misconduct",
         "Filing a Dispute: After a session has ended, clients can:",
         "1. Go to Past Sessions on their dashboard",
@@ -180,10 +180,10 @@ export const COUNSELOR_TERMS: TermsData = {
         "The dispute will be logged for administrative review",
         "Resolution Process:",
         "• The DTherapist admin team will review all disputes, verify session details, and determine an appropriate resolution (refund, partial credit, or other action)",
-        "• Both counselor and client will be notified of the decision",
+        "• Both professional and client will be notified of the decision",
         "• The admin's decision shall be final and based on available evidence",
         "Automatic Payment Release:",
-        "• If no dispute is filed within 24 hours after a session, payment will automatically be released to the counselor, and the session will be marked as non-disputable",
+        "• If no dispute is filed within 24 hours after a session, payment will automatically be released to the professional, and the session will be marked as non-disputable",
       ],
     },
     {
@@ -191,7 +191,7 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Roles and Responsibilities",
       icon: Shield,
       content: [
-        "Counselors must:",
+        "Professionals must:",
         "• Provide high-quality, ethical, and compassionate services",
         "• Adhere to DTherapist's operational and professional policies",
         "• Maintain confidentiality and compliance with applicable legal standards",
@@ -206,9 +206,9 @@ export const COUNSELOR_TERMS: TermsData = {
       title: "Acknowledgment",
       icon: UserCheck,
       content: [
-        "By registering as a Counselor on DTherapist, you confirm that you have read, understood, and agreed to be bound by these:",
+        "By registering as a Professional on DTherapist, you confirm that you have read, understood, and agreed to be bound by these:",
         "• Terms and Conditions of Service",
-        "• Counselor and Client Cancellation Policies",
+        "• Professional and Client Cancellation Policies",
         "• Payment and Dispute Resolution Policies",
         "Your commitment to these principles helps foster a trusted, professional, and supportive therapeutic community",
       ],
@@ -265,7 +265,7 @@ export const CLIENT_TERMS: TermsData = {
       content: [
         "DTherapist provides:",
         "• A supportive online community for individuals navigating grief and emotional recovery",
-        "• Access to resources, support groups, and sessions with certified therapists or counselors",
+        "• Access to resources, support groups, and sessions with certified therapists or professionals",
         "Please note that the platform facilitates support, not professional medical diagnosis or treatment",
       ],
     },
@@ -492,7 +492,7 @@ export const GENERAL_TERMS = {
   arbitration:
     "Any disputes arising hereunder shall be resolved through binding arbitration under the Arbitration and Mediation Act, 2023, as amended.",
   counselorNote:
-    "By offering services through DTherapist, counselors acknowledge their understanding and acceptance of these policies. Your commitment to these principles helps foster a trusted, professional, and supportive therapeutic community.",
+    "By offering services through DTherapist, professionals acknowledge their understanding and acceptance of these policies. Your commitment to these principles helps foster a trusted, professional, and supportive therapeutic community.",
   clientNote:
     "By creating an account and using DTherapist, you acknowledge that you have read, understood, and agreed to these Terms and Conditions, Cancellation Policies, and Appointment Dispute Policy. Your trust and cooperation help us maintain a safe, fair, and supportive environment for all.",
   exceptions:
