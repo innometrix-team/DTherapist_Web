@@ -2,3 +2,21 @@ node_modules/
 **/node_modules/
 apps/Dashboard/.env
 config.bat
+
+# Local agent & private task notes (contains test credentials / accounts)
+tasks/
+docs/CLIENT_RELEASE_OVERVIEW.md
+CLIENT_RELEASE_OVERVIEW.md
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build outputs & caches
+dist/
+**/dist/
+.turbo/
+.vite/
+

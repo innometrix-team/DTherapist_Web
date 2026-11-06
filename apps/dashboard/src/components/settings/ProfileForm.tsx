@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,20 +8,100 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { genderOptions } from "../../constants/settings.constants";
 import { FaTrash } from "react-icons/fa";
+import { Clock, AlertCircle, ArrowRightLeft } from "lucide-react";
 import { CameraIcon } from "../../assets/icons";
 
 
 
 import ProfileApi, {
   updateProfile as ProfileUpdateApi,
+  getProfessionalBodies,
+  requestProfessionChange,
+  type IProfile,
   type IProfileUpdateData,
 } from "../../api/Profile.api";
+import type { IAPIResult } from "../../api/Api";
 import DeleteAccountApi from "../../api/DeleteAccount.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
-// Base schema for common fields (removed email)
-const baseSchema = z.object({
+type ProfessionalBodyForm = {
+  bodyName: string;
+  certificationName: string;
+  otherBodyName?: string;
+};
+
+const normalizeProfessionalBodies = (value: unknown): ProfessionalBodyForm[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.reduce<ProfessionalBodyForm[]>((bodies, item: unknown) => {
+    if (item && typeof item === "object") {
+      const body = item as Record<string, unknown>;
+      bodies.push({
+        bodyName: typeof body.bodyName === "string" ? body.bodyName : "",
+        certificationName:
+          typeof body.certificationName === "string" ? body.certificationName : "",
+        ...(typeof body.otherBodyName === "string"
+          ? { otherBodyName: body.otherBodyName }
+          : {}),
+      });
+    }
+    return bodies;
+  }, []);
+};
+
+interface CategoryRequestView {
+  requestId?: string;
+  status?: "pending" | "approved" | "rejected";
+  requestedProfession: "counselor" | "psychologist";
+  note?: string;
+}
+
+const parseCategoryRequest = (
+  profile: IProfile | undefined,
+  fallbackCategory: "counselor" | "psychologist"
+): CategoryRequestView | undefined => {
+  if (!profile || typeof profile !== "object") return undefined;
+  const rawProfile = profile as unknown as Record<string, unknown>;
+  const rawReq = rawProfile.professionalCategoryRequest;
+  if (!rawReq || typeof rawReq !== "object") return undefined;
+
+  const req = rawReq as Record<string, unknown>;
+  const rawStatus = req.status;
+  const status: "pending" | "approved" | "rejected" | undefined =
+    rawStatus === "pending" || rawStatus === "approved" || rawStatus === "rejected"
+      ? rawStatus
+      : undefined;
+
+  const rawRequested = req.requestedCategory ?? req.professionalCategory;
+  const requestedProfession: "counselor" | "psychologist" =
+    rawRequested === "psychologist" || rawRequested === "counselor"
+      ? rawRequested
+      : fallbackCategory;
+
+  const requestId: string | undefined =
+    typeof req.requestId === "string" && req.requestId.trim().length > 0
+      ? req.requestId
+      : typeof req.requestId === "number"
+      ? String(req.requestId)
+      : undefined;
+
+  const note: string | undefined =
+    typeof req.note === "string" && req.note.trim().length > 0
+      ? req.note
+      : typeof req.note === "number"
+      ? String(req.note)
+      : undefined;
+
+  return {
+    requestId,
+    status,
+    requestedProfession,
+    note,
+  };
+};
+
+const baseProfileFields = {
   fullName: z
     .string()
     .min(2, "Full Name is required")
@@ -30,26 +110,46 @@ const baseSchema = z.object({
     }),
   phoneNumber: z.string().regex(/^[\d\s\-+()]+$/, "Please enter a valid phone number"),
   country: z.string().min(2, "Country is required"),
-});
-
-// User-specific schema
-const userSchema = baseSchema.extend({
   bio: z.string().min(10, "Bio must be at least 10 characters"),
-});
+  specialization: z.string().optional(),
+  experience: z.number().optional(),
+  gender: z.enum(["male", "female", "non-binary", "other"]).optional(),
+};
 
-// Counselor-specific schema
-const counselorSchema = baseSchema.extend({
-  bio: z.string().min(10, "Bio must be at least 10 characters"),
-  specialization: z.string().min(2, "Specialization is required"),
-  experience: z.number().min(0, "Years of experience must be 0 or greater"),
-  gender: z.enum(["male", "female", "non-binary", "other"], {
-    errorMap: () => ({ message: "Please select a gender" }),
-  }),
-});
+const baseProfileSchema = z.object(baseProfileFields);
 
-type UserFormData = z.infer<typeof userSchema>;
-type CounselorFormData = z.infer<typeof counselorSchema>;
-type ProfileFormData = UserFormData | CounselorFormData;
+export type ProfileFormData = z.infer<typeof baseProfileSchema>;
+
+const createProfileSchema = (isCounselor: boolean) =>
+  baseProfileSchema.superRefine((data, ctx) => {
+    if (isCounselor) {
+      if (!data.specialization || data.specialization.trim().length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["specialization"],
+          message: "Specialization is required",
+        });
+      }
+      if (
+        typeof data.experience !== "number" ||
+        data.experience < 0 ||
+        isNaN(data.experience)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["experience"],
+          message: "Years of experience must be 0 or greater",
+        });
+      }
+      if (!data.gender) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["gender"],
+          message: "Please select a gender",
+        });
+      }
+    }
+  });
 
 const ProfileForm: React.FC = () => {
   const navigate = useNavigate();
@@ -63,7 +163,7 @@ const ProfileForm: React.FC = () => {
   const deleteAbortControllerRef = useRef<AbortController | null>(null);
 
   // Use appropriate schema based on role
-  const schema = isCounselor ? counselorSchema : userSchema;
+  const schema = useMemo(() => createProfileSchema(isCounselor), [isCounselor]);
 
   const {
     register,
@@ -93,14 +193,130 @@ const ProfileForm: React.FC = () => {
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [initialProfilePicture, setInitialProfilePicture] = useState<string | null>(null);
+  const [professionalBodies, setProfessionalBodies] = useState<ProfessionalBodyForm[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch existing profile data
-  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery<IAPIResult<IProfile> | null>({
     queryKey: QUERY_KEYS.profile.current(role || ''),
-    queryFn: () => ProfileApi(role as "user" | "counselor"),
+    queryFn: async (): Promise<IAPIResult<IProfile> | null> => {
+      return ProfileApi(role as "user" | "counselor");
+    },
     enabled: !!role,
     retry: 1,
+  });
+
+  // Fetch available professional bodies
+  const { data: bodiesResponse, isLoading: isLoadingBodies } = useQuery({
+    queryKey: QUERY_KEYS.profile.professionalBodies,
+    queryFn: async (): Promise<{ data: unknown }> => {
+      const fetchBodies = getProfessionalBodies as () => Promise<{ data: unknown }>;
+      return fetchBodies();
+    },
+    enabled: isCounselor,
+  });
+
+  const availableBodies = useMemo(() => {
+    const data: unknown = bodiesResponse?.data;
+    const list = Array.isArray(data)
+      ? data.filter((body: unknown): body is string => typeof body === "string")
+      : [];
+    if (list.length > 0 && !list.includes("Others")) {
+      return [...list, "Others"];
+    }
+    return list;
+  }, [bodiesResponse?.data]);
+
+  const handleAddBody = useCallback(() => {
+    setProfessionalBodies((prev) => [
+      ...prev,
+      { bodyName: "", certificationName: "", otherBodyName: "" },
+    ]);
+  }, []);
+
+  const handleRemoveBody = useCallback((index: number) => {
+    setProfessionalBodies((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleUpdateBody = useCallback((
+    index: number,
+    field: keyof ProfessionalBodyForm,
+    value: string
+  ) => {
+    setProfessionalBodies((prev: ProfessionalBodyForm[]) =>
+      prev.map((item: ProfessionalBodyForm, i: number): ProfessionalBodyForm => {
+        if (i !== index) return item;
+        const updated: ProfessionalBodyForm = { ...item, [field]: value };
+        if (field === "bodyName" && value !== "Others") {
+          delete updated.otherBodyName;
+        }
+        return updated;
+      })
+    );
+  }, []);
+
+  // Item 8: Profession Change Request state & mutation
+  const [showProfessionChange, setShowProfessionChange] = useState(false);
+  const rawProfileRecord = profileData?.data as unknown as
+    | Record<string, unknown>
+    | undefined;
+  const currentProfession: "counselor" | "psychologist" =
+    rawProfileRecord?.professionalCategory === "psychologist"
+      ? "psychologist"
+      : "counselor";
+
+  const defaultTargetCategory: "counselor" | "psychologist" =
+    currentProfession === "counselor" ? "psychologist" : "counselor";
+
+  const [selectedTargetCategory, setSelectedTargetCategory] =
+    useState<"counselor" | "psychologist">(defaultTargetCategory);
+
+  useEffect(() => {
+    setSelectedTargetCategory(
+      currentProfession === "counselor" ? "psychologist" : "counselor"
+    );
+  }, [currentProfession]);
+
+  const categoryRequest: CategoryRequestView | undefined = parseCategoryRequest(
+    profileData?.data,
+    defaultTargetCategory
+  );
+  const isPendingProfessionRequest = categoryRequest?.status === "pending";
+  const isRejectedProfessionRequest = categoryRequest?.status === "rejected";
+  const requestedProfession: "counselor" | "psychologist" =
+    categoryRequest?.requestedProfession ?? defaultTargetCategory;
+  const requestIdText: string | undefined = categoryRequest?.requestId;
+  const noteText: string | undefined = categoryRequest?.note;
+
+  const {
+    mutate: submitProfessionChange,
+    isPending: isSubmittingProfessionChange,
+  } = useMutation({
+    mutationFn: async (target: "counselor" | "psychologist") => {
+      const submitRequest = requestProfessionChange as (request: {
+        professionalCategory: "counselor" | "psychologist";
+      }) => Promise<{ message?: string }>;
+      return submitRequest({ professionalCategory: target });
+    },
+    onSuccess: (res) => {
+      toast.success(
+        res?.message || "Profession change request submitted successfully"
+      );
+      setShowProfessionChange(false);
+      void queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.profile.current(role || ""),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.profile.professionRequest as readonly unknown[],
+      });
+    },
+    onError: (err: unknown) => {
+      const errorMsg =
+        err instanceof Error
+          ? err.message
+          : "Failed to submit profession change request";
+      toast.error(errorMsg);
+    },
   });
 
   // Populate form with existing data when profile data is loaded
@@ -114,7 +330,6 @@ const ProfileForm: React.FC = () => {
       setValue("bio", profile.bio || "");
       setValue("country", profile.country || "");
 
-
       // Set counselor-specific fields if user is counselor
       if (isCounselor) {
         setValue("specialization", profile.specialization || "");
@@ -123,6 +338,9 @@ const ProfileForm: React.FC = () => {
           "gender",
           (profile.gender as "male" | "female" | "non-binary" | "other") || "male"
         );
+        if (profile.professionalBodies && Array.isArray(profile.professionalBodies)) {
+          setProfessionalBodies(normalizeProfessionalBodies(profile.professionalBodies));
+        }
       }
 
       // Set profile picture if it exists
@@ -151,7 +369,7 @@ const ProfileForm: React.FC = () => {
 
       // Handle case where result.data doesn't exist or is null
       if (!result.data) {
-        toast.success(result.message || "Profile updated successfully!");
+        toast.success(result.message || "Profile updated successfully!", { id: "profile-update" });
         return;
       }
 
@@ -201,7 +419,7 @@ const ProfileForm: React.FC = () => {
         });
       }
 
-      toast.success(result.message || "Profile updated successfully!");
+      toast.success(result.message || "Profile updated successfully!", { id: "profile-update" });
 
       // Clear only the new profile image since the form should keep updated values
       setProfileImage(null);
@@ -320,6 +538,34 @@ const ProfileForm: React.FC = () => {
         return;
       }
 
+      if (isCounselor) {
+        for (let i = 0; i < professionalBodies.length; i++) {
+          const row = professionalBodies[i];
+          if (!row.bodyName) {
+            toast.error(`Please select a professional body for row #${i + 1}`);
+            return;
+          }
+          if (row.bodyName === "Others") {
+            if (!row.otherBodyName?.trim()) {
+              toast.error(`Please specify the body name for row #${i + 1}`);
+              return;
+            }
+            if (row.otherBodyName.trim().length > 200) {
+              toast.error(`Body name cannot exceed 200 characters for row #${i + 1}`);
+              return;
+            }
+          }
+          if (!row.certificationName?.trim()) {
+            toast.error(`Please enter a certification name for row #${i + 1}`);
+            return;
+          }
+          if (row.certificationName.trim().length > 200) {
+            toast.error(`Certification name cannot exceed 200 characters for row #${i + 1}`);
+            return;
+          }
+        }
+      }
+
       // Prepare update data - removed email
       const updateData: IProfileUpdateData = {
         fullName: data.fullName,
@@ -328,17 +574,23 @@ const ProfileForm: React.FC = () => {
         country: data.country,
         profilePicture: profileImage || undefined,
         // Add counselor-specific fields if user is counselor
-        ...(isCounselor &&
-          "specialization" in data && {
-            specialization: data.specialization,
-            experience: data.experience,
-            gender: data.gender,
-          }),
+        ...(isCounselor && {
+          specialization: data.specialization,
+          experience: data.experience,
+          gender: data.gender,
+          professionalBodies: professionalBodies.map((b) => ({
+            bodyName: b.bodyName.trim(),
+            certificationName: b.certificationName.trim(),
+            ...(b.bodyName === "Others" && b.otherBodyName
+              ? { otherBodyName: b.otherBodyName.trim() }
+              : {}),
+          })),
+        }),
       };
 
       void handleProfileUpdate(updateData);
     },
-    [handleProfileUpdate, isPending, isSubmitting, profileImage, isCounselor]
+    [handleProfileUpdate, isPending, isSubmitting, profileImage, isCounselor, professionalBodies]
   );
 
   useEffect(() => {
@@ -385,8 +637,10 @@ const ProfileForm: React.FC = () => {
       }}
       className="bg-white p-4 md:p-6 space-y-6 w-full"
     >
-      <h2 className="text-xl font-semibold text-gray-800">
-        {isCounselor ? "Counselor Profile Details" : "User Profile Details"}
+      <h2 className="text-xl font-semibold text-gray-800 capitalize">
+        {isCounselor
+          ? `${currentProfession} Profile Details`
+          : "User Profile Details"}
       </h2>
 
       {/* Profile Image Section */}
@@ -519,7 +773,7 @@ const ProfileForm: React.FC = () => {
 
       {/* Counselor-specific fields */}
       {isCounselor && (
-        <>
+        <div className="space-y-6">
           {/* Area of Specialization */}
           <div className={formGroupStyle}>
             <label htmlFor="specialization" className={labelStyle}>
@@ -534,13 +788,11 @@ const ProfileForm: React.FC = () => {
                 disabled={isPending || isSubmitting}
                 className={inputStyle}
               />
-              {isCounselor &&
-                "specialization" in errors &&
-                errors.specialization && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.specialization.message}
-                  </p>
-                )}
+              {isCounselor && errors.specialization && (
+                <p className="text-red-600 text-sm mt-1">
+                  {errors.specialization.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -559,7 +811,7 @@ const ProfileForm: React.FC = () => {
                 disabled={isPending || isSubmitting}
                 className={inputStyle}
               />
-              {"experience" in errors && errors.experience && (
+              {isCounselor && errors.experience && (
                 <p className="text-red-600 text-sm mt-1">
                   {errors.experience.message}
                 </p>
@@ -585,14 +837,267 @@ const ProfileForm: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {isCounselor && "gender" in errors && errors.gender && (
+              {isCounselor && errors.gender && (
                 <p className="text-red-600 text-sm mt-1">
                   {errors.gender.message}
                 </p>
               )}
             </div>
           </div>
-        </>
+
+          {/* Professional Bodies & Certifications */}
+          <div className="pt-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-darkerb">
+                  Professional Bodies & Certifications
+                </h3>
+                <p className="text-xs text-neutral">
+                  Add your memberships and qualifications. Select 'Others' if your body is not listed.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddBody}
+                disabled={isPending || isSubmitting || isLoadingBodies}
+                className="w-fit text-sm font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50"
+              >
+                + Add Another
+              </button>
+            </div>
+
+            {professionalBodies.length === 0 ? (
+              <div className="p-6 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-center">
+                <p className="text-sm text-neutral mb-2">
+                  No professional bodies or certifications added yet.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddBody}
+                  disabled={isPending || isSubmitting || isLoadingBodies}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  + Add Professional Body
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {professionalBodies.map((item, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-neutral uppercase tracking-wider">
+                        Certification #{index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBody(index)}
+                        disabled={isPending || isSubmitting}
+                        className="text-red-600 hover:text-red-700 text-xs font-medium inline-flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                        title="Remove certification"
+                      >
+                        <FaTrash className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Professional Body <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={item.bodyName}
+                          onChange={(e) =>
+                            handleUpdateBody(index, "bodyName", e.target.value)
+                          }
+                          disabled={isPending || isSubmitting || isLoadingBodies}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                        >
+                          <option value="">Select Professional Body</option>
+                          {availableBodies.map((body) => (
+                            <option key={body} value={body}>
+                              {body}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Certification / Qualification Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={200}
+                          placeholder="e.g. QA Certificate"
+                          value={item.certificationName}
+                          onChange={(e) =>
+                            handleUpdateBody(index, "certificationName", e.target.value)
+                          }
+                          disabled={isPending || isSubmitting}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    {item.bodyName === "Others" && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Specify Organization / Body Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={200}
+                          placeholder="Enter organization / body name"
+                          value={item.otherBodyName || ""}
+                          onChange={(e) =>
+                            handleUpdateBody(index, "otherBodyName", e.target.value)
+                          }
+                          disabled={isPending || isSubmitting}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Current Profession & Profession Change Request (Item 8) */}
+          <div className="pt-6 border-t border-gray-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <span className="text-xs uppercase font-semibold text-neutral tracking-wider">
+                  Current Profession
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-base font-bold text-darkerb capitalize">
+                    {currentProfession}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              {!isPendingProfessionRequest && !showProfessionChange && (
+                <button
+                  type="button"
+                  onClick={() => setShowProfessionChange(true)}
+                  disabled={isPending || isSubmitting}
+                  className="w-fit text-sm font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>Request Profession Change</span>
+                </button>
+              )}
+            </div>
+
+            {/* Pending Alert */}
+            {isPendingProfessionRequest && (
+              <div className="p-3 bg-amber-50 rounded-md text-amber-900 text-sm space-y-1">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Profession Change Pending Review</span>
+                </div>
+                <p className="text-xs text-amber-800">
+                  You requested to switch your profession to{" "}
+                  <strong className="capitalize">{requestedProfession}</strong>.
+                  {requestIdText && (
+                    <span className="ml-1 text-amber-700">
+                      (Request ID: {requestIdText})
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-amber-700">
+                  Your current profession ({currentProfession}) remains active until an administrator reviews and approves your request.
+                </p>
+              </div>
+            )}
+
+            {/* Rejected Alert */}
+            {isRejectedProfessionRequest && !showProfessionChange && (
+              <div className="p-3 bg-red-50 rounded-md text-red-900 text-sm space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>Previous Profession Change Request Rejected</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfessionChange(true)}
+                    className="text-xs font-semibold text-red-700 underline hover:text-red-800 cursor-pointer shrink-0"
+                  >
+                    Submit New Request
+                  </button>
+                </div>
+                {noteText && (
+                  <p className="text-xs text-red-800">
+                    <span className="font-medium">Reason from admin:</span>{" "}
+                    {noteText}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Change Request Form */}
+            {showProfessionChange && !isPendingProfessionRequest && (
+              <div className="pt-3 border-t border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-darkerb">
+                    Request Change to Another Profession
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfessionChange(false)}
+                    disabled={isSubmittingProfessionChange}
+                    className="text-xs text-neutral hover:text-darkerb cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-xs text-neutral">
+                  Select the profession you want to switch to. Admin review is required before changes take effect.
+                </p>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <select
+                    value={selectedTargetCategory}
+                    onChange={(e) =>
+                      setSelectedTargetCategory(
+                        e.target.value as "counselor" | "psychologist"
+                      )
+                    }
+                    disabled={isSubmittingProfessionChange}
+                    className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50"
+                  >
+                    <option value="psychologist">Psychologist</option>
+                    <option value="counselor">Counselor</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => submitProfessionChange(selectedTargetCategory)}
+                    disabled={
+                      isSubmittingProfessionChange ||
+                      selectedTargetCategory === currentProfession
+                    }
+                    className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingProfessionChange ? "Submitting..." : "Submit Request"}
+                  </button>
+                </div>
+                {selectedTargetCategory === currentProfession && (
+                  <p className="text-xs text-amber-600">
+                    Please select a profession different from your current one ({currentProfession}).
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Submit Button */}

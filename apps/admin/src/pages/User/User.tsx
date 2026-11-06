@@ -2,13 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { GetAllUsersApi } from "../../api/GetUsers.api";
+import { GetAllUsersApi, GetAllUsersParams, type UserListItem } from "../../api/GetUsers.api";
 import Pagination from "../../components/pagination/Pagination";
 
 interface UserFilters {
   search: string;
   role: string;
   isSuspended: string;
+  professionalCategory: string;
+  professionalCategoryRequestStatus: string;
 }
 
 function User() {
@@ -24,6 +26,9 @@ function User() {
       search: searchParams.get("search") || "",
       role: searchParams.get("role") || "all",
       isSuspended: searchParams.get("isSuspended") || "all",
+      professionalCategory: searchParams.get("professionalCategory") || "all",
+      professionalCategoryRequestStatus:
+        searchParams.get("professionalCategoryRequestStatus") || "all",
     }),
     [searchParams]
   );
@@ -64,12 +69,38 @@ function User() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["admin-users"],
+    queryKey: [
+      "admin-users",
+      filters.professionalCategoryRequestStatus,
+      filters.professionalCategory,
+    ],
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      const response = await GetAllUsersApi();
+      const params: GetAllUsersParams = {};
+      if (
+        filters.professionalCategoryRequestStatus &&
+        filters.professionalCategoryRequestStatus !== "all"
+      ) {
+        params.professionalCategoryRequestStatus =
+          filters.professionalCategoryRequestStatus as
+            | "pending"
+            | "approved"
+            | "rejected";
+      }
+      if (
+        filters.professionalCategory &&
+        filters.professionalCategory !== "all"
+      ) {
+        params.professionalCategory = filters.professionalCategory as
+          | "counselor"
+          | "psychologist";
+      }
+
+      const response = await GetAllUsersApi(params, {
+        signal: controller.signal,
+      });
 
       if (!response?.data) {
         throw new Error("No users data received");
@@ -111,7 +142,26 @@ function User() {
         (filters.isSuspended === "true" && user.isSuspended) ||
         (filters.isSuspended === "false" && !user.isSuspended);
 
-      return matchesSearch && matchesRole && matchesSuspension;
+      // Profession category filter
+      const matchesProfession =
+        filters.professionalCategory === "all" ||
+        user.professionalCategory === filters.professionalCategory;
+
+      // Profession request status filter
+      const reqStatus =
+        user.professionalCategoryRequestStatus ||
+        user.professionalCategoryRequest?.status;
+      const matchesReqStatus =
+        filters.professionalCategoryRequestStatus === "all" ||
+        reqStatus === filters.professionalCategoryRequestStatus;
+
+      return (
+        matchesSearch &&
+        matchesRole &&
+        matchesSuspension &&
+        matchesProfession &&
+        matchesReqStatus
+      );
     });
   }, [usersData, filters]);
 
@@ -156,23 +206,37 @@ function User() {
       : "bg-green-100 text-green-800";
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string, professionalCategory?: string) => {
+    if (professionalCategory === "psychologist") {
+      return "bg-indigo-100 text-indigo-800";
+    }
     switch (role) {
       case "admin":
         return "bg-purple-100 text-purple-800";
       case "counselor":
-        return "bg-blue-100 text-blue-800";
       case "therapist":
         return "bg-blue-100 text-blue-800";
       case "user":
+      case "client":
         return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  const handleOpenUser = (userId: string) => {
-    void navigate(`/user/${userId}`);
+  const getRoleLabel = (role: string, professionalCategory?: string) => {
+    if (role === "counselor" || role === "therapist") {
+      if (professionalCategory === "psychologist") return "Psychologist";
+      return "Counselor";
+    }
+    if (role === "user" || role === "client") return "User";
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  const handleOpenUser = (user: UserListItem) => {
+    void navigate(`/user/${user._id}`, {
+      state: { userSummary: user },
+    });
   };
 
   if (isLoading) {
@@ -203,9 +267,9 @@ function User() {
         </h1>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
           {/* Search */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
@@ -227,6 +291,36 @@ function User() {
             <option value="all">All Roles</option>
             <option value="counselor">Counselors</option>
             <option value="user">Users</option>
+          </select>
+
+          {/* Profession Filter (Item 7) */}
+          <select
+            value={filters.professionalCategory}
+            onChange={(e) =>
+              setFilters({ ...filters, professionalCategory: e.target.value })
+            }
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Professions</option>
+            <option value="psychologist">Psychologists</option>
+            <option value="counselor">Counselors</option>
+          </select>
+
+          {/* Profession Request Status Filter (Item 8) */}
+          <select
+            value={filters.professionalCategoryRequestStatus}
+            onChange={(e) =>
+              setFilters({
+                ...filters,
+                professionalCategoryRequestStatus: e.target.value,
+              })
+            }
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Request Statuses</option>
+            <option value="pending">Pending Profession Requests</option>
+            <option value="approved">Approved Requests</option>
+            <option value="rejected">Rejected Requests</option>
           </select>
 
           {/* Suspension Status Filter */}
@@ -288,16 +382,28 @@ function User() {
                     <div className="text-xs text-gray-400 truncate">
                       Alias: {user.alias || 'Not set'}
                     </div>
+                    {user.createdAt && (
+                      <div className="text-[11px] text-gray-400 mt-1">
+                        Registered: {new Date(user.createdAt).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="ml-3 flex flex-col items-end gap-1">
                   <span
-                    className={`px-2 py-0.5 text-[10px] font-medium rounded-full capitalize ${getRoleColor(
-                      user.role
+                    className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${getRoleColor(
+                      user.role,
+                      user.professionalCategory
                     )}`}
                   >
-                    {user.role}
+                    {getRoleLabel(user.role, user.professionalCategory)}
                   </span>
+                  {(user.professionalCategoryRequestStatus === "pending" ||
+                    user.professionalCategoryRequest?.status === "pending") && (
+                    <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">
+                      Req: → {user.professionalCategoryRequest?.requestedCategory || user.professionalCategoryRequest?.professionalCategory || (user.professionalCategory === "counselor" ? "Psychologist" : "Counselor")}
+                    </span>
+                  )}
                   <span
                     className={`px-2 py-0.5 text-[10px] font-medium rounded-full capitalize ${getStatusColor(
                       user.isSuspended
@@ -310,8 +416,8 @@ function User() {
 
               <div className="pt-3 flex items-center justify-end">
                 <button
-                  onClick={() => handleOpenUser(user._id)}
-                  className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 text-blue-700 border-blue-200"
+                  onClick={() => handleOpenUser(user)}
+                  className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 text-blue-700 border-blue-200 cursor-pointer"
                 >
                   View
                 </button>
@@ -330,6 +436,9 @@ function User() {
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Registered
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -374,13 +483,29 @@ function User() {
 
                   {/* Role */}
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getRoleColor(
-                        user.role
-                      )}`}
-                    >
-                      {user.role}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(
+                          user.role,
+                          user.professionalCategory
+                        )}`}
+                      >
+                        {getRoleLabel(user.role, user.professionalCategory)}
+                      </span>
+                      {(user.professionalCategoryRequestStatus === "pending" ||
+                        user.professionalCategoryRequest?.status === "pending") && (
+                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">
+                          Req: → {user.professionalCategoryRequest?.requestedCategory || user.professionalCategoryRequest?.professionalCategory || (user.professionalCategory === "counselor" ? "Psychologist" : "Counselor")}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Registration Date (Item 1) */}
+                  <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-600">
+                    {user.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString()
+                      : "-"}
                   </td>
 
                   {/* Status */}
@@ -397,8 +522,8 @@ function User() {
                   {/* Actions */}
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      onClick={() => handleOpenUser(user._id)}
-                      className="text-blue-600 hover:text-blue-900 font-medium"
+                      onClick={() => handleOpenUser(user)}
+                      className="text-blue-600 hover:text-blue-900 font-medium cursor-pointer"
                     >
                       View
                     </button>
@@ -421,14 +546,17 @@ function User() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                   User
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                   Alias
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                   Role
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
                   Email
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  Registered
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                   Status
@@ -474,13 +602,22 @@ function User() {
 
                   {/* Role */}
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getRoleColor(
-                        user.role
-                      )}`}
-                    >
-                      {user.role}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(
+                          user.role,
+                          user.professionalCategory
+                        )}`}
+                      >
+                        {getRoleLabel(user.role, user.professionalCategory)}
+                      </span>
+                      {(user.professionalCategoryRequestStatus === "pending" ||
+                        user.professionalCategoryRequest?.status === "pending") && (
+                        <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">
+                          Req: → {user.professionalCategoryRequest?.requestedCategory || user.professionalCategoryRequest?.professionalCategory || (user.professionalCategory === "counselor" ? "Psychologist" : "Counselor")}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Email */}
@@ -488,6 +625,13 @@ function User() {
                     <div className="truncate max-w-[180px]">
                       {user.email}
                     </div>
+                  </td>
+
+                  {/* Registration Date (Item 1) */}
+                  <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-600">
+                    {user.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString()
+                      : "-"}
                   </td>
 
                   {/* Status */}
@@ -504,8 +648,8 @@ function User() {
                   {/* Actions */}
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      onClick={() => handleOpenUser(user._id)}
-                      className="text-blue-600 hover:text-blue-900 font-medium"
+                      onClick={() => handleOpenUser(user)}
+                      className="text-blue-600 hover:text-blue-900 font-medium cursor-pointer"
                     >
                       View
                     </button>

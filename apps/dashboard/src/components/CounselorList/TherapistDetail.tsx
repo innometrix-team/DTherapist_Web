@@ -29,6 +29,10 @@ import {
 import toast from "react-hot-toast";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import PageContainer from "../common/PageContainer";
+import {
+  formatTherapistCostSummary,
+  formatSessionTypeRate,
+} from "../../utils/currency.utils";
 
 interface TherapistDetailProps {
   therapistId: string;
@@ -199,7 +203,8 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
         onClick={() => onRate(i + 1)}
         onMouseEnter={() => onHover(i + 1)}
         onMouseLeave={() => onHover(0)}
-        className="focus:outline-none"
+        aria-label={`Rate ${i + 1} of 5 stars`}
+        className="focus:outline-none focus:ring-2 focus:ring-primary rounded p-0.5"
       >
         <Star className={`w-6 h-6 ${i < (hover || rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} transition-colors`} />
       </button>
@@ -224,7 +229,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading therapist details...</p>
+          <p className="text-gray-600">Loading professional details...</p>
         </div>
       </div>
     );
@@ -235,7 +240,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            {therapistError ? "Failed to load therapist" : "Therapist not found"}
+            {therapistError ? "Failed to load professional" : "Professional not found"}
           </h2>
           <button onClick={onBack} className="text-blue-800 hover:text-primary">Go back</button>
         </div>
@@ -257,7 +262,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
         <div className="flex items-center mb-8">
           <button onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-800">
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-xl font-semibold text-black">Counselor Detail</span>
+            <span className="text-xl font-semibold text-black">Professional</span>
           </button>
         </div>
 
@@ -278,28 +283,43 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
               <div className="space-y-4">
                 <button
                   onClick={() => onBookSession(therapistId, "video")}
-                  className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
+                  className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 px-4 rounded-lg hover:bg-blue-800 transition-colors font-medium cursor-pointer"
                 >
-                  <Video className="w-5 h-5" />
-                  <span>Book Video Session</span>
+                  <Video className="w-5 h-5 shrink-0" />
+                  <span>
+                    Book Video Session
+                    {formatSessionTypeRate(therapist.cost, "video")
+                      ? ` • ${formatSessionTypeRate(therapist.cost, "video", "/hr")}`
+                      : ""}
+                  </span>
                 </button>
 
                 <button
                   onClick={() => onBookSession(therapistId, "physical")}
-                  className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
+                  className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 px-4 rounded-lg hover:bg-blue-800 transition-colors font-medium cursor-pointer"
                 >
-                  <MapPin className="w-5 h-5" />
-                  <span>Book Physical Meetings</span>
+                  <MapPin className="w-5 h-5 shrink-0" />
+                  <span>
+                    Book Physical Meeting
+                    {formatSessionTypeRate(therapist.cost, "physical")
+                      ? ` • ${formatSessionTypeRate(therapist.cost, "physical", "/hr")}`
+                      : ""}
+                  </span>
                 </button>
 
                 {/* Only show Team Meeting button if the therapist supports group bookings */}
                 {supportsGroupBooking && (
                   <button
                     onClick={() => onBookSession(therapistId, "group")}
-                    className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 rounded-lg hover:bg-blue-800 transition-colors font-medium"
+                    className="w-full flex items-center justify-center space-x-2 bg-primary text-white py-4 px-4 rounded-lg hover:bg-blue-800 transition-colors font-medium cursor-pointer"
                   >
-                    <Users className="w-5 h-5" />
-                    <span>Book Team Meeting</span>
+                    <Users className="w-5 h-5 shrink-0" />
+                    <span>
+                      Book Team Meeting
+                      {formatSessionTypeRate(therapist.cost, "group")
+                        ? ` • ${formatSessionTypeRate(therapist.cost, "group", "/hr")}`
+                        : ""}
+                    </span>
                   </button>
                 )}
               </div>
@@ -321,10 +341,13 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                 </div>
                 <p className="text-gray-700 text-lg mb-2">{therapist.category}</p>
                 <p className="text-gray-700 text-lg mb-2">{therapist.experience} years experience</p>
+                <p className="text-primary font-bold text-xl">
+                  {formatTherapistCostSummary(therapist.cost)}
+                </p>
               </div>
 
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">About Counselor</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">About Professional</h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
                   <div className="whitespace-pre-line">{displayAbout}</div>
                   {needsTruncation && (
@@ -345,6 +368,34 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                           {specialization}
                         </span>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {therapist.professionalBodies && therapist.professionalBodies.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Professional Bodies & Certifications
+                    </h3>
+                    <div className="space-y-2">
+                      {therapist.professionalBodies.map((body, index) => {
+                        const displayName =
+                          body.bodyName === "Others" && body.otherBodyName
+                            ? body.otherBodyName
+                            : body.bodyName;
+                        return (
+                          <div
+                            key={index}
+                            className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"
+                          >
+                            <span className="font-medium text-darkerb text-sm">
+                              {displayName}
+                            </span>
+                            <span className="text-neutral text-sm">
+                              {body.certificationName}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -399,7 +450,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                           onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                           rows={4}
-                          placeholder="Share your experience with this therapist..."
+                          placeholder="Share your experience with this professional..."
                           required
                           disabled={creatingReview}
                         />
@@ -514,7 +565,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                     ) : (
                       <div className="text-center py-12 text-gray-500">
                         <p className="text-lg mb-2">No reviews yet</p>
-                        <p className="text-sm">Be the first to leave a review for this counselor!</p>
+                        <p className="text-sm">Be the first to leave a review for this professional!</p>
                       </div>
                     )}
                   </>

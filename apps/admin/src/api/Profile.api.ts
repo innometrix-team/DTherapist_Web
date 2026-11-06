@@ -213,6 +213,45 @@ export async function ReviewCVApi(
   }
 }
 
+export async function ReviewProfessionalBodyCertificateApi(
+  params: {
+    userId: string;
+    status: "approved" | "rejected";
+    note?: string;
+  },
+  config?: AxiosRequestConfig,
+): Promise<IAPIResult<IResponseData> | null> {
+  try {
+    const response = await Api.put<APIResponse>(
+      `/api/admin/users/professional-body-certificates/${params.userId}`,
+      {
+        status: params.status,
+        note: params.note ?? "",
+      },
+      config
+    );
+
+    return Promise.resolve({
+      code: response.status,
+      status: response.data.status,
+      message: response.data.message ?? "Professional body certificate status updated",
+      data: response.data.data,
+    });
+  } catch (e) {
+    if (axios.isCancel(e)) {
+      return Promise.resolve(null);
+    }
+
+    const statusCode = (e as AxiosError).response?.status || 0;
+    const errorMessage =
+      (e as AxiosError<IAPIResult>).response?.data?.message ||
+      (e as Error).message ||
+      "An error occurred while updating professional body certificate";
+    const status = (e as AxiosError<IAPIResult>).response?.data?.status || "error";
+
+    return Promise.reject(new ApiError(errorMessage, statusCode, status));
+  }
+}
 
 // PUT /api/admin/users/{id}/profile-picture  (multipart/form-data, field: profilePicture)
 export async function UploadProfilePictureApi(

@@ -9,7 +9,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTherapistDetailsApi } from "../../api/Therapist.api";
 import createBookingApi, {
   createGroupBookingApi,
@@ -18,11 +18,17 @@ import createBookingApi, {
 } from "../../api/Booking.api";
 import {
   getTherapistScheduleApi,
+  IScheduleItem,
   ITimeSlot,
 } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import PageContainer from "../common/PageContainer";
+import { safeRedirect } from "../../utils/security.utils";
+import {
+  formatNaira,
+  getCostForSessionType,
+} from "../../utils/currency.utils";
 
 interface BookingSessionProps {
   therapistId: string;
@@ -35,6 +41,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
   sessionType,
   onBack,
 }) => {
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -51,6 +58,25 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     sessionType === "physical" ? "in-person" : "video";
 
   const isGroupSession = sessionType === "group";
+
+  const filterSlotsForSessionType = useCallback(
+    (scheduleItem: IScheduleItem): ITimeSlot[] => {
+      const targetMeetingType =
+        scheduleApiSessionType === "physical" ? "in-person" : "video";
+
+      return (scheduleItem.slots || []).filter((slot) => {
+        if (slot.isBooked) return false;
+        if (slot.meetingType && slot.meetingType !== "both") {
+          return slot.meetingType === targetMeetingType;
+        }
+        return (
+          scheduleItem.meetingType === "both" ||
+          scheduleItem.meetingType === targetMeetingType
+        );
+      });
+    },
+    [scheduleApiSessionType]
+  );
 
   // Fetch therapist details
   const {
@@ -85,22 +111,26 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Helper function to get cost based on session type
-  const getCostForSessionType = (
-    cost:
-      | { video: number; inPerson: number; groupVideo: number }
-      | number
-      | null,
-    sessionType: SessionType,
-  ): number => {
-    if (typeof cost === "number") return cost;
-    if (typeof cost === "object" && cost !== null) {
-      if (sessionType === "physical") return cost.inPerson || 0;
-      if (sessionType === "group") return cost.groupVideo || 0;
-      return cost.video || 0;
-    }
-    return 0;
-  };
+  // Fetch date-specific schedule when a date is selected so isBooked & validity are evaluated on the backend
+  const { data: dateScheduleResponse } = useQuery({
+    queryKey: QUERY_KEYS.therapists.schedule(
+      therapistId,
+      scheduleApiSessionType,
+      selectedDate || undefined
+    ),
+    queryFn: async () => {
+      const result = await getTherapistScheduleApi(
+        therapistId,
+        scheduleApiSessionType,
+        undefined,
+        selectedDate
+      );
+      if (!result) throw new Error("Request cancelled");
+      return result;
+    },
+    enabled: Boolean(therapistId && selectedDate),
+    staleTime: 60 * 1000,
+  });
 
   // Individual booking mutation
   const bookingMutation = useMutation({
@@ -110,14 +140,23 @@ const BookingSession: React.FC<BookingSessionProps> = ({
       return result;
     },
     onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
+      void queryClient.invalidateQueries({
+        queryKey: ["therapist-schedule", therapistId],
+      });
       toast.success(data.message || "Booking created successfully");
       if (data.data?.paymentUrl) {
-        window.location.href = data.data.paymentUrl;
+        safeRedirect(data.data.paymentUrl, () => {
+          toast.error("Invalid payment redirect URL");
+          setTimeout(() => onBack(), 2000);
+        });
       } else {
         setTimeout(() => onBack(), 2000);
       }
     },
     onError: (error) => {
+      // Reconcile appointments in case of network timeout after server commit
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
       toast.error(error?.message || "Failed to create booking");
     },
   });
@@ -130,11 +169,16 @@ const BookingSession: React.FC<BookingSessionProps> = ({
       return result;
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
+      void queryClient.invalidateQueries({
+        queryKey: ["therapist-schedule", therapistId],
+      });
       toast.success("Group session booked successfully!");
       setTimeout(() => onBack(), 2000);
     },
     onError: (error) => {
-      toast.error(error?.message || "Failed to create group booking omo");
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
+      toast.error(error?.message || "Failed to create group booking");
     },
   });
 
@@ -205,19 +249,25 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     const schedules = scheduleResponse?.data?.schedules || [];
 
     schedules.forEach((scheduleItem) => {
-      const scheduleMeetingType =
-        scheduleItem.meetingType === "in-person" ? "physical" : "video";
-
-      // For group sessions, filter only schedules where teamBooking is true
+      // For group sessions, filter only schedules where teamBooking or allowGroupBooking is true
       const passesGroupCheck = isGroupSession
-        ? scheduleItem.teamBooking === true
+        ? Boolean(scheduleItem.teamBooking || scheduleItem.allowGroupBooking)
         : true;
+
+      const usableSlots = filterSlotsForSessionType(scheduleItem);
 
       if (
         scheduleItem.isAvailable &&
-        scheduleMeetingType === scheduleApiSessionType &&
+        usableSlots.length > 0 &&
         passesGroupCheck
       ) {
+        const validFromStr = scheduleItem.validFrom
+          ? scheduleItem.validFrom.split("T")[0]
+          : null;
+        const validUntilStr = scheduleItem.validUntil
+          ? scheduleItem.validUntil.split("T")[0]
+          : null;
+
         const dates = getDatesForDayInCurrentMonth(
           scheduleItem.day,
           currentMonth,
@@ -228,10 +278,14 @@ const BookingSession: React.FC<BookingSessionProps> = ({
           const day = String(date.getDate()).padStart(2, "0");
           const dateStr = `${year}-${month}-${day}`;
 
+          if (validFromStr && dateStr < validFromStr) return;
+          if (validUntilStr && dateStr > validUntilStr) return;
+
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           if (date >= today) {
-            map.set(dateStr, scheduleItem.slots);
+            const existing = map.get(dateStr) || [];
+            map.set(dateStr, [...existing, ...usableSlots]);
           }
         });
       }
@@ -240,7 +294,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
     return map;
   }, [
     scheduleResponse?.data?.schedules,
-    scheduleApiSessionType,
+    filterSlotsForSessionType,
     currentMonth,
     getDatesForDayInCurrentMonth,
     isGroupSession,
@@ -373,7 +427,18 @@ const BookingSession: React.FC<BookingSessionProps> = ({
   };
 
   const getAvailableTimesForDate = (): ITimeSlot[] => {
-    if (!selectedDate || !availableDatesMap.has(selectedDate)) return [];
+    if (!selectedDate) return [];
+    const dateSchedules = dateScheduleResponse?.data?.schedules;
+    if (dateSchedules) {
+      const targetDayName = new Date(selectedDate + "T00:00:00").toLocaleDateString(
+        "en-US",
+        { weekday: "long" }
+      );
+      const matchingItems = dateSchedules.filter(
+        (item) => item.day === targetDayName && item.isAvailable
+      );
+      return matchingItems.flatMap((item) => filterSlotsForSessionType(item));
+    }
     return availableDatesMap.get(selectedDate) || [];
   };
 
@@ -518,7 +583,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
                     {therapist.experience} years experience
                   </p>
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
-                    ₦{sessionCost}.00/hr
+                    {formatNaira(sessionCost, { suffix: "/hr" })}
                   </p>
                   
                 </div>
@@ -527,7 +592,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
               {/* About Section */}
               <div>
                 <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-                  About Counselor
+                  About Professional
                 </h3>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
                   <p>
@@ -686,6 +751,11 @@ const BookingSession: React.FC<BookingSessionProps> = ({
                     <span>Unavailable</span>
                   </div>
                 </div>
+                {availableDatesMap.size === 0 && (
+                  <p className="mt-4 text-xs text-primary bg-blue-50 rounded-lg px-3 py-2.5 text-center font-medium">
+                    No available slots for this month yet. Please check another month or try again later.
+                  </p>
+                )}
               </div>
 
               {/* Available Times */}
@@ -727,7 +797,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
                 {!isGroupSession && (
                   <div className="flex justify-between items-center mb-4 text-lg sm:text-xl font-bold">
                     <span>Total:</span>
-                    <span>₦{sessionCost}.00</span>
+                    <span>{formatNaira(sessionCost, { showDecimals: true })}</span>
                   </div>
                 )}
                 <button
@@ -761,7 +831,7 @@ const BookingSession: React.FC<BookingSessionProps> = ({
                       Total:
                     </span>
                     <span className="text-2xl font-bold text-gray-900">
-                      ₦{sessionCost}.00
+                      {formatNaira(sessionCost, { showDecimals: true })}
                     </span>
                   </div>
                 )}

@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,7 +30,7 @@ const calculatePasswordStrength = (password: string): { score: number; level: "w
   if (/[0-9]/.test(password)) score++;
   else feedback.push("Add numbers");
 
-  if (/[^a-zA-Z0-9]/.test(password)) score++;
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
   else feedback.push("Add special characters (!@#$%^&*)");
 
   const levels: ("weak" | "fair" | "good" | "strong")[] = ["weak", "weak", "fair", "good", "strong", "strong"];
@@ -40,40 +41,53 @@ const calculatePasswordStrength = (password: string): { score: number; level: "w
   };
 };
 
-const passwordSchema = z.string().min(8, "Password must be at least 8 characters").refine(
-  (password) => /[a-z]/.test(password),
-  "Password must contain lowercase letters"
-).refine(
-  (password) => /[A-Z]/.test(password),
-  "Password must contain uppercase letters"
-).refine(
-  (password) => /[0-9]/.test(password),
-  "Password must contain numbers"
-);
+const passwordSchema = z
+  .string({ required_error: "Password is required" })
+  .min(1, "Password is required")
+  .min(8, "Password must be at least 8 characters")
+  .refine((value) => {
+    const hasUppercase = /[A-Z]/.test(value);
+    const hasLowercase = /[a-z]/.test(value);
+    const hasDigit = /[0-9]/.test(value);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(value);
 
-const signupSchema = z.object({
-  fullName: z
-    .string()
-    .min(2, "Full Name is required")
-    .refine((val) => val.trim().split(/\s+/).length >= 2, {
-      message: "Please enter your full name",
+    return hasUppercase && hasLowercase && hasDigit && hasSpecialChar;
+  }, "Password must contain uppercase, lowercase,\ndigit and special character");
+
+const signupSchema = z
+  .object({
+    fullName: z
+      .string()
+      .min(2, "Full Name is required")
+      .refine((val) => val.trim().split(/\s+/).length >= 2, {
+        message: "Please enter your full name",
+      }),
+    email: z
+      .string()
+      .email("Invalid email address")
+      .transform((val) => val.toLowerCase()),
+    phoneNumber: z
+      .string()
+      .min(10, "Phone number must be at least 10 digits")
+      .regex(/^[0-9+\-\s()]+$/, "Phone number contains invalid characters"),
+    password: passwordSchema,
+    role: z.enum(["client", "therapist"], {
+      errorMap: () => ({ message: "Please select a role" }),
     }),
-  email: z
-    .string()
-    .email("Invalid email address")
-    .transform((val) => val.toLowerCase()),
-  phoneNumber: z
-    .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .regex(/^[0-9+\-\s()]+$/, "Phone number contains invalid characters"),
-  password: passwordSchema,
-  role: z.enum(["client", "therapist"], {
-    errorMap: () => ({ message: "Please select a role" }),
-  }),
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({ message: "You must agree to the Terms & Conditions" }),
-  }),
-});
+    professionalCategory: z.enum(["counselor", "psychologist"]).optional(),
+    agreeTerms: z.literal(true, {
+      errorMap: () => ({ message: "You must agree to the Terms & Conditions" }),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === "therapist" && !data.professionalCategory) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["professionalCategory"],
+        message: "Please select your profession (Counselor or Psychologist)",
+      });
+    }
+  });
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
@@ -83,16 +97,25 @@ function SignUpForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
     watch,
+    setValue,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
   const password = watch("password");
+  const selectedRole = watch("role");
   const passwordStrength = password ? calculatePasswordStrength(password) : null;
   
   const abortControllerRef = useRef<AbortController>(null);
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear professionalCategory if switching away from therapist
+  useEffect(() => {
+    if (selectedRole !== "therapist") {
+      setValue("professionalCategory", undefined);
+    }
+  }, [selectedRole, setValue]);
 
   const { mutateAsync: handleSignup, isPending } = useMutation({
     mutationFn: (data: IRequestData) => {
@@ -111,6 +134,7 @@ function SignUpForm() {
         name: variables.fullName,
         id: responseData?.id,
         email: variables.email,
+        professionalCategory: variables.professionalCategory,
       });
 
       // Always navigate to email verification, regardless of role
@@ -120,6 +144,10 @@ function SignUpForm() {
         role: variables.role, // Always pass the role
         fullName: variables.fullName, // Always pass the full name
       });
+
+      if (variables.professionalCategory) {
+        searchParams.set("professionalCategory", variables.professionalCategory);
+      }
 
       void navigate(`/auth/verify-email?${searchParams.toString()}`);
     },
@@ -140,6 +168,9 @@ function SignUpForm() {
         password: data.password,
         role: data.role,
         phoneNumber: data.phoneNumber,
+        ...(data.role === "therapist" && data.professionalCategory
+          ? { professionalCategory: data.professionalCategory }
+          : {}),
       });
     },
     [handleSignup, isPending, isSubmitting]
@@ -152,8 +183,16 @@ function SignUpForm() {
   }, []);
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-4">
-      <h2 className="text-3xl font-bold">Create free account</h2>
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+          Create your account
+        </h1>
+        <p className="text-sm text-gray-500 mt-2">
+          Join DTherapist for accessible, confidential support.
+        </p>
+      </div>
+
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -161,125 +200,141 @@ function SignUpForm() {
         }}
       >
         <div>
+          <label
+            htmlFor="fullName"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+          >
+            Full Name
+          </label>
           <input
+            id="fullName"
             type="text"
-            placeholder="Full Name"
+            placeholder="e.g. Jane Doe"
             {...register("fullName")}
-            className="w-full border border-gray-300 rounded px-4 py-2"
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
           {errors.fullName && (
-            <p className="text-red-600 text-sm mt-1">
+            <p className="text-red-600 text-xs mt-1.5">
               {errors.fullName.message}
             </p>
           )}
         </div>
+
         <div>
+          <label
+            htmlFor="email"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+          >
+            Email Address
+          </label>
           <input
+            id="email"
             type="email"
-            placeholder="Email Address"
+            placeholder="name@example.com"
             autoCapitalize="none"
             autoCorrect="off"
             {...register("email", {
               setValueAs: (value: unknown) =>
                 typeof value === "string" ? value.toLowerCase() : "",
             })}
-            className="w-full border border-gray-300 rounded px-4 py-2 lowercase"
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all lowercase"
           />
           {errors.email && (
-            <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+            <p className="text-red-600 text-xs mt-1.5">{errors.email.message}</p>
           )}
         </div>
+
         <div>
+          <label
+            htmlFor="phoneNumber"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+          >
+            Phone Number
+          </label>
           <input
+            id="phoneNumber"
             type="tel"
-            placeholder="Phone Number"
+            placeholder="+1 (555) 000-0000"
             {...register("phoneNumber")}
-            className="w-full border border-gray-300 rounded px-4 py-2"
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
           {errors.phoneNumber && (
-            <p className="text-red-600 text-sm mt-1">{errors.phoneNumber.message}</p>
+            <p className="text-red-600 text-xs mt-1.5">{errors.phoneNumber.message}</p>
           )}
         </div>
+
         <div>
+          <label
+            htmlFor="password"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+          >
+            Password
+          </label>
           <div className="relative">
             <input
+              id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="Create a strong password"
               {...register("password")}
-              className="w-full border border-gray-300 rounded px-4 py-2 pr-12"
+              className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-11"
             />
             <button
               type="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
-            {showPassword ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-5 0-9.27-3.11-11-8 1.02-2.76 2.86-5.05 5.14-6.53" />
-                <path d="M1 1l22 22" />
-                <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
-                <path d="M16.24 7.76A10.94 10.94 0 0 1 23 12c-.47 1.27-1.14 2.45-1.98 3.5" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            )}
-          </button>
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
           </div>
           
           {/* Password Strength Indicator */}
-          {password && (
-            <div className="mt-2 space-y-2">
-              {/* Strength Bar */}
-              <div className="flex gap-1">
+          {password && passwordStrength && (
+            <div className="mt-2.5 space-y-1.5">
+              <div className="flex gap-1.5">
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className={`h-2 flex-1 rounded ${
-                      i < passwordStrength!.score
-                        ? passwordStrength!.level === "weak"
+                    className={`h-1.5 flex-1 rounded-full transition-all ${
+                      i < passwordStrength.score
+                        ? passwordStrength.level === "weak"
                           ? "bg-red-500"
-                          : passwordStrength!.level === "fair"
+                          : passwordStrength.level === "fair"
                             ? "bg-yellow-500"
-                            : passwordStrength!.level === "good"
+                            : passwordStrength.level === "good"
                               ? "bg-blue-500"
                               : "bg-green-500"
-                        : "bg-gray-300"
+                        : "bg-gray-200"
                     }`}
                   />
                 ))}
               </div>
               
-              {/* Strength Label */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium capitalize">
-                  Strength: <span className={
-                    passwordStrength!.level === "weak"
-                      ? "text-red-600"
-                      : passwordStrength!.level === "fair"
-                        ? "text-yellow-600"
-                        : passwordStrength!.level === "good"
-                          ? "text-blue-600"
-                          : "text-green-600"
+              <div className="flex items-center justify-between text-xs font-medium">
+                <span className="text-gray-500">
+                  Strength:{" "}
+                  <span className={
+                    passwordStrength.level === "weak"
+                      ? "text-red-600 font-semibold capitalize"
+                      : passwordStrength.level === "fair"
+                        ? "text-yellow-600 font-semibold capitalize"
+                        : passwordStrength.level === "good"
+                          ? "text-blue-600 font-semibold capitalize"
+                          : "text-green-600 font-semibold capitalize"
                   }>
-                    {passwordStrength!.level}
+                    {passwordStrength.level}
                   </span>
                 </span>
-                {passwordStrength!.level === "strong" && (
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                )}
               </div>
               
-              {/* Feedback Tips */}
-              {passwordStrength!.feedback.length > 0 && (
-                <div className="space-y-1">
-                  {passwordStrength!.feedback.map((tip, idx) => (
-                    <p key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+              {passwordStrength.feedback.length > 0 && (
+                <div className="space-y-0.5">
+                  {passwordStrength.feedback.map((tip, idx) => (
+                    <p key={idx} className="text-[11px] text-gray-500 flex items-center gap-1">
                       <span>•</span> {tip}
                     </p>
                   ))}
@@ -289,54 +344,100 @@ function SignUpForm() {
           )}
           
           {errors.password && (
-            <p className="text-red-600 text-sm mt-1">
+            <p className="text-red-600 text-xs mt-1.5 whitespace-pre-line">
               {errors.password.message}
             </p>
           )}
         </div>
+
         <div>
-          <select
-            {...register("role")}
-            className="w-full border border-gray-300 rounded px-4 py-2"
+          <label
+            htmlFor="role"
+            className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
           >
-            <option value="">Register as</option>
-            <option value="client">User</option>
-            <option value="therapist">Counselor</option>
+            I want to join as
+          </label>
+          <select
+            id="role"
+            {...register("role")}
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+          >
+            <option value="">Select your role</option>
+            <option value="client">Client</option>
+            <option value="therapist">Licensed Professional</option>
           </select>
           {errors.role && (
-            <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
+            <p className="text-red-600 text-xs mt-1.5">{errors.role.message}</p>
           )}
         </div>
-        <div className="flex items-start gap-2">
-          <input type="checkbox" {...register("agreeTerms")} className="mt-1" />
-          <p className="text-sm">
+
+        {selectedRole === "therapist" && (
+          <div>
+            <label
+              htmlFor="professionalCategory"
+              className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+            >
+              Professional Category
+            </label>
+            <select
+              id="professionalCategory"
+              {...register("professionalCategory")}
+              className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+            >
+              <option value="">Select Category</option>
+              <option value="counselor">Counselor</option>
+              <option value="psychologist">Psychologist</option>
+            </select>
+            {errors.professionalCategory && (
+              <p className="text-red-600 text-xs mt-1.5">
+                {errors.professionalCategory.message}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-start gap-2.5 pt-1">
+          <input
+            id="agreeTerms"
+            type="checkbox"
+            {...register("agreeTerms")}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary mt-0.5 cursor-pointer"
+          />
+          <label htmlFor="agreeTerms" className="text-xs text-gray-600 leading-relaxed cursor-pointer">
             I agree to the{" "}
             <Link
               to="/terms-and-conditions"
-              className="text-blue-700 font-semibold"
+              className="text-primary hover:text-darkerb font-semibold underline transition-colors"
             >
               Terms & Conditions
             </Link>{" "}
-            of Dtherapist.
-          </p>
+            and Privacy Policy of DTherapist.
+          </label>
         </div>
         {errors.agreeTerms && (
-          <p className="text-red-600 text-sm">{errors.agreeTerms.message}</p>
+          <p className="text-red-600 text-xs">{errors.agreeTerms.message}</p>
         )}
+
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="w-fit bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+          disabled={isSubmitting || isPending}
+          className="w-full py-3.5 px-4 bg-primary hover:bg-darkerb text-white font-semibold rounded-lg text-sm sm:text-base transition-colors shadow-xs cursor-pointer disabled:opacity-50 mt-3 flex items-center justify-center gap-2"
         >
-          {isSubmitting || isPending ? "Creating..." : "Create Account"}
+          {isSubmitting || isPending ? "Creating account..." : "Create Account"}
         </button>
       </form>
-      <p className="text-sm text-gray-600 text-center">
-        I already have an account?{" "}
-        <Link to="/auth/login" className="text-blue-700 font-semibold">
-          Login
-        </Link>
-      </p>
+
+      <div className="mt-8 text-center">
+        <p className="text-sm text-gray-500">
+          Already have an account?{" "}
+          <Link
+            to="/auth/login"
+            className="text-primary hover:text-darkerb font-semibold transition-colors"
+          >
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

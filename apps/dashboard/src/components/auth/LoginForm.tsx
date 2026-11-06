@@ -1,13 +1,14 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { SubmitHandler } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { toast } from "react-hot-toast";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
 import LoginApi, { IRequestData } from "../../api/Login.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
-import { toast } from "react-hot-toast";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -23,8 +24,8 @@ function LoginForm() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Get the return URL from location state, or default to dashboard
-  const from = "/";
+  // Navigate back to origin route or default to dashboard
+  const from = locationState?.from || "/";
 
   const {
     register,
@@ -42,8 +43,6 @@ function LoginForm() {
   // Load saved credentials on component mount
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
-   
-
     if (savedEmail) {
       setValue("email", savedEmail);
       setValue("rememberMe", true);
@@ -67,13 +66,13 @@ function LoginForm() {
         name: user.name,
         token: token ?? null,
         email: user.email ?? null,
+        professionalCategory: user.professionalCategory,
       });
 
       // Handle remember me functionality
       const formData = variables as IRequestData & { rememberMe?: boolean };
       if (formData.rememberMe) {
         localStorage.setItem("rememberedEmail", formData.email);
-        localStorage.setItem("rememberedPassword", formData.password);
       } else {
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
@@ -83,7 +82,6 @@ function LoginForm() {
       toast.success(`Welcome back, ${user.name}!`);
 
       // Navigate to the intended page or dashboard
-      // Use replace: true to prevent going back to login page
       void navigate(from, { replace: true });
     },
     onError: (error) => {
@@ -113,126 +111,108 @@ function LoginForm() {
   }, []);
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-4">
-      <h2 className="text-3xl font-bold">Login to account</h2>
+    <div className="w-full space-y-6">
+      <div className="text-center sm:text-left space-y-2">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-darkerb tracking-tight">
+          Log in to your account
+        </h2>
+        <p className="text-xs sm:text-sm text-gray-500">
+          Welcome back! Enter your registered details to continue.
+        </p>
+      </div>
 
       <form
-        className="space-y-4"
+        className="space-y-4.5"
         onSubmit={(e) => {
           void handleSubmit(onSubmit)(e);
         }}
       >
         <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+            Email Address
+          </label>
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder="name@example.com"
+            autoComplete="email"
             {...register("email")}
-            className="w-full border border-gray-300 rounded px-4 py-2"
+            className="w-full px-4 py-3 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
           {errors.email && (
-            <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+            <p className="text-red-600 text-xs mt-1.5 font-medium">{errors.email.message}</p>
           )}
         </div>
 
         <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              Password
+            </label>
+            <Link
+              to="/auth/forgot-password"
+              className="text-xs font-semibold text-primary hover:text-darkerb transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="••••••••••••"
+              autoComplete="current-password"
               {...register("password")}
-              className="w-full border border-gray-300 rounded px-4 py-2 pr-12"
+              className="w-full px-4 py-3 pr-11 bg-gray-50/70 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             />
             <button
               type="button"
               onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer transition-colors"
             >
               {showPassword ? (
-                // Eye slash icon (hide password)
-                <svg
-                  className="w-5 h-5 text-gray-500 hover:text-gray-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                  />
-                </svg>
+                <EyeOff className="w-4 h-4" />
               ) : (
-                // Eye icon (show password)
-                <svg
-                  className="w-5 h-5 text-gray-500 hover:text-gray-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
+                <Eye className="w-4 h-4" />
               )}
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-600 text-sm mt-1">
+            <p className="text-red-600 text-xs mt-1.5 font-medium">
               {errors.password.message}
             </p>
           )}
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center py-0.5">
           <input
             type="checkbox"
             id="rememberMe"
             {...register("rememberMe")}
-            className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
           />
-          <label htmlFor="rememberMe" className="text-sm text-gray-700">
-            Remember my password
+          <label htmlFor="rememberMe" className="ml-2 text-xs text-gray-600 cursor-pointer select-none">
+            Remember my email
           </label>
         </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-fit bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
+          className="w-full py-3.5 px-4 bg-primary hover:bg-darkerb text-white font-semibold rounded-lg text-sm sm:text-base transition-colors shadow-xs cursor-pointer disabled:opacity-50 mt-2"
         >
-          {isSubmitting ? "Logging in..." : "Login"}
+          {isSubmitting ? "Logging in..." : "Log In"}
         </button>
 
-        <p className="text-sm text-gray-600 text-center">
-          Don't have an account?{" "}
+        <div className="pt-4 text-center text-xs sm:text-sm text-gray-600">
+          New to DTherapist?{" "}
           <Link
             to="/auth/signup"
-            state={{ from: locationState?.from }} // Pass along the return URL to signup
-            className="text-blue-700 font-semibold"
+            state={{ from: locationState?.from }}
+            className="font-bold text-primary hover:text-darkerb transition-colors"
           >
-            Signup
+            Sign up
           </Link>
-        </p>
-
-        <p className="text-sm text-center mt-2">
-          Forgot Password?{" "}
-          <Link
-            to="/auth/forgot-password"
-            className="text-blue-700 font-semibold"
-          >
-            Reset
-          </Link>
-        </p>
+        </div>
       </form>
     </div>
   );
