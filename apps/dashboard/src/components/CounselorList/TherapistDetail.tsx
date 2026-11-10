@@ -113,13 +113,19 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Determine if any schedule slot has teamBooking = true
+  // Determine if any schedule slot has teamBooking/allowGroupBooking = true or groupVideo pricing set
   const supportsGroupBooking = useMemo(() => {
     const schedules = scheduleResponse?.data?.schedules || [];
-    return schedules.some(
-      (s) => s.isAvailable && s.teamBooking === true
+    const hasScheduleGroup = schedules.some(
+      (s) => s.isAvailable && (s.teamBooking === true || s.allowGroupBooking === true)
     );
-  }, [scheduleResponse?.data?.schedules]);
+    const currentTherapist = therapistResponse?.data?.therapist;
+    const hasGroupCost =
+      typeof currentTherapist?.cost === "object" &&
+      currentTherapist.cost !== null &&
+      (currentTherapist.cost.groupVideo ?? 0) > 0;
+    return hasScheduleGroup || hasGroupCost;
+  }, [scheduleResponse?.data?.schedules, therapistResponse?.data?.therapist]);
 
   const { mutateAsync: createReview, isPending: creatingReview } = useMutation({
     mutationFn: (data: IReviewRequest) => {

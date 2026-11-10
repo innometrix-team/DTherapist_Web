@@ -281,7 +281,12 @@ const TherapistList: React.FC<TherapistListProps> = ({
     therapists.forEach((t: ITherapist, i: number) => {
       const data = scheduleQueries[i]?.data;
       const schedules = data?.data?.schedules || [];
-      map.set(t.userId, schedules.some((s) => s.isAvailable && s.teamBooking === true));
+      const hasScheduleGroup = schedules.some(
+        (s) => s.isAvailable && (s.teamBooking === true || s.allowGroupBooking === true)
+      );
+      const hasGroupCost =
+        typeof t.cost === "object" && t.cost !== null && (t.cost.groupVideo ?? 0) > 0;
+      map.set(t.userId, hasScheduleGroup || hasGroupCost);
     });
     return map;
   }, [therapists, scheduleQueries]);
