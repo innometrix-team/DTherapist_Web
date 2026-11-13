@@ -115,5 +115,48 @@ describe('Appointments.api Zod Schemas', () => {
       expect(parsed.data).toEqual([]);
     }
   });
+
+  it('parses appointment with null profilePicture, action, and invoiceDownloadLink', () => {
+    const raw = {
+      bookingId: '6af558d71f5db0ec0657642f',
+      userId: '6ae4b08037b3247c39a6a6d4',
+      fullName: 'Favour Francis Asuk',
+      profilePicture: null,
+      date: '2026-11-15',
+      time: '9:00 AM - 10:00 AM',
+      type: 'Video Call',
+      status: 'upcoming',
+      chatId: '6af558d71f5db0ec0657642b',
+      invoiceDownloadLink: null,
+      action: null,
+    };
+
+    const parsed = AppointmentSchema.safeParse(raw);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.profilePicture).toBe('');
+      expect(parsed.data.invoiceDownloadLink).toBeNull();
+      expect(parsed.data.action).toEqual({});
+    }
+  });
+
+  it('parses group with null optional string fields', () => {
+    const raw = {
+      _id: 'g-null',
+      name: null,
+      description: null,
+      image: null,
+      createdAt: null,
+    };
+
+    const parsed = GroupSchema.safeParse(raw);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.name).toBe('');
+      expect(parsed.data.description).toBe('');
+      expect(parsed.data.image).toBe('');
+      expect(parsed.data.createdAt).toBe('');
+    }
+  });
 });
 

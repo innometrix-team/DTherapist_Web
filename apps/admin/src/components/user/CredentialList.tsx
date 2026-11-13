@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, FileText, Loader2, ShieldAlert, X } from "lucide-react";
+import { Check, Download, FileText, Loader2, ShieldAlert, X } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ICertificate } from "../../api/GetUsers.api";
 import { ReviewCertificationApi, ReviewCVApi, ReviewProfessionalBodyCertificateApi } from "../../api/Profile.api";
@@ -171,7 +171,44 @@ export default function CredentialList({
   const [rejectOpen, setRejectOpen] = useState<null | {
     kind: "cv" | "cert" | "profCert";
   }>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ url: string; title: string } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async (url: string, title: string) => {
+    setDownloading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const urlPath = url.split("?")[0];
+      const lastSegment = urlPath.split("/").pop() ?? "";
+      const extMatch = lastSegment.match(/(\.[a-z0-9]{2,5})$/i);
+      let ext = extMatch ? extMatch[1].toLowerCase() : "";
+
+      if (blob.type === "application/pdf" || (!ext && !blob.type.startsWith("image/"))) {
+        ext = ".pdf";
+      } else if (!ext && blob.type.startsWith("image/")) {
+        const mimeExt = blob.type.split("/")[1]?.split("+")[0];
+        ext = mimeExt ? `.${mimeExt === "jpeg" ? "jpg" : mimeExt}` : ".png";
+      }
+
+      const safeBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "credential";
+      const filename = `${safeBase}${ext}`;
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const { mutate: reviewCertification, isPending: approvingCert } = useMutation(
     {
@@ -338,7 +375,7 @@ export default function CredentialList({
           busy={approving}
           onView={() => {
             if (!row.doc) return;
-            setPreviewUrl(row.doc);
+            setPreviewDoc({ url: row.doc, title: row.title });
           }}
           onApprove={() => approveDoc(row.key)}
           onReject={() => setRejectOpen({ kind: row.key })}
@@ -356,19 +393,19 @@ export default function CredentialList({
       />
 
       {/* Document Preview Modal */}
-      {previewUrl && (
+      {previewDoc && (
         <div className="fixed inset-0 z-[1000]" role="dialog" aria-modal="true">
           <div
             className="absolute inset-0 bg-black/60"
-            onClick={() => setPreviewUrl(null)}
+            onClick={() => setPreviewDoc(null)}
           />
           <div className="absolute inset-4 sm:inset-10 bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-2">
               <h3 className="text-sm sm:text-base font-semibold truncate">
-                Document preview
+                {previewDoc.title}
               </h3>
               <button
-                onClick={() => setPreviewUrl(null)}
+                onClick={() => setPreviewDoc(null)}
                 className="p-2 rounded hover:bg-gray-100"
                 aria-label="Close preview"
               >
@@ -376,11 +413,11 @@ export default function CredentialList({
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              {/\.(png|jpe?g|gif|webp|svg)$/i.test(previewUrl) ? (
+              {/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(previewDoc.url) ? (
                 <div className="w-full h-full overflow-auto flex items-center justify-center bg-gray-50">
                   <img
-                    src={previewUrl}
-                    alt="Document"
+                    src={previewDoc.url}
+                    alt={previewDoc.title}
                     className="max-w-full max-h-full object-contain"
                   />
                 </div>
@@ -393,20 +430,25 @@ export default function CredentialList({
                       </div>
                     }
                   >
-                    <PdfPreview fileUrl={previewUrl} />
+                    <PdfPreview fileUrl={previewDoc.url} />
                   </Suspense>
                 </div>
               )}
             </div>
-            <div className="border-t p-2 sm:p-3 text-right">
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+            <div className="border-t p-2 sm:p-3 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => void handleDownload(previewDoc.url, previewDoc.title)}
+                disabled={downloading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
               >
-                Open in new tab
-              </a>
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Download
+              </button>
             </div>
           </div>
         </div>

@@ -54,6 +54,7 @@ const gridColumns = (total: number): number => {
 
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
+  const authUserId = useAuthStore((s) => s.id);
   const name = useAuthStore((s) => s.name);
   const role = useAuthStore((s) => s.role);
   const token = useAuthStore((s) => s.token);
@@ -708,7 +709,7 @@ const VideoCallPage: React.FC = () => {
       {channel && (
         <InCallChat
           channel={channel}
-          userId={String(uid)}
+          userId={authUserId ?? String(uid)}
           isOpen={isChatOpen}
           onClose={() => setIsChatOpen(false)}
           onUnreadCount={setChatUnread}

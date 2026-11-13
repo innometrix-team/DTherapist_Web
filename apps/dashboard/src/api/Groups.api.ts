@@ -5,10 +5,10 @@ import Api, { IAPIResult, handleApiRequest } from "./Api";
 // Zod Schemas for Runtime Validation
 export const GroupSchema = z.object({
   _id: z.string(),
-  name: z.string().default(""),
-  description: z.string().default(""),
-  image: z.string().default(""),
-  createdAt: z.string().default(""),
+  name: z.string().nullish().transform((v) => v ?? ""),
+  description: z.string().nullish().transform((v) => v ?? ""),
+  image: z.string().nullish().transform((v) => v ?? ""),
+  createdAt: z.string().nullish().transform((v) => v ?? ""),
 });
 
 export type IGroup = z.infer<typeof GroupSchema>;
@@ -34,13 +34,13 @@ export const MessageUserIdSchema = z.preprocess((val) => {
 
 export const MessageSchema = z.object({
   _id: z.string(),
-  content: z.string().default(""),
-  createdAt: z.string().default(""),
+  content: z.string().nullish().transform((v) => v ?? ""),
+  createdAt: z.string().nullish().transform((v) => v ?? ""),
   userId: MessageUserIdSchema,
-  groupId: z.string().optional(),
-  alias: z.string().optional(),
+  groupId: z.string().nullish().transform((v) => v ?? undefined),
+  alias: z.string().nullish().transform((v) => v ?? undefined),
   replyTo: ReplyToSchema.nullable().optional(),
-  isOwnMessage: z.boolean().optional(),
+  isOwnMessage: z.boolean().nullish().transform((v) => v ?? undefined),
 });
 
 export type IMessage = z.infer<typeof MessageSchema>;
@@ -59,14 +59,14 @@ export interface ISendGroupMessageRequestData {
 
 export const MessageDataSchema = z.object({
   _id: z.string(),
-  content: z.string().default(""),
-  groupId: z.string().default(""),
+  content: z.string().nullish().transform((v) => v ?? ""),
+  groupId: z.string().nullish().transform((v) => v ?? ""),
   userId: MessageUserIdSchema,
-  alias: z.string().optional(),
-  createdAt: z.string().default(""),
-  updatedAt: z.string().optional().default(""),
+  alias: z.string().nullish().transform((v) => v ?? undefined),
+  createdAt: z.string().nullish().transform((v) => v ?? ""),
+  updatedAt: z.string().nullish().transform((v) => v ?? ""),
   replyTo: z.string().nullable().optional(),
-  isOwnMessage: z.boolean().optional(),
+  isOwnMessage: z.boolean().nullish().transform((v) => v ?? undefined),
   __v: z.number().optional(),
 });
 

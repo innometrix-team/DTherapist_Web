@@ -5,16 +5,17 @@ import Api, { IAPIResult, handleApiRequest } from "./Api";
 // Zod Schemas for Runtime Validation
 export const AppointmentActionSchema = z
   .object({
-    joinMeetingLink: z.string().optional(),
-    agoraChannel: z.string().optional(),
+    joinMeetingLink: z.string().nullable().optional(),
+    agoraChannel: z.string().nullable().optional(),
     agoraToken: z
       .object({
         token: z.string(),
         expiresAt: z.string().optional(),
         uid: z.union([z.number(), z.string()]).optional(),
       })
+      .nullable()
       .optional(),
-    invoiceDownloadLink: z.string().optional(),
+    invoiceDownloadLink: z.string().nullable().optional(),
   })
   .catch({});
 
@@ -37,8 +38,8 @@ export interface ICounselorAppointmentsParams {
 
 export const AppointmentSchema = z.object({
   bookingId: z.string(),
-  fullName: z.string().default(""),
-  profilePicture: z.string().default(""),
+  fullName: z.string().nullish().transform((v) => v ?? ""),
+  profilePicture: z.string().nullish().transform((v) => v ?? ""),
   date: z.string().default(""),
   time: z.string().default(""),
   type: z.string().default(""),
@@ -46,7 +47,8 @@ export const AppointmentSchema = z.object({
   status: z.enum(["upcoming", "passed", "confirmed"]).or(z.string()).default("upcoming"),
   bookingStatus: BookingStatusSchema.optional(),
   price: z.number().nullable().optional(),
-  action: AppointmentActionSchema.default({}),
+  invoiceDownloadLink: z.string().nullable().optional(),
+  action: AppointmentActionSchema.nullish().transform((v) => v ?? {}),
   therapistId: z.string().optional(),
   userId: z.string().optional(),
   isDemo: z.boolean().optional(),
@@ -73,20 +75,22 @@ export const UserAppointmentsResponseSchema = z.union([
 ]);
 export type UserAppointmentsResponse = z.infer<typeof UserAppointmentsResponseSchema>;
 
+const optionalNullableString = z.string().nullish().transform((v) => v ?? undefined);
+
 export const UserProfileSchema = z.object({
-  _id: z.string().optional(),
-  id: z.string().optional(),
-  userId: z.string().optional(),
-  title: z.string().optional(),
-  message: z.string().optional(),
-  name: z.string().optional(),
-  email: z.string().optional(),
-  profilePicture: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  nationality: z.string().optional(),
-  occupation: z.string().optional(),
-  experience: z.string().optional(),
-  about: z.string().optional(),
+  _id: optionalNullableString,
+  id: optionalNullableString,
+  userId: optionalNullableString,
+  title: optionalNullableString,
+  message: optionalNullableString,
+  name: optionalNullableString,
+  email: optionalNullableString,
+  profilePicture: optionalNullableString,
+  phoneNumber: optionalNullableString,
+  nationality: optionalNullableString,
+  occupation: optionalNullableString,
+  experience: optionalNullableString,
+  about: optionalNullableString,
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
