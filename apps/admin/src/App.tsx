@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
 import LoadingFallback from "./components/common/LoadingFallback";
+import OfflineBanner from "./components/common/OfflineBanner";
 import { Toaster } from "react-hot-toast";
 
 // Lazy-loaded route components for optimized bundle splitting
@@ -18,10 +19,12 @@ const DAnonymous = lazy(() => import("./pages/DAnonymous/DAnonymous"));
 const DisputesPage = lazy(() => import("./pages/Dispute/Dispute"));
 const Moderation = lazy(() => import("./pages/Moderation/Moderation"));
 const Feedback = lazy(() => import("./pages/Feedback/Feedback"));
+const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
 function App() {
   return (
     <>
+      <OfflineBanner />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Protected Routes */}
@@ -54,8 +57,8 @@ function App() {
             <Route path="login" element={<LoginForm />} />
           </Route>
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch all 404 route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <Toaster position="top-center" reverseOrder={false} />

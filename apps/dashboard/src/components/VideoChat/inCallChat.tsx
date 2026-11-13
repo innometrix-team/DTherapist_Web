@@ -138,14 +138,14 @@ const InCallChat: React.FC<InCallChatProps> = ({
         subscribed = true;
         cleanupFn = socketService.onReceiveCallMessage((msg) => {
           setMessages((prev) => {
+            // Skip adding if it's from ourselves, since we optimistically added it locally
+            if (String(msg.senderId) === String(userId)) {
+              return prev;
+            }
+
             // Use refs so we never need isOpen/onUnreadCount in the dep array
             if (!isOpenRef.current) {
               onUnreadCountRef.current?.(prev.length + 1);
-            }
-
-            // Skip adding if it's from ourselves, since we optimistically added it locally
-            if (msg.senderId === userId) {
-              return prev;
             }
 
             return [

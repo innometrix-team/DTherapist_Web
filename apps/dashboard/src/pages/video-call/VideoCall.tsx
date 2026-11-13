@@ -16,6 +16,8 @@ import { LocalVideoTile, RemoteTile } from "./components/VideoTiles";
 import { ControlBar } from "./components/ControlBar";
 import { SessionExpiredOverlay } from "./components/SessionExpiredOverlay";
 import { useCallTimer } from "./hooks/useCallTimer";
+import { env } from "../../configs/env.config";
+import { useScreenCaptureMonitor } from "../../hooks/useScreenCaptureMonitor";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +54,7 @@ const gridColumns = (total: number): number => {
 
 const VideoCallPage: React.FC = () => {
   const navigate = useNavigate();
+  const authUserId = useAuthStore((s) => s.id);
   const name = useAuthStore((s) => s.name);
   const role = useAuthStore((s) => s.role);
   const token = useAuthStore((s) => s.token);
@@ -75,6 +78,8 @@ const VideoCallPage: React.FC = () => {
     state?.agora?.channel,
   );
   const [uid, setUid] = useState<number>(state?.agora?.uid ?? 0);
+
+  useScreenCaptureMonitor(channel ? `call:${channel}` : null);
   const [isLoadingToken, setIsLoadingToken] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinStep, setJoinStep] = useState<string>("Connecting…");
@@ -104,7 +109,7 @@ const VideoCallPage: React.FC = () => {
     useCallTimer(state?.appointment, isJoined);
 
   useEffect(() => {
-    if (!appId) setAppId(import.meta.env.VITE_AGORA_APP_ID);
+    if (!appId) setAppId(env.AGORA_APP_ID);
     if (!channel) setChannel(state?.agora?.channel);
     if (!uid) setUid(state?.agora?.uid ?? 0);
   }, []); // eslint-disable-line
@@ -704,7 +709,7 @@ const VideoCallPage: React.FC = () => {
       {channel && (
         <InCallChat
           channel={channel}
-          userId={String(uid)}
+          userId={authUserId ?? String(uid)}
           isOpen={isChatOpen}
           onClose={() => setIsChatOpen(false)}
           onUnreadCount={setChatUnread}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { SessionType } from "./types";
 import { ChevronDown, User, Video, MapPin, Users, UserX } from "lucide-react";
 import { useQuery, useQueries } from "@tanstack/react-query";
@@ -15,106 +16,118 @@ import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import Skeleton, { SkeletonTable } from "../common/Skeleton";
 import EmptyState from "../common/EmptyState";
 import PageContainer from "../common/PageContainer";
+import {
+  formatTherapistCostSummary,
+  formatSessionTypeRate,
+} from "../../utils/currency.utils";
 
 interface TherapistListProps {
   onBookAppointment: (therapistId: string, sessionType: SessionType) => void;
   onViewProfile: (therapistId: string) => void;
 }
 
-// Dropdown menu — receives supportsGroup as a plain boolean (no internal fetch)
-const TherapistDropdownMenu: React.FC<{
-  therapist: ITherapist;
-  supportsGroup: boolean;
-  dropdownPosition: { top?: string; bottom?: string };
-  onBook: (therapistId: string, sessionType: SessionType) => void;
-}> = ({ therapist, supportsGroup, dropdownPosition, onBook }) => (
-  <div
-    className="dropdown-menu absolute left-0 w-48 bg-white rounded-lg shadow-lg border border-gray-300 z-50"
-    style={{
-      top: dropdownPosition.top,
-      bottom: dropdownPosition.bottom,
-      marginTop: dropdownPosition.bottom ? "0" : "0.5rem",
-      marginBottom: dropdownPosition.bottom ? "0.5rem" : "0",
-    }}
-  >
-    <button
-      onClick={() => onBook(therapist.userId, "video")}
-      className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm"
-    >
-      <Video className="w-4 h-4 text-primary" />
-      <span>Video Call</span>
-    </button>
-    <button
-      onClick={() => onBook(therapist.userId, "physical")}
-      className={`flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm ${supportsGroup ? "border-b border-gray-100" : ""}`}
-    >
-      <MapPin className="w-4 h-4 text-success" />
-      <span>Physical Meeting</span>
-    </button>
-    {supportsGroup && (
-      <button
-        onClick={() => onBook(therapist.userId, "group")}
-        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm"
-      >
-        <Users className="w-4 h-4 text-primary" />
-        <span>Team Meeting</span>
-      </button>
-    )}
-  </div>
-);
+interface DropdownCoords {
+  top: number;
+  left: number;
+  width?: number;
+  openUp: boolean;
+}
 
-const MobileTherapistDropdown: React.FC<{
+// Portal Dropdown menu — renders in document.body to avoid clipping inside overflow containers
+const PortalDropdownMenu: React.FC<{
   therapist: ITherapist;
   supportsGroup: boolean;
-  dropdownPosition: { top?: string; bottom?: string };
+  coords: DropdownCoords;
   onBook: (therapistId: string, sessionType: SessionType) => void;
-}> = ({ therapist, supportsGroup, dropdownPosition, onBook }) => (
-  <div
-    className="dropdown-menu absolute left-0 w-full bg-white rounded-lg shadow-lg border z-50"
-    style={{
-      top: dropdownPosition.top,
-      bottom: dropdownPosition.bottom,
-      marginTop: dropdownPosition.bottom ? "0" : "0.5rem",
-      marginBottom: dropdownPosition.bottom ? "0.5rem" : "0",
-    }}
-  >
-    <button
-      onClick={() => onBook(therapist.userId, "video")}
-      className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 text-sm sm:text-base"
+  onClose: () => void;
+}> = ({ therapist, supportsGroup, coords, onBook, onClose }) => {
+  const isMobile = window.innerWidth < 1024;
+  const videoRate = formatSessionTypeRate(therapist.cost, "video");
+  const physicalRate = formatSessionTypeRate(therapist.cost, "physical");
+  const groupRate = formatSessionTypeRate(therapist.cost, "group");
+
+  return createPortal(
+    <div
+      className="dropdown-portal fixed bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1 transition-opacity duration-150 ease-out"
+      style={{
+        top: `${coords.top}px`,
+        left: `${coords.left}px`,
+        width: `${coords.width || 248}px`,
+      }}
     >
-      <Video className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-      <span>Video Call</span>
-    </button>
-    <button
-      onClick={() => onBook(therapist.userId, "physical")}
-      className={`flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm sm:text-base ${supportsGroup ? "border-b border-gray-100" : ""}`}
-    >
-      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
-      <span>Physical Meeting</span>
-    </button>
-    {supportsGroup && (
       <button
-        onClick={() => onBook(therapist.userId, "group")}
-        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 text-sm sm:text-base"
+        onClick={() => {
+          onBook(therapist.userId, "video");
+          onClose();
+        }}
+        className={`flex items-center justify-between gap-2 w-full px-4 text-left hover:bg-gray-50 border-b border-gray-100 transition-colors cursor-pointer ${
+          isMobile ? "text-sm sm:text-base py-3" : "text-sm py-2.5"
+        }`}
       >
-        <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-        <span>Team Meeting</span>
+        <span className="flex items-center gap-2.5">
+          <Video className="w-4 h-4 text-primary shrink-0" />
+          <span className="font-medium text-gray-800">Video Call</span>
+        </span>
+        {videoRate && (
+          <span className="text-xs font-semibold text-primary bg-blue-50 px-2 py-0.5 rounded-full">
+            {videoRate}
+          </span>
+        )}
       </button>
-    )}
-  </div>
-);
+      <button
+        onClick={() => {
+          onBook(therapist.userId, "physical");
+          onClose();
+        }}
+        className={`flex items-center justify-between gap-2 w-full px-4 text-left hover:bg-gray-50 transition-colors cursor-pointer ${
+          supportsGroup ? "border-b border-gray-100" : ""
+        } ${isMobile ? "text-sm sm:text-base py-3" : "text-sm py-2.5"}`}
+      >
+        <span className="flex items-center gap-2.5">
+          <MapPin className="w-4 h-4 text-success shrink-0" />
+          <span className="font-medium text-gray-800">Physical Meeting</span>
+        </span>
+        {physicalRate && (
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            {physicalRate}
+          </span>
+        )}
+      </button>
+      {supportsGroup && (
+        <button
+          onClick={() => {
+            onBook(therapist.userId, "group");
+            onClose();
+          }}
+          className={`flex items-center justify-between gap-2 w-full px-4 text-left hover:bg-gray-50 transition-colors cursor-pointer ${
+            isMobile ? "text-sm sm:text-base py-3" : "text-sm py-2.5"
+          }`}
+        >
+          <span className="flex items-center gap-2.5">
+            <Users className="w-4 h-4 text-primary shrink-0" />
+            <span className="font-medium text-gray-800">Team Meeting</span>
+          </span>
+          {groupRate && (
+            <span className="text-xs font-semibold text-primary bg-blue-50 px-2 py-0.5 rounded-full">
+              {groupRate}
+            </span>
+          )}
+        </button>
+      )}
+    </div>,
+    document.body
+  );
+};
 
 const TherapistList: React.FC<TherapistListProps> = ({
   onBookAppointment,
   onViewProfile,
 }) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{
-    top?: string;
-    bottom?: string;
-  }>({});
+  const [dropdownCoords, setDropdownCoords] = useState<DropdownCoords | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedProfession, setSelectedProfession] = useState<"" | "counselor" | "psychologist">("");
   const [currentPage, setCurrentPage] = useState(1);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -125,57 +138,73 @@ const TherapistList: React.FC<TherapistListProps> = ({
       : text;
   };
 
-  const toggleDropdown = (therapistId: string) => {
-    setOpenDropdown((prev) => {
-      const newValue = prev === therapistId ? null : therapistId;
-      if (newValue) {
-        setTimeout(() => {
-          const button = document.querySelector(
-            `[data-dropdown-id="${therapistId}"]`
-          );
-          if (button) {
-            const rect = button.getBoundingClientRect();
-            const dropdownHeight = 160;
-            const viewportHeight = window.innerHeight;
-            const spaceBelow = viewportHeight - rect.bottom;
-            const spaceAbove = rect.top;
-            const position: { top?: string; bottom?: string } = {};
-            if (spaceBelow >= dropdownHeight) {
-              position.top = "100%";
-            } else if (spaceAbove >= dropdownHeight) {
-              position.bottom = "100%";
-            } else {
-              position.top = "100%";
-            }
-            setDropdownPosition(position);
-          }
-        }, 0);
-      }
-      return newValue;
-    });
+  const toggleDropdown = (therapistId: string, buttonEl?: HTMLElement) => {
+    if (openDropdown === therapistId) {
+      setOpenDropdown(null);
+      setDropdownCoords(null);
+      return;
+    }
+
+    if (buttonEl) {
+      const rect = buttonEl.getBoundingClientRect();
+      const dropdownHeight = 155;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUp = spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight;
+
+      const isMobile = window.innerWidth < 1024;
+      const width = isMobile ? rect.width : 248;
+      const left = isMobile
+        ? rect.left
+        : Math.max(8, Math.min(rect.left, window.innerWidth - 248 - 16));
+      const top = openUp ? rect.top - dropdownHeight - 4 : rect.bottom + 4;
+
+      setDropdownCoords({ top, left, width, openUp });
+    }
+    setOpenDropdown(therapistId);
   };
 
   const handleBooking = (therapistId: string, sessionType: SessionType) => {
     onBookAppointment(therapistId, sessionType);
     setOpenDropdown(null);
+    setDropdownCoords(null);
   };
 
   useEffect(() => {
+    if (!openDropdown) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
+      const target = event.target as Element | null;
       if (
-        openDropdown &&
-        !target.closest(".dropdown-container") &&
-        !target.closest(".dropdown-menu")
+        target?.closest?.(".dropdown-portal") ||
+        target?.closest?.(`[data-dropdown-id="${openDropdown}"]`)
       ) {
-        setOpenDropdown(null);
+        return;
       }
+      setOpenDropdown(null);
+      setDropdownCoords(null);
     };
-    if (openDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.(".dropdown-portal")) return;
+      setOpenDropdown(null);
+      setDropdownCoords(null);
+    };
+
+    const handleResize = () => {
+      setOpenDropdown(null);
+      setDropdownCoords(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
     };
   }, [openDropdown]);
 
@@ -201,7 +230,12 @@ const TherapistList: React.FC<TherapistListProps> = ({
     error: therapistsError,
     refetch: refetchTherapists,
   } = useQuery({
-    queryKey: QUERY_KEYS.therapists.list(selectedCategory, searchQuery, currentPage),
+    queryKey: QUERY_KEYS.therapists.list(
+      selectedCategory,
+      searchQuery,
+      currentPage,
+      selectedProfession || undefined
+    ),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -211,6 +245,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
       }
       if (searchQuery.trim()) {
         params.search = searchQuery.trim();
+      }
+      if (selectedProfession) {
+        params.professionalCategory = selectedProfession;
       }
       const result = await getTherapistsApi(params, { signal: controller.signal });
       if (!result) throw new Error("Request cancelled");
@@ -244,47 +281,31 @@ const TherapistList: React.FC<TherapistListProps> = ({
     therapists.forEach((t: ITherapist, i: number) => {
       const data = scheduleQueries[i]?.data;
       const schedules = data?.data?.schedules || [];
-      map.set(t.userId, schedules.some((s) => s.isAvailable && s.teamBooking === true));
+      const hasScheduleGroup = schedules.some(
+        (s) => s.isAvailable && (s.teamBooking === true || s.allowGroupBooking === true)
+      );
+      const hasGroupCost =
+        typeof t.cost === "object" && t.cost !== null && (t.cost.groupVideo ?? 0) > 0;
+      map.set(t.userId, hasScheduleGroup || hasGroupCost);
     });
     return map;
   }, [therapists, scheduleQueries]);
 
-  const getCostDisplay = (
-    cost: { video: number; inPerson: number; groupVideo?: number } | number | null
-  ): string => {
-    if (cost === null || cost === undefined) return "";
-    if (typeof cost === "number") {
-      if (cost === 0) return "";
-      return `₦${cost}.00/hr`;
-    }
-    const { video, inPerson, groupVideo } = cost;
-    const hasGroup = groupVideo !== undefined && groupVideo !== null && groupVideo > 0;
-    const videoCost = video > 0 ? video : null;
-    const inPersonCost = inPerson > 0 ? inPerson : null;
+  const activeTherapist = useMemo(
+    () => therapists.find((t: ITherapist) => t.userId === openDropdown),
+    [therapists, openDropdown]
+  );
 
-    if (!videoCost && !inPersonCost && !hasGroup) return "";
-
-    if (videoCost && inPersonCost && videoCost === inPersonCost && !hasGroup) {
-      return `₦${videoCost}.00/hr`;
-    }
-    if (videoCost && inPersonCost && videoCost === inPersonCost && hasGroup) {
-      return `₦${videoCost}.00/₦${groupVideo}/hr`;
-    }
-
-    const parts: string[] = [];
-    if (videoCost) parts.push(`₦${videoCost}`);
-    if (inPersonCost && inPersonCost !== videoCost) parts.push(`₦${inPersonCost}`);
-    if (hasGroup) parts.push(`₦${groupVideo}`);
-
-    if (parts.length === 1) return `${parts[0]}.00/hr`;
-    if (parts.length === 2 && hasGroup && videoCost === inPersonCost) {
-      return `${parts[0]}.00/${parts[1]}/hr`;
-    }
-    return `${parts.join("/")}/hr`;
-  };
+  const getCostDisplay = (cost: ITherapist["cost"]): string =>
+    formatTherapistCostSummary(cost);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
+    setCurrentPage(1);
+  }, []);
+
+  const handleProfessionChange = useCallback((profession: "" | "counselor" | "psychologist") => {
+    setSelectedProfession(profession);
     setCurrentPage(1);
   }, []);
 
@@ -346,7 +367,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
           <div className="absolute inset-0 bg-linear-to-r from-blue-900/20 to-purple-900/20"></div>
           <div className="absolute inset-0 flex items-center justify-center">
             <h1 className="text-white text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
-              Our Counselors
+              Our Professionals
             </h1>
           </div>
         </div>
@@ -371,10 +392,26 @@ const TherapistList: React.FC<TherapistListProps> = ({
               </select>
               <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
+            <div className="relative w-full sm:w-auto sm:min-w-45">
+              <select
+                value={selectedProfession}
+                onChange={(e) =>
+                  handleProfessionChange(
+                    e.target.value as "" | "counselor" | "psychologist"
+                  )
+                }
+                className="appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary w-full text-sm sm:text-base cursor-pointer"
+              >
+                <option value="">All Professions</option>
+                <option value="counselor">Counselors</option>
+                <option value="psychologist">Psychologists</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
             <div className="relative w-full sm:flex-1 sm:max-w-md">
               <input
                 type="text"
-                placeholder="Search for Counselor"
+                placeholder="Search professionals..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-3 sm:pl-4 pr-3 sm:pr-4 py-2 border border-gray-300 rounded-lg bg-white w-full focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base"
@@ -383,7 +420,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
           </div>
           {totalCount > 0 && (
             <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-right">
-              {totalCount} counselor{totalCount > 1 ? "s" : ""} found
+              {totalCount} professional{totalCount > 1 ? "s" : ""} found
             </div>
           )}
         </div>
@@ -415,7 +452,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
         {therapistsError && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-md mx-auto my-4 shadow-xs">
             <p className="text-red-600 font-semibold mb-3 text-sm sm:text-base">
-              Failed to load counselors
+              Failed to load professionals
             </p>
             <button
               onClick={() => {
@@ -432,12 +469,13 @@ const TherapistList: React.FC<TherapistListProps> = ({
         {!therapistsLoading && !therapistsError && therapists.length === 0 && (
           <EmptyState
             icon={UserX}
-            title="No Counselors Found"
-            description="We couldn't find any counselors matching your search query or category filter. Try clearing your filters or selecting a different specialization."
-            actionText={selectedCategory || searchQuery ? "Clear All Filters" : undefined}
+            title="No Professionals Found"
+            description="We couldn't find any professionals matching your search query or category filter. Try clearing your filters or selecting a different specialization."
+            actionText={selectedCategory || searchQuery || selectedProfession ? "Clear All Filters" : undefined}
             onActionClick={() => {
               setSelectedCategory("");
               setSearchQuery("");
+              setSelectedProfession("");
             }}
           />
         )}
@@ -472,9 +510,16 @@ const TherapistList: React.FC<TherapistListProps> = ({
                             className="w-8 h-8 lg:w-12 lg:h-12 rounded-full object-cover shrink-0"
                             onError={handleImageError}
                           />
-                          <span className="font-medium text-gray-900 text-sm lg:text-base">
-                            {trimText(therapist.name, 20)}
-                          </span>
+                          <div>
+                            <span className="font-medium text-gray-900 text-sm lg:text-base block">
+                              {trimText(therapist.name, 20)}
+                            </span>
+                            {therapist.professionalCategory && (
+                              <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[11px] font-medium capitalize bg-blue-50 text-primary border border-blue-100">
+                                {therapist.professionalCategory}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 lg:px-6 py-4 text-gray-600 text-xs lg:text-sm">
@@ -489,25 +534,17 @@ const TherapistList: React.FC<TherapistListProps> = ({
                       <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 text-xs lg:text-sm">
                         {getCostDisplay(therapist.cost)}
                       </td>
-                      <td className="px-3 lg:px-6 py-4 relative dropdown-container">
+                      <td className="px-3 lg:px-6 py-4">
                         <button
                           data-dropdown-id={therapist.userId}
-                          onClick={() => toggleDropdown(therapist.userId)}
-                          className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs lg:text-sm"
+                          onClick={(e) => toggleDropdown(therapist.userId, e.currentTarget)}
+                          className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs lg:text-sm cursor-pointer"
                         >
                           <span className="whitespace-nowrap">Book</span>
                           <ChevronDown
                             className={`w-3 h-3 lg:w-4 lg:h-4 shrink-0 transition-transform ${openDropdown === therapist.userId ? "rotate-180" : ""}`}
                           />
                         </button>
-                        {openDropdown === therapist.userId && (
-                          <TherapistDropdownMenu
-                            therapist={therapist}
-                            supportsGroup={groupSupportMap.get(therapist.userId) ?? false}
-                            dropdownPosition={dropdownPosition}
-                            onBook={handleBooking}
-                          />
-                        )}
                       </td>
                       <td className="px-3 lg:px-6 py-4 text-center">
                         <button
@@ -542,6 +579,11 @@ const TherapistList: React.FC<TherapistListProps> = ({
                       <h3 className="font-medium text-gray-900 text-sm sm:text-lg mb-1 truncate">
                         {therapist.name}
                       </h3>
+                      {therapist.professionalCategory && (
+                        <span className="inline-block mb-1.5 px-2 py-0.5 rounded-full text-xs font-medium capitalize bg-blue-50 text-primary border border-blue-100">
+                          {therapist.professionalCategory}
+                        </span>
+                      )}
                       <p className="text-gray-600 mb-2 text-xs sm:text-sm">
                         {trimText(therapist.category, 30)}
                       </p>
@@ -567,30 +609,36 @@ const TherapistList: React.FC<TherapistListProps> = ({
                   </div>
 
                   {/* Mobile Action Button */}
-                  <div className="relative dropdown-container border-t border-gray-100 pt-3">
+                  <div className="border-t border-gray-100 pt-3">
                     <button
                       data-dropdown-id={therapist.userId}
-                      onClick={() => toggleDropdown(therapist.userId)}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2 sm:py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+                      onClick={(e) => toggleDropdown(therapist.userId, e.currentTarget)}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 sm:py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base cursor-pointer"
                     >
                       <span>Book Appointment</span>
                       <ChevronDown
                         className={`w-4 h-4 transition-transform ${openDropdown === therapist.userId ? "rotate-180" : ""}`}
                       />
                     </button>
-                    {openDropdown === therapist.userId && (
-                      <MobileTherapistDropdown
-                        therapist={therapist}
-                        supportsGroup={groupSupportMap.get(therapist.userId) ?? false}
-                        dropdownPosition={dropdownPosition}
-                        onBook={handleBooking}
-                      />
-                    )}
                   </div>
                 </div>
               ))}
             </div>
           </>
+        )}
+
+        {/* Global Portal Dropdown Menu - rendered outside overflow containers */}
+        {activeTherapist && dropdownCoords && (
+          <PortalDropdownMenu
+            therapist={activeTherapist}
+            supportsGroup={groupSupportMap.get(activeTherapist.userId) ?? false}
+            coords={dropdownCoords}
+            onBook={handleBooking}
+            onClose={() => {
+              setOpenDropdown(null);
+              setDropdownCoords(null);
+            }}
+          />
         )}
 
         {/* Pagination */}

@@ -14,6 +14,7 @@ import { useAuthStore } from "../../store/auth/useAuthStore";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 import { X } from "lucide-react";
+import { safeRedirect } from "../../utils/security.utils";
 
 const PRESET_AMOUNTS = [
   { label: "₦5,000", value: "5000" },
@@ -72,7 +73,9 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
         return;
       }
       localStorage.setItem("paymentReference", responseData.reference);
-      window.location.href = responseData.authorization_url;
+      safeRedirect(responseData.authorization_url, () => {
+        toast.error("Invalid payment authorization URL");
+      });
     },
     onError: (error) => {
       toast.error(error.message || "Failed to fund wallet");

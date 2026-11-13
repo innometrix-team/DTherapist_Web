@@ -1,37 +1,48 @@
-import { ArrowLeft, MessageCircle, Users } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, MessageCircle } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
-// import { PeopleIcon } from "../../assets/icons";
 import DAnonymousGroups from "../../components/anonymous/DAnonymousGroups";
 import { useGroups } from "../../hooks/useGroups";
 
 const DAnonymous = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: groupsData, isLoading, isError } = useGroups();
-  const groups = groupsData?.data || [];
-  const selectedGroup = groups.find((g) => g._id === groupId);
+  const rawGroups = groupsData?.data;
+  const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
+  const hasSelectedGroup = Boolean(groupId);
+
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups;
+    const q = searchQuery.toLowerCase();
+    return groups.filter(
+      (g) =>
+        g.name.toLowerCase().includes(q) ||
+        (g.description && g.description.toLowerCase().includes(q))
+    );
+  }, [groups, searchQuery]);
 
   return (
     <div className="flex bg-gray-50 relative h-full overflow-hidden">
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50  z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       <div
         className={`bg-white border-r border-gray-200 transition-all h-full duration-300 ease-in-out z-50
-        ${selectedGroup ? "w-80" : "max-w-96 w-[90%]"}
+        ${hasSelectedGroup ? "w-80" : "max-w-96 w-[90%]"}
         md:relative md:translate-x-0
         ${
           isMobileMenuOpen
             ? "fixed inset-y-0 left-0 w-80 translate-x-0"
             : "fixed inset-y-0 left-0 w-80 -translate-x-full"
         }
-        ${selectedGroup && !isMobileMenuOpen ? "md:block hidden" : ""}
-        ${!selectedGroup ? "md:block" : ""}
+        ${hasSelectedGroup && !isMobileMenuOpen ? "md:block hidden" : ""}
+        ${!hasSelectedGroup ? "md:block" : ""}
       `}
       >
         {/* Header */}
@@ -48,6 +59,8 @@ const DAnonymous = () => {
           <div className="relative">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for Groups"
               className="w-full px-4 py-3 bg-gray-100 rounded-2xl border-0 focus:ring-2 focus:ring-primary focus:outline-none lg:text-sm"
             />
@@ -77,13 +90,15 @@ const DAnonymous = () => {
               Retry
             </button>
           </div>
-        ) : groups.length === 0 ? (
+        ) : filteredGroups.length === 0 ? (
           <div className="p-6 text-center text-neutral text-xs">
-            No support groups available at the moment.
+            {searchQuery
+              ? "No groups match your search."
+              : "No support groups available at the moment."}
           </div>
         ) : (
           <DAnonymousGroups
-            groups={groups}
+            groups={filteredGroups}
             onGroupSelect={() => setIsMobileMenuOpen(false)}
           />
         )}
@@ -91,42 +106,14 @@ const DAnonymous = () => {
 
       <div
         className={`flex-1 flex flex-col ${
-          selectedGroup ? "block" : "md:flex"
+          hasSelectedGroup ? "block" : "md:flex"
         }`}
       >
-        {!selectedGroup ? (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center max-w-md mx-auto p-8">
-              <div className="w-24 h-24 bg-darkerb rounded-full mx-auto mb-6 flex items-center justify-center">
-                {/* <PeopleIcon className="w-12 h-12 text-gray-400" /> */}
-                <img src="/d-logo.png" alt="" className="rounded-full "/>
-              </div>
-              <h2 className="text-2xl font-semibold text-gray-700 mb-3">
-                Welcome to DAnonymous
-              </h2>
-              <p className="text-gray-500 mb-6">
-                Select a group to start participating in meaningful
-                conversations with others on similar journeys anonymously.
-              </p>
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-400">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4" />
-                  <span>{groups.length} Active Groups</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>200 conversations</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <Outlet />
-        )}
+        <Outlet context={{ groups, isLoading }} />
       </div>
 
       {/* Mobile-only */}
-      {!selectedGroup && (
+      {!hasSelectedGroup && (
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg z-30"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { X, Send, Minus, Sparkles, Bot, RotateCcw } from "lucide-react";
+import { X, Send, Minus, Sparkles, Bot, RotateCcw, GripHorizontal } from "lucide-react";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { sendChatbotMessage } from "../../api/ChatBot.api";
 
@@ -21,6 +21,11 @@ const QUICK_ACTIONS: QuickAction[] = [
     label: "Need a Counselor",
     prompt: "I need help finding the right counselor for my needs.",
     icon: "👩‍⚕️",
+  },
+  {
+    label: "Need psychological services",
+    prompt: "I need psychological services. Can you connect me with professional psychological support and guide me through available services?",
+    icon: "🧠",
   },
   {
     label: "Mental Health Advice",
@@ -47,7 +52,24 @@ const QUICK_ACTIONS: QuickAction[] = [
 const FeliciaChatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [showQuickPopup, setShowQuickPopup] = useState(true);
+
+  // Quick message popup takes 3 seconds before showing when user enters/signs in
+  const [showQuickPopup, setShowQuickPopup] = useState(false);
+
+  // Docking position: can be dragged to 'left' or 'right' side
+  const [dockSide, setDockSide] = useState<"left" | "right">(() => {
+    try {
+      const saved = localStorage.getItem("felicia_chatbot_dock_side");
+      return saved === "left" ? "left" : "right";
+    } catch {
+      return "right";
+    }
+  });
+
+  // Transient drag state for smooth dragging across the screen
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragX, setDragX] = useState<number | null>(null);
+  const dragStartRef = useRef<{ startX: number; startY: number; moved: boolean } | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -77,12 +99,90 @@ const FeliciaChatbot: React.FC = () => {
     }
   }, [messages, isOpen, isMinimized, scrollToBottom]);
 
+  // Quick message popup takes 3 seconds before appearing after sign-in / initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowQuickPopup(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Clean up ongoing requests on unmount
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  // Drag handlers for dragging between left and right side
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+    };
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore in environments where pointer capture is unsupported
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragStartRef.current) return;
+    const deltaX = Math.abs(e.clientX - dragStartRef.current.startX);
+    const deltaY = Math.abs(e.clientY - dragStartRef.current.startY);
+
+    if (deltaX > 6 || deltaY > 6) {
+      dragStartRef.current.moved = true;
+      setIsDragging(true);
+
+      const buttonRadius = 28;
+      const clampedX = Math.max(
+        buttonRadius + 16,
+        Math.min(window.innerWidth - buttonRadius - 16, e.clientX)
+      );
+      setDragX(clampedX);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragStartRef.current) return;
+    const { moved } = dragStartRef.current;
+    dragStartRef.current = null;
+    setIsDragging(false);
+
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+
+    if (moved) {
+      // Snap to closer half of the screen (left or right)
+      const newSide: "left" | "right" = e.clientX < window.innerWidth / 2 ? "left" : "right";
+      setDockSide(newSide);
+      setDragX(null);
+      try {
+        localStorage.setItem("felicia_chatbot_dock_side", newSide);
+      } catch {
+        // Ignore
+      }
+    } else {
+      // Simple click: toggle chat
+      setDragX(null);
+      setIsOpen((prev) => !prev);
+      setShowQuickPopup(false);
+    }
+  };
+
+  const handlePointerCancel = () => {
+    dragStartRef.current = null;
+    setIsDragging(false);
+    setDragX(null);
+  };
 
   // Send message implementation
   const handleSendMessage = useCallback(
@@ -182,13 +282,24 @@ const FeliciaChatbot: React.FC = () => {
     });
   };
 
+  const isLeft = dockSide === "left";
+
   return (
     <>
-      {/* 1. Fixed Bottom-Right Bot Launcher Container */}
-      <div className="fixed bottom-6 right-6 z-9999 flex flex-col items-end pointer-events-auto">
-        {/* Quick Action Popup when user lands or logs in */}
-        {showQuickPopup && !isOpen && (
-          <div className="mb-3 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-3 duration-200">
+      {/* 1. Bot Launcher Container (Draggable to Left and Right side) */}
+      <div
+        style={{
+          left: isDragging && dragX !== null ? `${dragX - 28}px` : isLeft ? "24px" : "auto",
+          right: isDragging ? "auto" : !isLeft ? "24px" : "auto",
+          transition: isDragging ? "none" : "left 0.25s ease-out, right 0.25s ease-out",
+        }}
+        className={`fixed bottom-6 z-9999 flex flex-col ${
+          isLeft ? "items-start" : "items-end"
+        } pointer-events-auto select-none`}
+      >
+        {/* Quick Action Popup (Appears 3 seconds after entering) */}
+        {showQuickPopup && !isOpen && !isDragging && (
+          <div className="mb-3 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-3 duration-300">
             <div className="bg-white rounded-2xl shadow-2xl border border-divider p-3.5 space-y-2.5 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-divider/40 pb-2">
                 <div className="flex items-center gap-2">
@@ -215,7 +326,7 @@ const FeliciaChatbot: React.FC = () => {
                 Welcome to Dtherapist! How can I assist your mental wellness journey right now?
               </p>
 
-              {/* Quick Action Buttons */}
+              {/* Quick Action Buttons (includes Need psychological services) */}
               <div className="flex flex-col gap-1.5 pt-0.5">
                 {QUICK_ACTIONS.map((action) => (
                   <button
@@ -224,11 +335,13 @@ const FeliciaChatbot: React.FC = () => {
                     onClick={() => handleTriggerQuickAction(action.prompt)}
                     className="w-full text-left px-2.5 py-1.5 rounded-xl bg-offwhite hover:bg-primary text-darkerb hover:text-white transition-all duration-150 flex items-center justify-between text-xs font-medium cursor-pointer border border-divider/40 group shadow-2xs"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm shrink-0">{action.icon}</span>
-                      <span className="group-hover:translate-x-0.5 transition-transform">{action.label}</span>
+                      <span className="truncate group-hover:translate-x-0.5 transition-transform">
+                        {action.label}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-neutral group-hover:text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[10px] text-neutral group-hover:text-white/80 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       Ask →
                     </span>
                   </button>
@@ -238,33 +351,49 @@ const FeliciaChatbot: React.FC = () => {
           </div>
         )}
 
-        {/* Launcher Circle Button (Fixed bottom-right, standard click) */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsOpen((prev) => !prev);
-            setShowQuickPopup(false);
-          }}
-          className="w-14 h-14 rounded-full bg-linear-to-tr from-primary to-blue-600 hover:shadow-primary/40 text-white shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95 hover:scale-105 cursor-pointer border-2 border-white relative group"
-          aria-label="Toggle Felicia AI Chat"
-          title="Click to chat with Felicia"
-        >
-          <div className="relative flex items-center justify-center">
-            <img
-              src="/AI-Logo.png"
-              alt="Felicia AI"
-              className="w-7 h-7 object-contain pointer-events-none drop-shadow-xs"
-            />
-            {/* Online Green Pulsing Indicator */}
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse" />
-          </div>
-        </button>
+        {/* Launcher Circle Button (Draggable horizontally to left and right edges) */}
+        <div className="relative group flex items-center">
+          <button
+            type="button"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            className={`w-14 h-14 rounded-full bg-linear-to-tr from-primary to-blue-600 hover:shadow-primary/40 text-white shadow-xl flex items-center justify-center transition-transform duration-150 active:scale-95 cursor-grab active:cursor-grabbing border-2 border-white relative touch-none ${
+              isDragging ? "scale-105 shadow-2xl ring-4 ring-primary/20" : ""
+            }`}
+            aria-label="Toggle Felicia AI Chat (Drag to reposition left or right)"
+            title="Click to chat or drag to reposition between left and right side"
+          >
+            <div className="relative flex items-center justify-center pointer-events-none">
+              <img
+                src="/AI-Logo.png"
+                alt="Felicia AI"
+                className="w-7 h-7 object-contain drop-shadow-xs"
+              />
+              {/* Online Green Pulsing Indicator */}
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-white animate-pulse" />
+            </div>
+
+            {/* Subtle drag grip indicator on top edge */}
+            <span
+              className="absolute -top-1.5 px-1 py-0.2 bg-darkerb/80 text-white/90 rounded-full text-[8px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 pointer-events-none shadow-xs"
+              aria-hidden="true"
+            >
+              <GripHorizontal className="w-2.5 h-2.5" />
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* 2. Fixed Open Chat Window */}
+      {/* 2. Open Chat Window (Docked on left or right matching the launcher) */}
       {isOpen && (
         <div
-          className={`fixed bottom-24 right-4 sm:right-6 z-9999 w-[calc(100vw-32px)] sm:w-[380px] max-w-[380px] ${
+          style={{
+            left: isLeft ? "16px" : "auto",
+            right: !isLeft ? "16px" : "auto",
+          }}
+          className={`fixed bottom-24 z-9999 w-[calc(100vw-32px)] sm:w-[380px] max-w-[380px] ${
             isMinimized ? "h-auto" : "h-[510px]"
           } bg-white rounded-2xl shadow-2xl border border-divider flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200`}
         >
@@ -387,7 +516,7 @@ const FeliciaChatbot: React.FC = () => {
 
               {/* In-Chat Quick Prompt Chips */}
               <div className="px-3 py-2 bg-white border-t border-divider/60 overflow-x-auto no-scrollbar flex items-center gap-1.5 shrink-0">
-                {QUICK_ACTIONS.slice(0, 3).map((act) => (
+                {QUICK_ACTIONS.slice(0, 4).map((act) => (
                   <button
                     key={act.label}
                     type="button"

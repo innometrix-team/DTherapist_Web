@@ -24,6 +24,12 @@ export interface ITherapist {
     count?: number;
   };
   userId: string;
+  professionalCategory?: "counselor" | "psychologist";
+  professionalBodies?: {
+    bodyName: string;
+    otherBodyName?: string;
+    certificationName: string;
+  }[];
 }
 
 export interface ICategory {
@@ -37,6 +43,7 @@ export interface ITherapistListParams {
   search?: string;
   page?: number;
   limit?: number;
+  professionalCategory?: "counselor" | "psychologist";
 }
 
 export interface ITherapistListResponse {
@@ -128,6 +135,7 @@ export const getTherapistsApi = (
   if (params?.search) searchParams.append('search', params.search);
   if (params?.page) searchParams.append('page', params.page.toString());
   if (params?.limit) searchParams.append('limit', params.limit.toString());
+  if (params?.professionalCategory) searchParams.append('professionalCategory', params.professionalCategory);
 
   const queryString = searchParams.toString();
   const url = queryString ? `/api/user/counselors?${queryString}` : '/api/user/counselors';

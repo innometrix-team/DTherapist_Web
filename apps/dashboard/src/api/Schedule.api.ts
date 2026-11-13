@@ -5,14 +5,18 @@ import Api, { ApiError, IAPIResult } from "./Api";
 export interface IScheduleSlot {
   startTime: string;
   endTime: string;
+  meetingType?: "video" | "in-person";
 }
 
 export interface IScheduleRequestData {
   day: string;
-  meetingType: string;
+  meetingType?: string;
   timezone: string;
   isAvailable: boolean;
-  teamBooking: boolean;
+  teamBooking?: boolean;
+  allowGroupBooking?: boolean;
+  validFrom?: string;
+  validUntil?: string;
   slots: IScheduleSlot[];
 }
 

@@ -8,11 +8,14 @@ import { StoreResult } from "../store/types";
 // Types & Interfaces
 // ========================
 
+export type ProfessionalCategory = "counselor" | "psychologist";
+
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
   role: "client" | "therapist" | "user" | "counselor";
+  professionalCategory?: ProfessionalCategory;
 }
 
 export interface LoginPayload {
@@ -31,6 +34,7 @@ export interface RegisterPayload {
   password: string;
   role: "client" | "therapist";
   phoneNumber?: string;
+  professionalCategory?: ProfessionalCategory;
 }
 
 export interface RegisterResponseData {
@@ -72,8 +76,14 @@ export interface ResetPasswordResponseData {
 }
 
 export interface PasswordChangePayload {
+  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+export interface LogoutPayload {
+  fcmToken?: string;
+  allDevices?: boolean;
 }
 
 export interface PasswordChangeResponseData {
@@ -195,6 +205,14 @@ export const changePassword = (
     Api.patch(endpoint, data, config)
   );
 };
+
+export const logout = (
+  data?: LogoutPayload,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<{ message?: string }> | null> =>
+  handleApiRequest<{ message?: string }>(() =>
+    Api.post("/api/auth/logout", data || {}, config)
+  );
 
 export async function deleteAccount(
   config?: AxiosRequestConfig
