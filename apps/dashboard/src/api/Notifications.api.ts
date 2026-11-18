@@ -1,15 +1,33 @@
 import { AxiosRequestConfig } from "axios";
 import Api, { IAPIResult, handleApiRequest } from "./Api";
 
+export interface INotificationData {
+  type?: string;
+  groupId?: string;
+  messageId?: string;
+  replyTo?: string;
+  parentAuthorId?: string;
+  authorId?: string;
+  senderId?: string;
+  bookingId?: string;
+  appointmentId?: string;
+  disputeId?: string;
+  clientId?: string;
+  chatId?: string;
+  userId?: string;
+  url?: string;
+}
+
 export interface IUserNotification {
   _id: string;
   userId: string;
   type: string;
-  audience: "client" | "therapist | all";
+  audience: "client" | "therapist" | "all" | "therapist | all";
   seenBy: string[];
   title: string;
   message: string;
   seen: boolean;
+  data?: INotificationData;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -64,8 +82,19 @@ export function formatNotificationDate(dateString: string): string {
 
 // Helper function to get notification type color
 export function getNotificationTypeColor(type: string): string {
-  switch (type.toLowerCase()) {
+  const t = type.toLowerCase();
+  if (t.includes('forum') || t.includes('reply') || t.includes('community') || t.includes('danonymous')) {
+    return 'text-primary';
+  }
+  if (t.includes('dispute')) {
+    return 'text-amber-600';
+  }
+  if (t.includes('profile') || t.includes('profession') || t.includes('credential')) {
+    return 'text-indigo-600';
+  }
+  switch (t) {
     case 'booking':
+    case 'appointment':
       return 'text-blue-600';
     case 'session':
       return 'text-green-600';
@@ -84,8 +113,19 @@ export function getNotificationTypeColor(type: string): string {
 
 // Helper function to get notification icon based on type
 export function getNotificationIcon(type: string): string {
-  switch (type.toLowerCase()) {
+  const t = type.toLowerCase();
+  if (t.includes('forum') || t.includes('reply') || t.includes('community') || t.includes('danonymous')) {
+    return '💬';
+  }
+  if (t.includes('dispute')) {
+    return '⚖️';
+  }
+  if (t.includes('profile') || t.includes('profession') || t.includes('credential')) {
+    return '👤';
+  }
+  switch (t) {
     case 'booking':
+    case 'appointment':
       return '📅';
     case 'session':
       return '🎯';

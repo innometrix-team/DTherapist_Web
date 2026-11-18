@@ -1,12 +1,13 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/auth/useAuthStore';
-import { getTherapistScheduleApi, ITimeSlot } from '../../api/TherapistSchedule.api';
+import { getTherapistScheduleApi, IScheduleItem, ITimeSlot } from '../../api/TherapistSchedule.api';
 import { rescheduleBookingApi, IUserRescheduleRequest, ICounselorRescheduleRequest } from '../../api/Reschedule.api';
 import { getCounselorAppointments, getUserAppointments, Appointment } from '../../api/Appointments.api';
 import { QUERY_KEYS } from '../../configs/queryKeys.config';
+import { invalidateAllCache } from '../../utils/AppointmentsCache.utils';
 
 interface RescheduleSessionProps {
   sessionId: string;
@@ -25,6 +26,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
   sessionId,
   onClose 
 }) => {
+  const queryClient = useQueryClient();
   // Get user role from auth store
   const role = useAuthStore((s) => s.role);
   const userId = useAuthStore((s) => s.id);
@@ -97,6 +99,24 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     const type = session.type.toLowerCase();
     return type === 'video call' || type === 'video' ? 'video' : 'physical';
   }, [session?.type]);
+
+  const filterSlotsForSessionType = useCallback(
+    (scheduleItem: IScheduleItem): ITimeSlot[] => {
+      const targetMeetingType = sessionType === 'physical' ? 'in-person' : 'video';
+
+      return (scheduleItem.slots || []).filter((slot) => {
+        if (slot.isBooked) return false;
+        if (slot.meetingType && slot.meetingType !== 'both') {
+          return slot.meetingType === targetMeetingType;
+        }
+        return (
+          scheduleItem.meetingType === 'both' ||
+          scheduleItem.meetingType === targetMeetingType
+        );
+      });
+    },
+    [sessionType]
+  );
   
   // Fetch therapist schedule
   const { 
@@ -115,6 +135,28 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     enabled: !!therapistId && !!session, // Only fetch if we have therapist ID and session
   });
 
+  // Fetch date-specific schedule when a date is selected
+  const { data: dateScheduleResponse } = useQuery({
+    queryKey: QUERY_KEYS.therapists.schedule(
+      therapistId || '',
+      sessionType,
+      selectedDate || undefined
+    ),
+    queryFn: async () => {
+      if (!therapistId) throw new Error('Therapist ID required');
+      const result = await getTherapistScheduleApi(
+        therapistId,
+        sessionType,
+        undefined,
+        selectedDate
+      );
+      if (!result) throw new Error('Request cancelled');
+      return result;
+    },
+    staleTime: 60 * 1000,
+    enabled: Boolean(therapistId && session && selectedDate),
+  });
+
   // Reschedule mutation
   const rescheduleMutation = useMutation({
     mutationFn: async (rescheduleData: IUserRescheduleRequest | ICounselorRescheduleRequest) => {
@@ -130,12 +172,21 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
       return result;
     },
     onSuccess: (data) => {
+      invalidateAllCache();
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
+      if (therapistId) {
+        void queryClient.invalidateQueries({
+          queryKey: ['therapist-schedule', therapistId],
+        });
+      }
       toast.success(data?.message || 'Session rescheduled successfully');
       setTimeout(() => {
         onClose();
       }, 2000);
     },
     onError: (error: Error) => {
+      invalidateAllCache();
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments.all });
       const errorMessage = error?.message || 'Failed to reschedule session';
       toast.error(errorMessage);
     }
@@ -191,29 +242,38 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
     const schedules = scheduleResponse.data.schedules;
     
     schedules.forEach((scheduleItem) => {
-      // Filter by session type and availability
-      const scheduleMeetingType = scheduleItem.meetingType === 'in-person' ? 'physical' : 'video';
+      const usableSlots = filterSlotsForSessionType(scheduleItem);
       
-      if (scheduleItem.isAvailable && scheduleMeetingType === sessionType) {
+      if (scheduleItem.isAvailable && usableSlots.length > 0) {
+        const validFromStr = scheduleItem.validFrom
+          ? scheduleItem.validFrom.split('T')[0]
+          : null;
+        const validUntilStr = scheduleItem.validUntil
+          ? scheduleItem.validUntil.split('T')[0]
+          : null;
+
         // Get all dates for this day of the week in the current month
         const dayName = scheduleItem.day;
         const dates = getDatesForDayInCurrentMonth(dayName, currentMonth);
         
         dates.forEach(date => {
           const dateStr = formatDateToString(date);
+          if (validFromStr && dateStr < validFromStr) return;
+          if (validUntilStr && dateStr > validUntilStr) return;
           
           // Only add future dates
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           if (date >= today) {
-            map.set(dateStr, scheduleItem.slots);
+            const existing = map.get(dateStr) || [];
+            map.set(dateStr, [...existing, ...usableSlots]);
           }
         });
       }
     });
     
     return map;
-  }, [scheduleResponse?.data?.schedules, sessionType, currentMonth, getDatesForDayInCurrentMonth, formatDateToString]);
+  }, [scheduleResponse?.data?.schedules, filterSlotsForSessionType, currentMonth, getDatesForDayInCurrentMonth, formatDateToString]);
 
   // Generate calendar days for the current month
   const generateCalendarDays = useCallback((): (number | null)[] => {
@@ -358,13 +418,25 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
 
   // Get available times for the selected date
   const availableTimes = useMemo((): ITimeSlot[] => {
-    if (!selectedDate || !availableDatesMap.has(selectedDate)) {
+    if (!selectedDate) {
       return [];
     }
-    
+
+    const dateSchedules = dateScheduleResponse?.data?.schedules;
+    if (dateSchedules) {
+      const targetDayName = new Date(selectedDate + 'T00:00:00').toLocaleDateString(
+        'en-US',
+        { weekday: 'long' }
+      );
+      const matchingItems = dateSchedules.filter(
+        (item) => item.day === targetDayName && item.isAvailable
+      );
+      return matchingItems.flatMap((item) => filterSlotsForSessionType(item));
+    }
+
     const timeSlots = availableDatesMap.get(selectedDate);
     return timeSlots || [];
-  }, [selectedDate, availableDatesMap]);
+  }, [selectedDate, dateScheduleResponse?.data?.schedules, filterSlotsForSessionType, availableDatesMap]);
 
   // Stop click propagation to prevent modal from closing when clicking inside it
   const handleModalClick = useCallback((e: React.MouseEvent) => {

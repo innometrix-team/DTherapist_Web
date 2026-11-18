@@ -2,6 +2,7 @@
 export type NavLabel =
   | "Dashboard"
   | "Counselors"
+  | "Professionals"
   | "Appointments"
   | "DAnonymous"
   | "Library"

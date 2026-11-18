@@ -3,7 +3,7 @@ import { CancelIcon, AddIcon } from "../../assets/icons";
 import { MeetingPreference } from "./schedule.types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { CreateScheduleApi, IScheduleRequestData } from "../../api/Schedule.api";
+import { CreateScheduleApi, IScheduleRequestData, IScheduleSlot } from "../../api/Schedule.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
@@ -25,12 +25,25 @@ const getMeetingTypeFromPreference = (meetingPreference: MeetingPreference): str
     case "In-person":
       return "in-person";
     case "Both":
-      return "both";
     case "Team Session":
     case "Video Session":
     default:
       return "video";
   }
+};
+
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(":").map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+};
+
+const getDefaultDateRange = (): { from: string; until: string } => {
+  const now = new Date();
+  const from = now.toISOString().split("T")[0];
+  const untilDate = new Date(now);
+  untilDate.setDate(untilDate.getDate() + 30);
+  const until = untilDate.toISOString().split("T")[0];
+  return { from, until };
 };
 
 interface Slot {
@@ -93,6 +106,9 @@ const DateTimeStep: React.FC<Props> = ({
 
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const defaultRange = React.useMemo(() => getDefaultDateRange(), []);
+  const [validFrom, setValidFrom] = useState<string>(defaultRange.from);
+  const [validUntil, setValidUntil] = useState<string>(defaultRange.until);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const hadExistingScheduleRef = React.useRef(false);
 
@@ -112,7 +128,7 @@ const DateTimeStep: React.FC<Props> = ({
 
   const getDefaultMode = (): string => {
     switch (meetingPreference) {
-      case "Both": return "both";
+      case "Both": return "video";
       case "Video Session": return "video";
       case "Team Session": return "group";
       default: return "in-person";
@@ -132,14 +148,12 @@ const DateTimeStep: React.FC<Props> = ({
           { value: "in-person", label: "In-Person" },
           { value: "video", label: "Video" },
           { value: "group", label: "Group" },
-          { value: "both", label: "All Types" },
         ];
       default:
         return [
           { value: "in-person", label: "In-Person" },
           { value: "video", label: "Video" },
           { value: "group", label: "Team Session" },
-          { value: "both", label: "All Types" },
         ];
     }
   };
@@ -162,9 +176,20 @@ const DateTimeStep: React.FC<Props> = ({
 
   const addSlot = (dayIndex: number) => {
     const updated = [...availability];
+    const currentDaySlots = updated[dayIndex] || [];
+    let nextStart = "09:00";
+    let nextEnd = "10:00";
+    if (currentDaySlots.length > 0) {
+      const lastEnd = currentDaySlots[currentDaySlots.length - 1].endTime;
+      const [h, m] = lastEnd.split(":").map(Number);
+      if (Number.isFinite(h) && Number.isFinite(m) && h < 23) {
+        nextStart = lastEnd;
+        nextEnd = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+    }
     updated[dayIndex] = [
-      ...updated[dayIndex],
-      { startTime: "09:00", endTime: "10:00", mode: getDefaultMode(), teamBooking: false },
+      ...currentDaySlots,
+      { startTime: nextStart, endTime: nextEnd, mode: getDefaultMode(), teamBooking: false },
     ];
     sync(updated);
   };
@@ -213,7 +238,39 @@ const DateTimeStep: React.FC<Props> = ({
 
   React.useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
 
-  // ── build API payload ────────────────────────────────────────────────────
+  // ── validation & build API payload ────────────────────────────────────────
+
+  const validateSchedule = (): boolean => {
+    if (validFrom && validUntil && validFrom > validUntil) {
+      toast.error("Valid Until date must be on or after Valid From date.");
+      return false;
+    }
+
+    for (let dayIdx = 0; dayIdx < availability.length; dayIdx++) {
+      const daySlots = availability[dayIdx] || [];
+      for (let i = 0; i < daySlots.length; i++) {
+        const sA = daySlots[i];
+        const aStart = toMinutes(sA.startTime);
+        const aEnd = toMinutes(sA.endTime);
+        if (aEnd <= aStart) {
+          toast.error(`${dayNames[dayIdx]}: End time (${sA.endTime}) must be after start time (${sA.startTime}).`);
+          return false;
+        }
+        for (let j = i + 1; j < daySlots.length; j++) {
+          const sB = daySlots[j];
+          const bStart = toMinutes(sB.startTime);
+          const bEnd = toMinutes(sB.endTime);
+          if (aStart < bEnd && bStart < aEnd) {
+            toast.error(
+              `Overlapping slots on ${dayNames[dayIdx]}: ${sA.startTime}–${sA.endTime} and ${sB.startTime}–${sB.endTime}.`
+            );
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
 
   const buildScheduleData = (): IScheduleRequestData[] =>
     availability.map((daySlots, index) => {
@@ -224,24 +281,34 @@ const DateTimeStep: React.FC<Props> = ({
           timezone: selectedTimeZone,
           isAvailable: false,
           teamBooking: false,
+          allowGroupBooking: false,
+          validFrom: validFrom || undefined,
+          validUntil: validUntil || undefined,
           slots: [],
         };
       }
 
-      const firstMode = daySlots[0].mode;
-      let meetingType = "video";
-      if (firstMode === "in-person") meetingType = "in-person";
-      else if (firstMode === "group") meetingType = "video";
-      else if (firstMode === "video") meetingType = "video";
-      else if (firstMode === "both") meetingType = "both";
+      const mappedSlots: IScheduleSlot[] = daySlots.map(({ startTime, endTime, mode }) => ({
+        startTime,
+        endTime,
+        meetingType: mode === "in-person" ? "in-person" : "video",
+      }));
+
+      const hasTeam = daySlots.some((s) => s.teamBooking || s.mode === "group");
+      const hasInPerson = mappedSlots.some((s) => s.meetingType === "in-person");
+      const hasVideo = mappedSlots.some((s) => s.meetingType === "video");
+      const derivedMeetingType = hasInPerson && !hasVideo ? "in-person" : "video";
 
       return {
         day: dayNames[index],
-        meetingType,
+        meetingType: derivedMeetingType,
         timezone: selectedTimeZone,
         isAvailable: true,
-        teamBooking: daySlots.some((s) => s.teamBooking),
-        slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
+        teamBooking: hasTeam,
+        allowGroupBooking: hasTeam,
+        validFrom: validFrom || undefined,
+        validUntil: validUntil || undefined,
+        slots: mappedSlots,
       };
     });
 
@@ -249,11 +316,19 @@ const DateTimeStep: React.FC<Props> = ({
 
   const handleSaveClick = () => {
     if (isPending) return;
+    if (!validateSchedule()) return;
     setShowModal(true);
+  };
+
+  const handleContinueClick = () => {
+    if (isPending) return;
+    if (!validateSchedule()) return;
+    onNext();
   };
 
   const handleConfirm = async () => {
     if (isPending) return;
+    if (!validateSchedule()) return;
 
     try {
       if (canSave) {
@@ -292,23 +367,49 @@ const DateTimeStep: React.FC<Props> = ({
           </p>
         </div>
 
-        {/* Timezone */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-8 shadow-sm hover:shadow-md transition-shadow">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <svg className="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold text-gray-700">Time Zone</span>
-            <select
-              value={selectedTimeZone}
-              onChange={(e) => onTimeZoneChange(e.target.value)}
-              className="ml-auto border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 px-4 py-2 hover:border-gray-400 transition"
-            >
-              {timeZones.map((z) => (
-                <option key={z} value={z}>{z}</option>
-              ))}
-            </select>
-          </label>
+        {/* Timezone & Validity Range */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow flex items-center">
+            <label className="flex items-center gap-3 cursor-pointer w-full">
+              <svg className="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-semibold text-gray-700">Time Zone</span>
+              <select
+                value={selectedTimeZone}
+                onChange={(e) => onTimeZoneChange(e.target.value)}
+                className="ml-auto border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 px-4 py-2 hover:border-gray-400 transition"
+              >
+                {timeZones.map((z) => (
+                  <option key={z} value={z}>{z}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="font-semibold text-gray-700 text-sm">Validity Window</span>
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
+                <input
+                  type="date"
+                  value={validFrom}
+                  onChange={(e) => setValidFrom(e.target.value)}
+                  className="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Valid From"
+                />
+                <span className="text-gray-400 text-sm">to</span>
+                <input
+                  type="date"
+                  value={validUntil}
+                  min={validFrom}
+                  onChange={(e) => setValidUntil(e.target.value)}
+                  className="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="Valid Until"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -554,7 +655,7 @@ const DateTimeStep: React.FC<Props> = ({
               )}
             </button>
             <button
-              onClick={onNext}
+              onClick={handleContinueClick}
               disabled={isPending}
               className="flex items-center gap-2 px-8 py-3 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
@@ -589,8 +690,11 @@ const DateTimeStep: React.FC<Props> = ({
                           {slots.map((s, si) => (
                             <span key={si} className="text-gray-600">
                               {s.startTime} – {s.endTime}
-                              {s.teamBooking && (
-                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                              <span className="ml-1.5 text-xs bg-white border border-gray-200 text-gray-700 px-1.5 py-0.5 rounded capitalize">
+                                {s.mode === "in-person" ? "In-Person" : "Video"}
+                              </span>
+                              {(s.teamBooking || s.mode === "group") && (
+                                <span className="ml-1.5 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                                   Team
                                 </span>
                               )}
@@ -600,10 +704,18 @@ const DateTimeStep: React.FC<Props> = ({
                       </div>
                     )
                   )}
-                  <div className="border-t border-gray-200 pt-2 flex justify-between">
+                  <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
                     <span className="text-gray-600 font-medium">Days Available</span>
                     <span className="font-bold text-gray-900">{activeDaysCount}/7</span>
                   </div>
+                  {(validFrom || validUntil) && (
+                    <div className="flex justify-between text-xs text-gray-600 pt-1">
+                      <span>Valid Period</span>
+                      <span className="font-medium text-gray-900">
+                        {validFrom || "Start"} – {validUntil || "Ongoing"}
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </div>

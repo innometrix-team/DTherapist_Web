@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import ProfileForm from "../../components/settings/ProfileForm";
 import CredentialForm from "../../components/settings/CredentialForm";
 import PasswordForm from "../../components/settings/PasswordForm";
@@ -7,7 +8,9 @@ import PageContainer from "../../components/common/PageContainer";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("profile");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabParam || "profile");
   const role = useAuthStore((s) => s.role);
 
   // Define tabs based on user role
@@ -30,12 +33,19 @@ const Settings: React.FC = () => {
     return baseTabs;
   }, [role]);
 
-  // Set initial active tab when tabs change
-  React.useEffect(() => {
-    if (tabs.length > 0 && !tabs.some(tab => tab.id === activeTab)) {
+  // Synchronize active tab with URL query parameter (for notification deep linking)
+  useEffect(() => {
+    if (tabParam && tabs.some((tab) => tab.id === tabParam)) {
+      setActiveTab(tabParam);
+    } else if (tabs.length > 0 && !tabs.some((tab) => tab.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
-  }, [tabs, activeTab]);
+  }, [tabParam, tabs, activeTab]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   const renderForm = () => {
     switch (activeTab) {
@@ -68,7 +78,7 @@ const Settings: React.FC = () => {
                   ? "text-primary border-b-2 border-primary"
                   : "text-neutral hover:text-darkerb"
               }`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>

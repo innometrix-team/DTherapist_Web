@@ -14,6 +14,7 @@ export interface ProfileDetails {
 export interface CredentialDetails {
   resume: File | null;
   certification: File | null;
+  professionalBodyCertificate?: File | null;
 }
 
 export interface PasswordDetails {

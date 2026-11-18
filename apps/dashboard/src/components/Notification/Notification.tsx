@@ -1,12 +1,21 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import type { FC } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { BellIcon } from "lucide-react";
+import { BellIcon, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  getNotificationDeepLink,
+  getNotificationEffectiveType,
+  isSelfNotification,
+  formatNotificationTypeLabel,
+  requestNotificationPermission,
+} from "../../utils/notificationDeepLink.utils";
 
 import {
   getUserNotificationsApi,
   markNotificationAsReadApi,
-  IUserNotification,
+  type IUserNotification,
   formatNotificationDate,
   getNotificationTypeColor,
   getNotificationIcon,
@@ -18,19 +27,35 @@ interface UserNotificationsDropdownProps {
   className?: string;
 }
 
-const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
+const UserNotificationsDropdown: FC<UserNotificationsDropdownProps> = ({
   className = "",
 }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
   const currentUserId = useAuthStore((s) => s.id);
-  const isUser = role === "user";
   const isCounselor = role === "counselor";
   const userType = isCounselor ? "counselor" : "user";
   const queryClient = useQueryClient();
+
+  const [desktopPermission, setDesktopPermission] = useState<string>(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      return Notification.permission;
+    }
+    return "denied";
+  });
+
+  const handleEnablePush = async () => {
+    const perm = await requestNotificationPermission();
+    setDesktopPermission(perm);
+    if (perm === "granted") {
+      toast.success("Desktop alerts enabled");
+    }
+  };
 
   // Fetch notifications
   const {
@@ -48,7 +73,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     staleTime: 1000 * 60, // Cache for 1 minute
     refetchInterval: 1000 * 60 * 2, // Refetch every 2 minutes
     retry: 2,
-    enabled: (isUser || isCounselor) && !!currentUserId,
+    enabled: !!token,
   });
 
   // Mark as read mutation
@@ -76,26 +101,37 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     },
   });
 
-  // Filter notifications for current user only
+  // Filter notifications for current user only and suppress self-notifications
   const notifications = useMemo(() => {
     const allNotifications = notificationsResponse?.data || [];
     
-    // Filter notifications by current user ID
-    return allNotifications.filter((notification: IUserNotification) => 
-      notification.userId === currentUserId
-    );
+    return allNotifications.filter((notification: IUserNotification) => {
+      // Filter by user ID only if both notification.userId and currentUserId exist
+      if (notification.userId && currentUserId && notification.userId !== currentUserId) {
+        return false;
+      }
+      // Direct replies alert the parent message author (no self-notifications)
+      if (isSelfNotification(notification, currentUserId)) {
+        return false;
+      }
+      return true;
+    });
   }, [notificationsResponse?.data, currentUserId]);
   
   const unreadCount = useMemo(() => {
     return notifications.filter((n: IUserNotification) => !n.seen).length;
   }, [notifications]);
 
-  // Handle notification click
+  // Handle notification click with deep linking to exact thread/view
   const handleNotificationClick = (notification: IUserNotification) => {
     if (!notification.seen) {
       markAsReadMutation.mutate(notification._id);
     }
-    // You can add additional navigation logic here
+    const deepLink = getNotificationDeepLink(notification);
+    if (deepLink) {
+      setIsOpen(false);
+      void navigate(deepLink);
+    }
   };
 
   // Close dropdown when clicking outside
@@ -126,8 +162,8 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
     }
   }, [error]);
 
-  // Don't render if not user or counselor or no user ID
-  if ((!isUser && !isCounselor) || !currentUserId) {
+  // Render bell icon whenever authenticated in layout
+  if (!token) {
     return null;
   }
 
@@ -152,13 +188,23 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <div className="flex items-center space-x-2">
-              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+              <h3 className="text-base font-semibold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">
                   {unreadCount} new
                 </span>
               )}
             </div>
+            {desktopPermission === "default" && (
+              <button
+                type="button"
+                onClick={() => { void handleEnablePush(); }}
+                className="text-xs text-primary font-medium hover:underline cursor-pointer"
+                title="Enable browser desktop notifications"
+              >
+                Enable alerts
+              </button>
+            )}
           </div>
 
           {/* Content */}
@@ -199,7 +245,7 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                       {/* Icon */}
                       <div className="flex-shrink-0">
                         <span className="text-lg">
-                          {getNotificationIcon(notification.type)}
+                          {getNotificationIcon(getNotificationEffectiveType(notification))}
                         </span>
                       </div>
 
@@ -218,12 +264,17 @@ const UserNotificationsDropdown: React.FC<UserNotificationsDropdownProps> = ({
                               {notification.message}
                             </p>
                             <div className="flex items-center justify-between mt-2">
-                              <span className={`text-xs font-medium capitalize ${getNotificationTypeColor(notification.type)}`}>
-                                {notification.type}
+                              <span className={`text-xs font-medium ${getNotificationTypeColor(getNotificationEffectiveType(notification))}`}>
+                                {formatNotificationTypeLabel(notification)}
                               </span>
-                              <span className="text-xs text-gray-500">
-                                {formatNotificationDate(notification.createdAt)}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-500">
+                                  {formatNotificationDate(notification.createdAt)}
+                                </span>
+                                {getNotificationDeepLink(notification) && (
+                                  <ExternalLink className="w-3 h-3 text-primary opacity-70 group-hover:opacity-100" />
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

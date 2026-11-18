@@ -5,7 +5,7 @@ import { useAuthStore } from "../../store/auth/useAuthStore";
 import { NavGroup } from "../layout/types";
 import { SidebarLink } from "./SideBarLink";
 import { SidebarProps } from "./types";
-import { STORE_KEYS } from "../../configs/store.config";
+import { clearAdminAuthSession } from "../../utils/authSession.utils";
 
 const NAV_ITEMS: Record<"admin", NavGroup> = {
   admin: {
@@ -25,15 +25,13 @@ const NAV_ITEMS: Record<"admin", NavGroup> = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
-  const logout = useAuthStore((s) => s.logout);
   const role = useAuthStore((state) => state.role);
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
-    logout();
-    localStorage.removeItem(STORE_KEYS.AUTH);
+    clearAdminAuthSession();
     void navigate("/auth");
-  }, [logout, navigate]);
+  }, [navigate]);
 
 
   const sections = useMemo(() => {

@@ -4,6 +4,24 @@ import { STORE_KEYS } from "../configs/store.config";
 import { AuthState } from "../store/auth/types";
 import { StoreResult } from "../store/types";
 
+export interface IProfessionalBody {
+  bodyName: string;
+  otherBodyName?: string;
+  certificationName: string;
+}
+
+export interface IProfessionalCategoryRequest {
+  requestId?: string;
+  _id?: string;
+  id?: string;
+  status: "pending" | "approved" | "rejected";
+  professionalCategory?: "counselor" | "psychologist";
+  requestedCategory?: "counselor" | "psychologist";
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface IProfile {
   _id: string;
   userId: string;
@@ -17,6 +35,9 @@ export interface IProfile {
   country?: string;
   gender?: string;
   phoneNumber?: string;
+  professionalCategory?: "counselor" | "psychologist";
+  professionalCategoryRequest?: IProfessionalCategoryRequest | null;
+  professionalBodies?: IProfessionalBody[];
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -31,6 +52,7 @@ export interface IProfileUpdateData {
   gender?: string;
   phoneNumber?: string;
   profilePicture?: File;
+  professionalBodies?: IProfessionalBody[];
 }
 
 export interface IProfileUpdateResponseData {
@@ -109,6 +131,9 @@ function createProfileFormData(data: IProfileUpdateData, isTherapist: boolean): 
     } else {
       formData.append('experience', '0');
     }
+    if (data.professionalBodies !== undefined) {
+      formData.append('professionalBodies', JSON.stringify(data.professionalBodies));
+    }
   }
 
   if (data.gender?.trim()) {
@@ -170,6 +195,41 @@ export async function updateProfile(
 
   return handleApiRequest<IProfileUpdateResponseData>(() =>
     Api.patch(endpoint, formData, requestConfig)
+  );
+}
+
+export async function getProfessionalBodies(
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<string[]> | null> {
+  return handleApiRequest<string[] | { bodies: string[] } | { professionalBodies: string[] }, string[]>(
+    () => Api.get("/api/profile/professional-bodies", config),
+    (raw) => {
+      if (Array.isArray(raw)) return raw;
+      if (raw && typeof raw === "object") {
+        if ("bodies" in raw && Array.isArray(raw.bodies)) return raw.bodies;
+        if ("professionalBodies" in raw && Array.isArray(raw.professionalBodies)) return raw.professionalBodies;
+      }
+      return [];
+    }
+  );
+}
+
+export interface IProfessionalCategoryRequestPayload {
+  professionalCategory: "counselor" | "psychologist";
+}
+
+export interface IProfessionalCategoryRequestResponseData {
+  message?: string;
+  requestId?: string;
+  request?: IProfessionalCategoryRequest;
+}
+
+export async function requestProfessionChange(
+  data: IProfessionalCategoryRequestPayload,
+  config?: AxiosRequestConfig
+): Promise<IAPIResult<IProfessionalCategoryRequestResponseData> | null> {
+  return handleApiRequest<IProfessionalCategoryRequestResponseData>(() =>
+    Api.post("/api/profile/professional-category-request", data, config)
   );
 }
 

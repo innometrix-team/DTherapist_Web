@@ -63,7 +63,9 @@ npx markdownlint docs/                    # Lint markdown files
 ## 4. Code Standards & Architecture
 
 ### TypeScript & Typing
-- **Strict mode:** Never use `any`. Always supply explicit interfaces/types for props, state, and API DTOs.
+- **Strict mode & Proper Typing:** Never use `any`. Always supply explicit interfaces/types for props, state, form schemas, and API DTOs. Everything must be properly and strictly typed with zero type errors. Ensure form validation schemas and resolver types match their form data interfaces without union mismatches or broken inferences.
+- **Mandatory Type Checks:** Always verify type safety before completing tasks by running `npm run build` (`tsc -b`) in the relevant app.
+- **Ask When Unsure:** If you are unsure about any type definition, requirement, payload structure, or intent, **always stop and ask the user for clarification** before proceeding or making assumptions.
 - **Unused variables:** TypeScript's `noUnusedLocals` is enabled. Remove unused imports (including unused `import React from 'react'`) to prevent `tsc -b` failures.
 - **Promise Rejection Reason:** Never reject promises with plain objects (`Promise.reject({ ... })`) or primitives. Always reject with an `Error` instance (e.g. `new ApiError(...)`) to preserve stack traces and satisfy `@typescript-eslint/prefer-promise-reject-errors`.
 
@@ -87,7 +89,8 @@ npx markdownlint docs/                    # Lint markdown files
 
 ## 5. Boundaries & Invariants
 
-- **Safe Refactoring:** Always run `npm run build` (`tsc -b`) in the relevant app to ensure zero TypeScript errors before committing changes.
+- **Safe Refactoring & Invariants:** Always run `npm run build` (`tsc -b`) in the relevant app to ensure zero TypeScript errors before committing changes. Everything must be properly typed. If you are not sure about any requirement or type, always ask.
 - **Vercel Routing:** Preserve the SPA rewrites in `vercel.json` (`/(.*) -> /index.html`).
 - **Secrets:** Never log, modify, or commit credentials in `.env` files.
 - **Documentation:** When generating documentation, write concise, value-dense Markdown into `docs/` that is easily understood by onboarding developers.
+- **Handoff Context:** Do not read or re-read `FRONTEND_HANDOFF.md` since full context of requirements is already retained in memory/context.

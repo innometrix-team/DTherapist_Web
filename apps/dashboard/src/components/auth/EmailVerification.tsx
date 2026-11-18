@@ -1,5 +1,6 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import VerifyOtpApi, { IRequestData } from "../../api/VerifyOTP.api";
 import VerifyOTPResetApi, { IVerifyOTPResetRequestData } from "../../api/VerifyOTPReset.api";
 import ResendOtpApi, { OTPRequestData } from "../../api/ResendOTP.api";
@@ -14,6 +15,7 @@ function EmailVerification() {
   const resetToken = searchParams.get("token") || "";
   const role = searchParams.get("role") || "";
   const fullName = searchParams.get("fullName") || "";
+  const professionalCategory = searchParams.get("professionalCategory") || "";
   const isPasswordReset = !!resetToken;
   const isTherapistSignup = role === "therapist" && !isPasswordReset;
   const isClientSignup = role === "client" && !isPasswordReset;
@@ -97,7 +99,6 @@ function EmailVerification() {
     }
 
     if (isPasswordReset) {
-      // Password reset flow - use the reset token from URL
       if (!resetToken) {
         toast.error("Reset token is missing");
         return;
@@ -107,7 +108,6 @@ function EmailVerification() {
         token: resetToken,
       });
     } else {
-      // Registration flow - use the auth token from store
       if (!authToken) {
         toast.error("Authentication token is missing");
         return;
@@ -122,29 +122,26 @@ function EmailVerification() {
   // Handle modal actions
   const handleModalContinue = useCallback(() => {
     setShowWelcomeModal(false);
-    void navigate("/settings"); // Navigate to settings for profile completion
+    void navigate("/settings");
   }, [navigate]);
 
   const handleModalClose = useCallback(() => {
     setShowWelcomeModal(false);
-    void navigate("/"); // Navigate to home
+    void navigate("/");
   }, [navigate]);
 
   useEffect(() => {
-    // Redirect if email is missing
     if (!email) {
       void navigate("/auth/login");
       return;
     }
 
-    // For registration flow, check if auth token exists in auth store
     if (!isPasswordReset && !authToken) {
       toast.error("Please complete registration first");
       void navigate("/auth/signup");
       return;
     }
 
-    // For password reset flow, check if reset token exists in URL
     if (isPasswordReset && !resetToken) {
       toast.error("Reset token is missing");
       void navigate("/auth/forgot-password");
@@ -162,61 +159,87 @@ function EmailVerification() {
 
   return (
     <>
-      <div className="max-w-md w-full mx-auto space-y-4">
-        <h2 className="text-3xl font-bold">
-          {isPasswordReset ? "Verify Reset Code" : "Verify Your Email"}
-        </h2>
-        <p className="text-gray-500 text-sm">
-          We've sent an OTP to your email:{" "}
-          <span className="font-medium">{email}</span>
-          {isPasswordReset && (
-            <span className="block mt-1">
-              Enter the verification code to reset your password.
-            </span>
-          )}
-        </p>
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="000000"
-          value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-          className="w-full border border-gray-300 rounded px-4 py-2 text-center text-lg tracking-widest"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={!otp || otp.length !== 6 || currentIsPending}
-          className="w-full bg-primary text-white py-2 px-4 rounded font-medium disabled:opacity-50"
-        >
-          {currentIsPending 
-            ? "Verifying..." 
-            : isPasswordReset 
-              ? "Verify Code" 
-              : "Verify Email"
-          }
-        </button>
-        <p className="text-gray-500 text-sm text-center">
-          Didn't receive the OTP?{" "}
+      <div className="w-full">
+        <div className="mb-6">
+          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            {isPasswordReset ? "Verify reset code" : "Verify your email"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-2">
+            We sent a 6-digit code to{" "}
+            <span className="font-semibold text-gray-800">{email}</span>.
+            {isPasswordReset
+              ? " Enter the code to continue resetting your password."
+              : " Enter the code below to activate your account."}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="otp"
+              className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5"
+            >
+              6-Digit Code
+            </label>
+            <input
+              id="otp"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="000000"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              className="w-full px-4 py-3.5 bg-gray-50/70 border border-gray-200 rounded-lg text-xl tracking-[0.5em] font-mono text-center text-gray-900 placeholder:text-gray-300 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            />
+          </div>
+
           <button
-            onClick={() => {
-              void handleResendOTP({ email });
-            }}
-            disabled={isResending}
-            className="text-primary font-medium disabled:opacity-50 hover:underline"
+            onClick={handleSubmit}
+            disabled={!otp || otp.length !== 6 || currentIsPending}
+            className="w-full py-3.5 px-4 bg-primary hover:bg-darkerb text-white font-semibold rounded-lg text-sm sm:text-base transition-colors shadow-xs cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
           >
-            {isResending ? "Resending..." : "Resend OTP"}
+            {currentIsPending
+              ? "Verifying..."
+              : isPasswordReset
+                ? "Verify Code"
+                : "Verify Email"}
           </button>
-        </p>
+
+          <p className="text-xs text-gray-500 text-center pt-2">
+            Didn&apos;t receive the code?{" "}
+            <button
+              onClick={() => {
+                void handleResendOTP({ email });
+              }}
+              disabled={isResending}
+              className="text-primary hover:text-darkerb font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isResending ? "Resending..." : "Resend Code"}
+            </button>
+          </p>
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link
+            to="/auth/login"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-darkerb transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to log in</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Welcome Modal - shown after email verification for both therapists and clients */}
       <CounselorWelcomeModal
         isOpen={showWelcomeModal}
         onClose={handleModalClose}
         onContinue={handleModalContinue}
         userName={fullName}
         userRole={role}
+        professionalCategory={professionalCategory}
       />
     </>
   );

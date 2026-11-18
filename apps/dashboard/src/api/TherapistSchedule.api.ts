@@ -5,16 +5,21 @@ export interface ITimeSlot {
   startTime: string; // HH:MM format
   endTime: string; // HH:MM format
   _id: string;
+  meetingType?: "video" | "in-person" | "both";
+  isBooked?: boolean;
 }
 
 export interface IScheduleItem {
   _id: string;
   therapist: string;
   day: string; // e.g., "Monday", "Tuesday", etc.
-  meetingType: "video" | "in-person";
+  meetingType: "video" | "in-person" | "both";
   timezone: string;
   isAvailable: boolean;
   teamBooking: boolean;
+  allowGroupBooking?: boolean;
+  validFrom?: string;
+  validUntil?: string;
   slots: ITimeSlot[];
   __v: number;
   createdAt: string;
@@ -23,6 +28,7 @@ export interface IScheduleItem {
 
 export interface ITherapistScheduleResponse {
   schedules: IScheduleItem[];
+  date?: string;
 }
 
 interface APIResponse<T> {
@@ -34,11 +40,13 @@ interface APIResponse<T> {
 // Get therapist schedule for video sessions
 export async function getTherapistVideoScheduleApi(
   therapistId: string,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
+  date?: string
 ): Promise<IAPIResult<ITherapistScheduleResponse> | null> {
   try {
+    const query = date ? `?date=${encodeURIComponent(date)}` : "";
     const response = await Api.get<APIResponse<ITherapistScheduleResponse>>(
-      `/api/schedule/${encodeURIComponent(therapistId)}/video`,
+      `/api/schedule/${encodeURIComponent(therapistId)}/video${query}`,
       { ...config }
     );
     return Promise.resolve({
@@ -62,11 +70,13 @@ export async function getTherapistVideoScheduleApi(
 // Get therapist schedule for in-person sessions
 export async function getTherapistInPersonScheduleApi(
   therapistId: string,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
+  date?: string
 ): Promise<IAPIResult<ITherapistScheduleResponse> | null> {
   try {
+    const query = date ? `?date=${encodeURIComponent(date)}` : "";
     const response = await Api.get<APIResponse<ITherapistScheduleResponse>>(
-      `/api/schedule/${encodeURIComponent(therapistId)}/in-person`,
+      `/api/schedule/${encodeURIComponent(therapistId)}/in-person${query}`,
       { ...config }
     );
     return Promise.resolve({
@@ -91,12 +101,13 @@ export async function getTherapistInPersonScheduleApi(
 export async function getTherapistScheduleApi(
   therapistId: string,
   sessionType: "video" | "physical",
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
+  date?: string
 ): Promise<IAPIResult<ITherapistScheduleResponse> | null> {
   if (sessionType === "video") {
-    return getTherapistVideoScheduleApi(therapistId, config);
+    return getTherapistVideoScheduleApi(therapistId, config, date);
   } else {
-    return getTherapistInPersonScheduleApi(therapistId, config);
+    return getTherapistInPersonScheduleApi(therapistId, config, date);
   }
 }
 

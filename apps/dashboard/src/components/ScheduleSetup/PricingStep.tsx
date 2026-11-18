@@ -134,7 +134,7 @@ const PricingStep: React.FC<PricingStepProps> = ({
         videoPrice: pricing.video ?? 0,
         inPersonPrice: pricing.inPerson ?? 0,
         groupVideoPrice: pricing.group ?? 0,
-        allowGroupVideo: meetingPreference === "Team Session",
+        allowGroupVideo: (pricing.group ?? 0) > 0 || meetingPreference === "Team Session",
       });
       if (authId) {
         void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.therapists.details(authId) });

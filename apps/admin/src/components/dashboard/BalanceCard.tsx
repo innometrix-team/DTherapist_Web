@@ -12,6 +12,7 @@ import FundWalletApi, {
 } from "../../api/FundWallet.api";
 import AdminDashboardApi from "../../api/AdminDashboard.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { safeRedirect } from "../../utils/security.utils";
 
 const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -118,8 +119,10 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
       }
       // Store reference for payment verification
       localStorage.setItem('paymentReference', responseData.reference);
-      // Redirect to Paystack payment page
-      window.location.href = responseData.authorization_url;
+      // Safely redirect to payment page
+      safeRedirect(responseData.authorization_url, () => {
+        toast.error("Invalid payment redirect URL");
+      });
     },
     onError: (error) => {
       toast.error(error.message || "Failed to fund wallet");

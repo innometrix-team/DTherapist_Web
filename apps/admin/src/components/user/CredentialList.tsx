@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, FileText, Loader2, ShieldAlert, X } from "lucide-react";
+import { Check, Download, FileText, Loader2, ShieldAlert, X } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ICertificate } from "../../api/GetUsers.api";
-import { ReviewCertificationApi, ReviewCVApi } from "../../api/Profile.api";
+import { ReviewCertificationApi, ReviewCVApi, ReviewProfessionalBodyCertificateApi } from "../../api/Profile.api";
 
 // Lazy-load so pdf.js is only downloaded when a PDF is actually previewed.
 const PdfPreview = lazy(() => import("./PdfPreview"));
@@ -168,10 +168,47 @@ export default function CredentialList({
   userId,
 }: CredentialListProps) {
   const qc = useQueryClient();
-  const [rejectOpen, setRejectOpen] = useState<null | { kind: "cv" | "cert" }>(
-    null
-  );
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState<null | {
+    kind: "cv" | "cert" | "profCert";
+  }>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ url: string; title: string } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async (url: string, title: string) => {
+    setDownloading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const urlPath = url.split("?")[0];
+      const lastSegment = urlPath.split("/").pop() ?? "";
+      const extMatch = lastSegment.match(/(\.[a-z0-9]{2,5})$/i);
+      let ext = extMatch ? extMatch[1].toLowerCase() : "";
+
+      if (blob.type === "application/pdf" || (!ext && !blob.type.startsWith("image/"))) {
+        ext = ".pdf";
+      } else if (!ext && blob.type.startsWith("image/")) {
+        const mimeExt = blob.type.split("/")[1]?.split("+")[0];
+        ext = mimeExt ? `.${mimeExt === "jpeg" ? "jpg" : mimeExt}` : ".png";
+      }
+
+      const safeBase = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "credential";
+      const filename = `${safeBase}${ext}`;
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const { mutate: reviewCertification, isPending: approvingCert } = useMutation(
     {
@@ -205,23 +242,50 @@ export default function CredentialList({
     },
   });
 
-  const approving = approvingCert || approvingCV;
+  const { mutate: reviewProfCert, isPending: approvingProfCert } = useMutation({
+    mutationFn: async (vars: {
+      status: "approved" | "rejected";
+      note?: string;
+    }) => {
+      if (!userId) throw new Error("Missing userId");
+      return ReviewProfessionalBodyCertificateApi({
+        userId,
+        status: vars.status,
+        note: vars.note,
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+    },
+  });
 
-  const approveDoc = (kind: "cv" | "cert") =>
-    kind === "cv"
-      ? reviewCV({ status: "approved" })
-      : reviewCertification({ status: "approved" });
+  const approving = approvingCert || approvingCV || approvingProfCert;
 
-  const rejectDoc = (kind: "cv" | "cert", note?: string) =>
-    kind === "cv"
-      ? reviewCV({ status: "rejected", note })
-      : reviewCertification({ status: "rejected", note });
+  const approveDoc = (kind: "cv" | "cert" | "profCert") => {
+    if (kind === "cv") {
+      reviewCV({ status: "approved" });
+    } else if (kind === "cert") {
+      reviewCertification({ status: "approved" });
+    } else {
+      reviewProfCert({ status: "approved" });
+    }
+  };
+
+  const rejectDoc = (kind: "cv" | "cert" | "profCert", note?: string) => {
+    if (kind === "cv") {
+      reviewCV({ status: "rejected", note });
+    } else if (kind === "cert") {
+      reviewCertification({ status: "rejected", note });
+    } else {
+      reviewProfCert({ status: "rejected", note });
+    }
+  };
 
   const items = useMemo(
     () => [
       {
         key: "cv" as const,
-        title: "CV/Resume",
+        title: "CV / Resume",
         doc: credentialsData?.cvUrl,
         status: credentialsData?.cvStatus ?? "pending",
         note: credentialsData?.cvNote,
@@ -233,6 +297,15 @@ export default function CredentialList({
         doc: credentialsData?.certificationUrl,
         status: credentialsData?.certificationStatus ?? "pending",
         note: credentialsData?.certificationNote,
+      },
+
+      {
+        key: "profCert" as const,
+        title: "Professional Body Certificate",
+        doc: credentialsData?.professionalBodyCertificateUrl,
+        status:
+          credentialsData?.professionalBodyCertificateStatus ?? "pending",
+        note: credentialsData?.professionalBodyCertificateNote,
       },
     ],
     [credentialsData]
@@ -248,6 +321,51 @@ export default function CredentialList({
 
   return (
     <div className="space-y-3">
+      {credentialsData?.compliance && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 border border-gray-200 rounded-md text-xs sm:text-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-700">Compliance Status:</span>
+            <span
+              className={`px-2 py-0.5 rounded-full ring-1 font-medium capitalize ${
+                credentialsData.compliance.status === "approved" ||
+                credentialsData.compliance.status === "compliant"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                  : credentialsData.compliance.status === "rejected"
+                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                  : "bg-amber-50 text-amber-700 ring-amber-200"
+              }`}
+            >
+              {credentialsData.compliance.status || "Pending"}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-gray-600">
+            <span>
+              Bookings:{" "}
+              <strong
+                className={
+                  credentialsData.compliance.canAcceptNewBookings
+                    ? "text-emerald-600"
+                    : "text-amber-600"
+                }
+              >
+                {credentialsData.compliance.canAcceptNewBookings
+                  ? "Active"
+                  : "Disabled"}
+              </strong>
+            </span>
+            {credentialsData.compliance.provisionalDeadline && (
+              <span>
+                Deadline:{" "}
+                <strong>
+                  {new Date(
+                    credentialsData.compliance.provisionalDeadline
+                  ).toLocaleDateString()}
+                </strong>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       {items.map((row) => (
         <DocRow
           key={row.key}
@@ -257,7 +375,7 @@ export default function CredentialList({
           busy={approving}
           onView={() => {
             if (!row.doc) return;
-            setPreviewUrl(row.doc);
+            setPreviewDoc({ url: row.doc, title: row.title });
           }}
           onApprove={() => approveDoc(row.key)}
           onReject={() => setRejectOpen({ kind: row.key })}
@@ -275,19 +393,19 @@ export default function CredentialList({
       />
 
       {/* Document Preview Modal */}
-      {previewUrl && (
+      {previewDoc && (
         <div className="fixed inset-0 z-[1000]" role="dialog" aria-modal="true">
           <div
             className="absolute inset-0 bg-black/60"
-            onClick={() => setPreviewUrl(null)}
+            onClick={() => setPreviewDoc(null)}
           />
           <div className="absolute inset-4 sm:inset-10 bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-2">
               <h3 className="text-sm sm:text-base font-semibold truncate">
-                Document preview
+                {previewDoc.title}
               </h3>
               <button
-                onClick={() => setPreviewUrl(null)}
+                onClick={() => setPreviewDoc(null)}
                 className="p-2 rounded hover:bg-gray-100"
                 aria-label="Close preview"
               >
@@ -295,11 +413,11 @@ export default function CredentialList({
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              {/\.(png|jpe?g|gif|webp|svg)$/i.test(previewUrl) ? (
+              {/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(previewDoc.url) ? (
                 <div className="w-full h-full overflow-auto flex items-center justify-center bg-gray-50">
                   <img
-                    src={previewUrl}
-                    alt="Document"
+                    src={previewDoc.url}
+                    alt={previewDoc.title}
                     className="max-w-full max-h-full object-contain"
                   />
                 </div>
@@ -312,20 +430,25 @@ export default function CredentialList({
                       </div>
                     }
                   >
-                    <PdfPreview fileUrl={previewUrl} />
+                    <PdfPreview fileUrl={previewDoc.url} />
                   </Suspense>
                 </div>
               )}
             </div>
-            <div className="border-t p-2 sm:p-3 text-right">
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+            <div className="border-t p-2 sm:p-3 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => void handleDownload(previewDoc.url, previewDoc.title)}
+                disabled={downloading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
               >
-                Open in new tab
-              </a>
+                {downloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Download
+              </button>
             </div>
           </div>
         </div>

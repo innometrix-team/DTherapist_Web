@@ -6,7 +6,7 @@ import DateTimeStep from "../../components/ScheduleSetup/DateTimeStep";
 import PricingStep from "../../components/ScheduleSetup/PricingStep";
 import ViewEditSchedule from "../../components/ScheduleSetup/ViewEditSchedule";
 import { MeetingPreference } from "../../components/ScheduleSetup/schedule.types";
-import { IScheduleRequestData } from "../../api/Schedule.api";
+import { IScheduleRequestData, IScheduleSlot } from "../../api/Schedule.api";
 import { getAllTherapistSchedulesApi, IScheduleItem } from "../../api/TherapistSchedule.api";
 import { getTherapistDetailsApi, ITherapist } from "../../api/Therapist.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
@@ -31,9 +31,24 @@ const days = [
 ];
 
 const getMeetingPreferenceFromSchedule = (schedules: IScheduleItem[]): MeetingPreference => {
-  const hasInPerson = schedules.some((schedule) => schedule.meetingType === "in-person");
-  const hasVideo = schedules.some((schedule) => schedule.meetingType === "video");
-  const hasGroup = schedules.some((schedule) => schedule.teamBooking === true);
+  const hasBothDay = schedules.some((schedule) => schedule.meetingType === "both");
+  const hasInPerson =
+    hasBothDay ||
+    schedules.some(
+      (schedule) =>
+        schedule.meetingType === "in-person" ||
+        schedule.slots.some((slot) => slot.meetingType === "in-person")
+    );
+  const hasVideo =
+    hasBothDay ||
+    schedules.some(
+      (schedule) =>
+        schedule.meetingType === "video" ||
+        schedule.slots.some((slot) => slot.meetingType === "video")
+    );
+  const hasGroup = schedules.some(
+    (schedule) => schedule.teamBooking === true || schedule.allowGroupBooking === true
+  );
 
   if (hasInPerson && hasVideo) return "Both";
   if (hasGroup && !hasInPerson) return "Team Session";
@@ -43,15 +58,25 @@ const getMeetingPreferenceFromSchedule = (schedules: IScheduleItem[]): MeetingPr
 
 const buildDateTimeFromSchedule = (schedules: IScheduleItem[]): string => {
   const dayMap = days.map((day) => {
-    const schedule = schedules.find((item) => item.day === day);
-    if (!schedule) return [];
+    const daySchedules = schedules.filter((item) => item.day === day);
+    if (!daySchedules.length) return [];
 
-    return schedule.slots.map((slot) => ({
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      mode: schedule.meetingType === "in-person" ? "in-person" : schedule.teamBooking ? "group" : "video",
-      teamBooking: schedule.teamBooking,
-    }));
+    return daySchedules.flatMap((schedule) =>
+      schedule.slots.map((slot) => {
+        const slotType = slot.meetingType && slot.meetingType !== "both"
+          ? slot.meetingType
+          : schedule.meetingType === "in-person"
+          ? "in-person"
+          : "video";
+        const isTeam = Boolean(schedule.teamBooking || schedule.allowGroupBooking);
+        return {
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          mode: slotType === "in-person" ? "in-person" : isTeam ? "group" : "video",
+          teamBooking: isTeam,
+        };
+      })
+    );
   });
 
   return JSON.stringify(dayMap);
@@ -167,24 +192,22 @@ const MySchedule: React.FC = () => {
       return availability.flatMap((daySlots, index) => {
         if (daySlots.length === 0) return [];
 
-        const firstMode = daySlots[0].mode;
-        let meetingType = "video";
-        if (firstMode === "in-person") meetingType = "in-person";
-        else if (firstMode === "group") meetingType = "video";
-        else if (firstMode === "video") meetingType = "video";
-        else if (firstMode === "both") meetingType = "both";
-        else if (meetingPreference === "In-person") meetingType = "in-person";
-        else if (meetingPreference === "Team Session") meetingType = "video";
-        else if (meetingPreference === "Both") meetingType = "both";
+        const mappedSlots: IScheduleSlot[] = daySlots.map(({ startTime, endTime, mode }) => ({
+          startTime,
+          endTime,
+          meetingType: mode === "in-person" ? "in-person" : "video",
+        }));
+
+        const hasTeam = daySlots.some((s) => s.teamBooking || s.mode === "group");
 
         return [
           {
             day: days[index],
-            meetingType,
             timezone: selectedTimeZone,
             isAvailable: true,
-            teamBooking: daySlots.some((s) => s.teamBooking),
-            slots: daySlots.map(({ startTime, endTime }) => ({ startTime, endTime })),
+            teamBooking: hasTeam,
+            allowGroupBooking: hasTeam,
+            slots: mappedSlots,
           },
         ];
       });

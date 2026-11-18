@@ -7,7 +7,9 @@ import {
   downloadInvoice,
   Appointment,
   UserDashboardData,
+  BookingStatus,
 } from "../../api/Appointments.api";
+import { IPaginationMeta } from "../../api/Api";
 import {
   ChevronDownIcon,
   MeetingIcon,
@@ -21,9 +23,11 @@ import PostCallReviewModal from "../../components/appointment/Postcallreviewmoda
 import { CalendarPlus, History, AlertCircle } from "lucide-react";
 import { SkeletonTable } from "../common/Skeleton";
 import EmptyState from "../common/EmptyState";
+import { env } from "../../configs/env.config";
 
 interface SessionTableProps {
   type: "upcoming" | "passed";
+  bookingStatus?: BookingStatus | "";
   onReschedule?: (appointmentId: string) => void;
   onDownloadInvoice?: (appointmentId: string) => void;
 }
@@ -32,11 +36,14 @@ type FetchState = "idle" | "loading" | "success" | "error";
 
 const SessionTable: React.FC<SessionTableProps> = ({
   type,
+  bookingStatus,
   onReschedule,
   onDownloadInvoice,
 }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [pagination, setPagination] = useState<IPaginationMeta | undefined>(undefined);
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
@@ -50,7 +57,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
   const role = useAuthStore((s) => s.role);
   const isCounselor = role === "counselor";
 
-  const cacheKey = isCounselor ? "counselor-appointments" : "user-appointments";
+  const cacheKey = isCounselor
+    ? `counselor-appointments-${page}`
+    : `user-appointments${bookingStatus ? `-${bookingStatus}` : ""}-${page}`;
 
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -62,12 +71,14 @@ const SessionTable: React.FC<SessionTableProps> = ({
       passedAppointments?: Appointment[];
       previousAppointments?: Appointment[];
       allAppointments?: Appointment[];
+      appointments?: Appointment[];
     };
     const merged = [
       ...(d.upcomingAppointments || []),
       ...(d.passedAppointments || []),
       ...(d.previousAppointments || []),
       ...(d.allAppointments || []),
+      ...(d.appointments || []),
     ];
     const seen = new Set<string>();
     return merged.filter((appt) => {
@@ -92,15 +103,26 @@ const SessionTable: React.FC<SessionTableProps> = ({
       try {
         let result;
         if (isCounselor) {
-          result = await getCounselorAppointments({ signal: controller.signal });
+          result = await getCounselorAppointments({
+            signal: controller.signal,
+            params: { page, limit: 20 },
+          });
         } else {
-          result = await getUserAppointments({ signal: controller.signal });
+          result = await getUserAppointments(
+            {
+              ...(bookingStatus ? { status: bookingStatus } : {}),
+              page,
+              limit: 20,
+            },
+            { signal: controller.signal }
+          );
         }
         if (!result) return;
         const parsed = parseAppointments(result.data);
         if (isMountedRef.current && !controller.signal.aborted) {
           setCache(cacheKey, parsed);
           setAllAppointments(parsed);
+          setPagination(result.pagination);
           setFetchState("success");
         }
       } catch (error: unknown) {
@@ -123,7 +145,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
         if (isMountedRef.current) setIsRefreshing(false);
       }
     },
-    [role, isCounselor, cacheKey],
+    [role, isCounselor, cacheKey, bookingStatus, page],
   );
 
   const loadAppointments = useCallback(
@@ -145,7 +167,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   useEffect(() => {
     if (role) void loadAppointments();
-  }, [role, loadAppointments]);
+  }, [role, bookingStatus, page, loadAppointments]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -161,11 +183,61 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
   const appointments = allAppointments.filter((appointment) => {
     if (!appointment) return false;
+    if (bookingStatus && appointment.bookingStatus && appointment.bookingStatus !== bookingStatus) {
+      return false;
+    }
     if (type === "upcoming") {
       return appointment.status === "upcoming" || appointment.status === "confirmed";
     }
     return appointment.status === "passed";
   });
+
+  const renderBookingStatusBadge = (bStatus?: string, fallbackStatus?: string) => {
+    const raw = (bStatus || fallbackStatus || "pending").toLowerCase();
+    switch (raw) {
+      case "confirmed":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 capitalize">
+            Confirmed
+          </span>
+        );
+      case "pending":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 capitalize">
+            Pending
+          </span>
+        );
+      case "completed":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-primary border border-blue-200 capitalize">
+            Completed
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200 capitalize">
+            Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200 capitalize">
+            {raw}
+          </span>
+        );
+    }
+  };
+
+  const renderPrice = (price?: number | null) => {
+    if (price !== null && price !== undefined) {
+      return `₦${Number(price).toLocaleString()}`;
+    }
+    return (
+      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-normal text-gray-500 bg-gray-100">
+        Free (Invited)
+      </span>
+    );
+  };
 
   const toggleDropdown = (appointmentId: string) => {
     setActiveDropdown(activeDropdown === appointmentId ? null : appointmentId);
@@ -183,7 +255,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
 
     switch (action) {
       case "startMeeting": {
-        const appId = import.meta.env.VITE_AGORA_APP_ID;
+        const appId = env.AGORA_APP_ID;
         const channel = appointment.action.agoraChannel;
         const token = appointment.action.agoraToken?.token;
         const uid = appointment.action.agoraToken?.uid;
@@ -267,9 +339,9 @@ const SessionTable: React.FC<SessionTableProps> = ({
           description={
             isCounselor
               ? "You do not have any upcoming counseling sessions scheduled. New bookings from clients will appear here."
-              : "You don't have any therapy sessions scheduled right now. Browse our directory of certified counselors to find the right therapist for you."
+              : "You don't have any therapy sessions scheduled right now. Browse our directory of certified professionals to find the right professional for you."
           }
-          actionText={isCounselor ? undefined : "Browse Counselors"}
+          actionText={isCounselor ? undefined : "Browse Professionals"}
           actionLink={isCounselor ? undefined : "/counselor"}
         />
       );
@@ -284,7 +356,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
             ? "Your completed client sessions, notes, and records will be archived here once concluded."
             : "You haven't completed any sessions yet. Once your sessions wrap up, their history and invoices will show up here."
         }
-        actionText={isCounselor ? undefined : "Find a Counselor"}
+        actionText={isCounselor ? undefined : "Find a Professional"}
         actionLink={isCounselor ? undefined : "/counselor"}
       />
     );
@@ -318,6 +390,8 @@ const SessionTable: React.FC<SessionTableProps> = ({
               <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
               <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
               <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th scope="col" className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -329,12 +403,19 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     <img
                       src={appointment.profilePicture || "https://placehold.net/avatar-4.png"}
                       alt={appointment.fullName}
-                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-full shrink-0"
+                      className="w-8 h-8 lg:w-10 lg:h-10 rounded-full shrink-0 object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.net/avatar-4.png"; }}
                     />
                     <div>
-                      <span className="font-medium text-sm lg:text-base text-gray-900">{appointment.fullName}</span>
-                      <div className="text-xs text-gray-400">Status: {appointment.status}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm lg:text-base text-gray-900">{appointment.fullName}</span>
+                        {(appointment.demoLabel || appointment.isDemo) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                            {appointment.demoLabel || "Demo Session"}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400 capitalize">{appointment.status}</span>
                     </div>
                   </div>
                 </td>
@@ -345,9 +426,15 @@ const SessionTable: React.FC<SessionTableProps> = ({
                   {appointment.time}
                 </td>
                 <td className="px-3 lg:px-6 py-4">
-                  <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-xs lg:text-sm whitespace-nowrap font-medium">
+                  <span className="px-2 lg:px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-xs lg:text-sm whitespace-nowrap font-medium capitalize">
                     {appointment.type}
                   </span>
+                </td>
+                <td className="px-3 lg:px-6 py-4 text-sm lg:text-base whitespace-nowrap font-medium text-gray-900">
+                  {renderPrice(appointment.price)}
+                </td>
+                <td className="px-3 lg:px-6 py-4 whitespace-nowrap">
+                  {renderBookingStatusBadge(appointment.bookingStatus, appointment.status)}
                 </td>
                 <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
                   <div className="relative">
@@ -448,20 +535,34 @@ const SessionTable: React.FC<SessionTableProps> = ({
       <div className="md:hidden space-y-4">
         {appointments.map((appointment) => (
           <div key={appointment.bookingId} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center space-x-3">
                 <img
                   src={appointment.profilePicture || "https://placehold.net/avatar-4.png"}
                   alt={appointment.fullName}
-                  className="w-10 h-10 rounded-full shrink-0"
+                  className="w-10 h-10 rounded-full shrink-0 object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.net/avatar-4.png"; }}
                 />
                 <div>
-                  <h3 className="font-medium text-gray-900 text-sm">{appointment.fullName}</h3>
-                  <span className="inline-block px-2 py-1 rounded-full bg-blue-100 text-primary text-xs font-medium mt-1">
-                    {appointment.type}
-                  </span>
-                  <div className="text-xs text-gray-400">Status: {appointment.status}</div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="font-medium text-gray-900 text-sm">{appointment.fullName}</h3>
+                    {(appointment.demoLabel || appointment.isDemo) && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                        {appointment.demoLabel || "Demo Session"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-blue-100 text-primary text-xs font-medium capitalize">
+                      {appointment.type}
+                    </span>
+                    {renderBookingStatusBadge(appointment.bookingStatus, appointment.status)}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-semibold text-gray-900 text-sm">
+                  {renderPrice(appointment.price)}
                 </div>
               </div>
             </div>
@@ -555,6 +656,33 @@ const SessionTable: React.FC<SessionTableProps> = ({
           </div>
         ))}
       </div>
+
+      {/* ── Pagination Controls ── */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4 mt-4 text-xs sm:text-sm text-gray-600">
+          <span>
+            Page <strong className="text-gray-900">{pagination.page}</strong> of{" "}
+            <strong className="text-gray-900">{pagination.totalPages}</strong>
+            {pagination.total ? ` (${pagination.total} total)` : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!pagination.hasPreviousPage || page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!pagination.hasNextPage}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Post-call review modal (counselor only) ── */}
       <PostCallReviewModal

@@ -1,6 +1,20 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import Api, { ApiError, IAPIResult } from "./Api";
 
+export interface IAdminNotificationData {
+  type?: string;
+  userId?: string;
+  therapistId?: string;
+  bookingId?: string;
+  disputeId?: string;
+  requestId?: string;
+  credentialId?: string;
+  tab?: string;
+  url?: string;
+  action?: string;
+  [key: string]: unknown;
+}
+
 export interface IAdminNotification {
   _id: string;
   type: string;
@@ -9,6 +23,7 @@ export interface IAdminNotification {
   title: string;
   message: string;
   seen: boolean;
+  data?: IAdminNotificationData;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -120,9 +135,25 @@ export function formatNotificationDate(dateString: string): string {
 export function getNotificationTypeColor(type: string): string {
   switch (type.toLowerCase()) {
     case 'transaction':
+    case 'commission':
+    case 'fee_split':
       return 'text-blue-600';
     case 'user':
+    case 'verified_registration':
+    case 'registration':
+    case 'user_registered':
       return 'text-green-600';
+    case 'file_upload':
+    case 'credential_upload':
+    case 'therapist_verification':
+      return 'text-indigo-600';
+    case 'dispute':
+    case 'dispute_created':
+    case 'dispute_updated':
+      return 'text-amber-600';
+    case 'profession_request':
+    case 'professional_category_request':
+      return 'text-purple-600';
     case 'system':
       return 'text-purple-600';
     case 'warning':
@@ -138,9 +169,25 @@ export function getNotificationTypeColor(type: string): string {
 export function getNotificationIcon(type: string): string {
   switch (type.toLowerCase()) {
     case 'transaction':
+    case 'commission':
+    case 'fee_split':
       return '💰';
     case 'user':
+    case 'verified_registration':
+    case 'registration':
+    case 'user_registered':
       return '👤';
+    case 'file_upload':
+    case 'credential_upload':
+    case 'therapist_verification':
+      return '📄';
+    case 'dispute':
+    case 'dispute_created':
+    case 'dispute_updated':
+      return '⚖️';
+    case 'profession_request':
+    case 'professional_category_request':
+      return '🎓';
     case 'system':
       return '⚙️';
     case 'warning':

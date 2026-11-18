@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellIcon, CheckIcon, XIcon } from "lucide-react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 import {
   getAdminNotificationsApi,
@@ -11,6 +12,7 @@ import {
   getNotificationTypeColor,
   getNotificationIcon,
 } from "../../api/AdminNotifications.api";
+import { getAdminNotificationDeepLink } from "../../utils/adminNotificationDeepLink.utils";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface NotificationsDropdownProps {
@@ -24,6 +26,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const role = useAuthStore((s) => s.role);
   const isAdmin = role === "admin";
@@ -112,6 +115,21 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       console.error("Error marking all notifications as read:", error);
     }
   }, [notifications, queryClient]);
+
+  // Handle notification click with auto-mark-as-read and deep linking
+  const handleNotificationItemClick = useCallback(
+    (notification: IAdminNotification) => {
+      if (!notification.seen) {
+        void handleMarkAsRead(notification._id);
+      }
+      const destination = getAdminNotificationDeepLink(notification);
+      setIsOpen(false);
+      if (destination) {
+        void navigate(destination);
+      }
+    },
+    [handleMarkAsRead, navigate]
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -227,11 +245,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
                     className={`p-4 hover:bg-gray-50 cursor-pointer ${
                       !notification.seen ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                     }`}
-                    onClick={() => {
-                      if (!notification.seen) {
-                        void handleMarkAsRead(notification._id);
-                      }
-                    }}
+                    onClick={() => handleNotificationItemClick(notification)}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Icon */}

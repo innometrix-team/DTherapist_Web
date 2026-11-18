@@ -98,18 +98,13 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setFeaturedImage(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      // Create local preview URL
+      const localUrl = URL.createObjectURL(file);
+      setFeaturedImage(localUrl);
     }
   };
 
-  // Handle image remove
+  // Handle image removal
   const handleImageRemove = () => {
     setFeaturedImage("");
     setSelectedFile(null);
@@ -118,9 +113,14 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
     }
   };
 
-  // Handle update group
+  // Validate form
+  const isFormValid = () => {
+    return name.trim().length > 0 && description.trim().length > 0;
+  };
+
+  // Handle update
   const handleUpdateGroup = () => {
-    if (!name.trim() || !description.trim()) {
+    if (!isFormValid()) {
       showToast("Please fill in all required fields", 'error');
       return;
     }
@@ -156,34 +156,44 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-group-title"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    >
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Edit Support Group</h2>
+            <h2 id="edit-group-title" className="text-xl font-semibold text-gray-900">
+              Edit Support Group
+            </h2>
             <p className="text-sm text-gray-500 mt-1">Update group information and image</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             disabled={isUpdating}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+            aria-label="Close dialog"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500" aria-hidden="true" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6">
-          <div className="flex gap-6">
+          <div className="flex flex-col md:flex-row gap-6">
             {/* Main Form */}
             <div className="flex-1 space-y-6">
               {/* Group Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="edit-group-name" className="block text-sm font-medium text-gray-700 mb-2">
                   Group Name *
                 </label>
                 <input
+                  id="edit-group-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -195,10 +205,11 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="edit-group-description" className="block text-sm font-medium text-gray-700 mb-2">
                   Description *
                 </label>
                 <textarea
+                  id="edit-group-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the purpose and goals of this support group..."
@@ -213,12 +224,12 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
             </div>
 
             {/* Sidebar */}
-            <div className="w-80 space-y-6">
+            <div className="w-full md:w-80 space-y-6">
               {/* Preview */}
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-3">Preview</h3>
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="relative h-32">
+                  <div className="relative h-32 bg-gray-100">
                     {featuredImage ? (
                       <img
                         src={featuredImage}
@@ -226,8 +237,8 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center">
-                        <Users className="w-12 h-12 text-white" />
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
+                        <Users className="w-12 h-12 text-white" aria-hidden="true" />
                       </div>
                     )}
                   </div>
@@ -258,16 +269,18 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
                     </div>
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={handleImageRemove}
                         disabled={isUpdating}
-                        className="flex-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-300"
                       >
                         Remove
                       </button>
                       <button
+                        type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUpdating}
-                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         Update
                       </button>
@@ -275,23 +288,27 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div 
-                      className={`w-full h-48 bg-gray-100 rounded-lg flex flex-col items-center justify-center transition-colors ${
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      aria-label="Upload group image"
+                      className={`w-full h-48 bg-gray-100 rounded-lg flex flex-col items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         isUpdating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'
                       }`}
                       onClick={() => !isUpdating && fileInputRef.current?.click()}
                     >
                       <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
-                        <Camera className="w-8 h-8 text-gray-400" />
+                        <Camera className="w-8 h-8 text-gray-400" aria-hidden="true" />
                       </div>
-                      <Plus className="w-6 h-6 text-gray-400" />
+                      <Plus className="w-6 h-6 text-gray-400" aria-hidden="true" />
                       <p className="text-sm text-gray-500 mt-2">Click to add image</p>
-                    </div>
+                    </button>
                   </div>
                 )}
 
                 <input
                   ref={fileInputRef}
+                  id="group-image-file"
                   type="file"
                   accept="image/*"
                   onChange={handleImageSelect}
@@ -315,16 +332,18 @@ const EditDAnonymousGroupModal: React.FC<EditDAnonymousGroupModalProps> = ({ gro
         {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={isUpdating}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleUpdateGroup}
             disabled={isUpdating || !name.trim() || !description.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {isUpdating ? "Updating..." : "Update Group"}
           </button>

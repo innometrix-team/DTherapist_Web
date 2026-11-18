@@ -15,7 +15,23 @@ interface Props {
 interface EditingSlot {
   startTime: string;
   endTime: string;
+  meetingType: "video" | "in-person";
 }
+
+interface DayValidity {
+  validFrom: string;
+  validUntil: string;
+}
+
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(":").map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+};
+
+const formatDateInput = (isoOrDate?: string): string => {
+  if (!isoOrDate) return "";
+  return isoOrDate.split("T")[0];
+};
 
 const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -27,6 +43,7 @@ const ViewEditSchedule: React.FC<Props> = ({
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSchedules, setEditedSchedules] = useState<{ [key: string]: EditingSlot[] }>({});
+  const [editedValidity, setEditedValidity] = useState<{ [key: string]: DayValidity }>({});
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   const { data, isLoading, error } = useQuery({
@@ -40,16 +57,54 @@ const ViewEditSchedule: React.FC<Props> = ({
             (schedule) => schedule.isAvailable && schedule.slots.length > 0
           );
 
-          // Initialize edited schedules with current data
-          const initial: { [key: string]: EditingSlot[] } = {};
+          // Deduplicate by day so each weekday has a single combined entry
+          const mergedMap = new Map<string, typeof activeSchedules[number]>();
           activeSchedules.forEach((schedule) => {
-            initial[schedule.day] = schedule.slots.map(slot => ({
+            const existing = mergedMap.get(schedule.day);
+            const fallbackType: "video" | "in-person" =
+              schedule.meetingType === "in-person" ? "in-person" : "video";
+            const normalizedSlots = schedule.slots.map((slot) => ({
+              ...slot,
+              meetingType:
+                slot.meetingType && slot.meetingType !== "both"
+                  ? slot.meetingType
+                  : fallbackType,
+            }));
+
+            if (!existing) {
+              mergedMap.set(schedule.day, {
+                ...schedule,
+                slots: normalizedSlots,
+              });
+            } else {
+              existing.slots = [...existing.slots, ...normalizedSlots];
+            }
+          });
+
+          const mergedSchedules = Array.from(mergedMap.values());
+
+          // Initialize edited schedules and validity with current data
+          const initial: { [key: string]: EditingSlot[] } = {};
+          const initialValidity: { [key: string]: DayValidity } = {};
+          mergedSchedules.forEach((schedule) => {
+            const fallbackType: "video" | "in-person" =
+              schedule.meetingType === "in-person" ? "in-person" : "video";
+            initial[schedule.day] = schedule.slots.map((slot) => ({
               startTime: slot.startTime,
               endTime: slot.endTime,
+              meetingType:
+                slot.meetingType && slot.meetingType !== "both"
+                  ? slot.meetingType
+                  : fallbackType,
             }));
+            initialValidity[schedule.day] = {
+              validFrom: formatDateInput(schedule.validFrom),
+              validUntil: formatDateInput(schedule.validUntil),
+            };
           });
           setEditedSchedules(initial);
-          return activeSchedules;
+          setEditedValidity(initialValidity);
+          return mergedSchedules;
         }
         return [];
       } catch (err) {
@@ -71,7 +126,12 @@ const ViewEditSchedule: React.FC<Props> = ({
 
   const schedules = data || [];
 
-  const handleSlotChange = (day: string, slotIndex: number, field: "startTime" | "endTime", value: string) => {
+  const handleSlotChange = (
+    day: string,
+    slotIndex: number,
+    field: "startTime" | "endTime" | "meetingType",
+    value: string
+  ) => {
     setEditedSchedules(prev => ({
       ...prev,
       [day]: prev[day].map((slot, idx) => 
@@ -80,14 +140,40 @@ const ViewEditSchedule: React.FC<Props> = ({
     }));
   };
 
-  const addSlot = (day: string) => {
-    setEditedSchedules(prev => ({
+  const handleValidityChange = (day: string, field: keyof DayValidity, value: string) => {
+    setEditedValidity((prev) => ({
       ...prev,
-      [day]: [
-        ...(prev[day] || []),
-        { startTime: "09:00", endTime: "10:00" }
-      ],
+      [day]: {
+        validFrom: prev[day]?.validFrom || "",
+        validUntil: prev[day]?.validUntil || "",
+        [field]: value,
+      },
     }));
+  };
+
+  const addSlot = (day: string) => {
+    setEditedSchedules(prev => {
+      const current = prev[day] || [];
+      let nextStart = "09:00";
+      let nextEnd = "10:00";
+      const defaultType: "video" | "in-person" =
+        current[current.length - 1]?.meetingType || "video";
+      if (current.length > 0) {
+        const lastEnd = current[current.length - 1].endTime;
+        const [h, m] = lastEnd.split(":").map(Number);
+        if (Number.isFinite(h) && Number.isFinite(m) && h < 23) {
+          nextStart = lastEnd;
+          nextEnd = `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        }
+      }
+      return {
+        ...prev,
+        [day]: [
+          ...current,
+          { startTime: nextStart, endTime: nextEnd, meetingType: defaultType }
+        ],
+      };
+    });
   };
 
   const removeSlot = (day: string, slotIndex: number) => {
@@ -99,27 +185,88 @@ const ViewEditSchedule: React.FC<Props> = ({
 
   const copySlot = (day: string, slotIndex: number) => {
     const slot = editedSchedules[day][slotIndex];
+    const [h, m] = slot.endTime.split(":").map(Number);
+    const nextStart = Number.isFinite(h) && h < 23 ? slot.endTime : slot.startTime;
+    const nextEnd =
+      Number.isFinite(h) && h < 23
+        ? `${String(h + 1).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`
+        : slot.endTime;
     setEditedSchedules(prev => ({
       ...prev,
-      [day]: [...prev[day], { ...slot }],
+      [day]: [...prev[day], { ...slot, startTime: nextStart, endTime: nextEnd }],
     }));
   };
 
+  const validateEditedSchedules = (): boolean => {
+    for (const schedule of schedules) {
+      const day = schedule.day;
+      const daySlots = editedSchedules[day] || [];
+      const validity = editedValidity[day];
+      if (validity?.validFrom && validity?.validUntil && validity.validFrom > validity.validUntil) {
+        toast.error(`${day}: Valid Until date must be on or after Valid From date.`);
+        return false;
+      }
+
+      for (let i = 0; i < daySlots.length; i++) {
+        const sA = daySlots[i];
+        const aStart = toMinutes(sA.startTime);
+        const aEnd = toMinutes(sA.endTime);
+        if (aEnd <= aStart) {
+          toast.error(`${day}: End time (${sA.endTime}) must be after start time (${sA.startTime}).`);
+          return false;
+        }
+        for (let j = i + 1; j < daySlots.length; j++) {
+          const sB = daySlots[j];
+          const bStart = toMinutes(sB.startTime);
+          const bEnd = toMinutes(sB.endTime);
+          if (aStart < bEnd && bStart < aEnd) {
+            toast.error(
+              `Overlapping slots on ${day}: ${sA.startTime}–${sA.endTime} and ${sB.startTime}–${sB.endTime}.`
+            );
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
+
   const handleSaveChanges = async () => {
+    if (!validateEditedSchedules()) {
+      setShowSaveModal(false);
+      return;
+    }
+
     try {
-      const updateData: IScheduleRequestData[] = schedules
-        .map(schedule => ({
+      const updateData: IScheduleRequestData[] = schedules.map((schedule) => {
+        const daySlots = editedSchedules[schedule.day] || [];
+        const hasSlots = daySlots.length > 0;
+        const hasInPerson = daySlots.some((s) => s.meetingType === "in-person");
+        const hasVideo = daySlots.some((s) => s.meetingType === "video");
+        const derivedMeetingType =
+          hasInPerson && !hasVideo
+            ? "in-person"
+            : schedule.meetingType === "in-person" && !hasVideo
+            ? "in-person"
+            : "video";
+        const validity = editedValidity[schedule.day];
+
+        return {
           day: schedule.day,
-          meetingType: schedule.meetingType,
+          meetingType: derivedMeetingType,
           timezone: schedule.timezone,
-          isAvailable: (editedSchedules[schedule.day] || []).length > 0,
-          teamBooking:
-            (editedSchedules[schedule.day] || []).length > 0 ? schedule.teamBooking : false,
-          slots: (editedSchedules[schedule.day] || []).map(slot => ({
+          isAvailable: hasSlots,
+          teamBooking: hasSlots ? Boolean(schedule.teamBooking || schedule.allowGroupBooking) : false,
+          allowGroupBooking: hasSlots ? Boolean(schedule.allowGroupBooking || schedule.teamBooking) : false,
+          validFrom: validity?.validFrom || undefined,
+          validUntil: validity?.validUntil || undefined,
+          slots: daySlots.map((slot) => ({
             startTime: slot.startTime,
             endTime: slot.endTime,
+            meetingType: slot.meetingType,
           })),
-        }));
+        };
+      });
 
       await handleScheduleUpdate(updateData);
       if (therapistId) {
@@ -257,41 +404,88 @@ const ViewEditSchedule: React.FC<Props> = ({
                     </span>
                   )}
                 </div>
+                {(schedule.validFrom || schedule.validUntil) && !isEditing && (
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    Valid: {formatDateInput(schedule.validFrom) || "Start"} – {formatDateInput(schedule.validUntil) || "Ongoing"}
+                  </p>
+                )}
               </div>
 
               <div className="p-6">
                 {isEditing ? (
                   // Edit Mode
                   <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 pb-2 border-b border-gray-100">
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Valid From</label>
+                        <input
+                          type="date"
+                          value={editedValidity[schedule.day]?.validFrom || ""}
+                          onChange={(e) => handleValidityChange(schedule.day, "validFrom", e.target.value)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-500 mb-1">Valid Until</label>
+                        <input
+                          type="date"
+                          value={editedValidity[schedule.day]?.validUntil || ""}
+                          min={editedValidity[schedule.day]?.validFrom || undefined}
+                          onChange={(e) => handleValidityChange(schedule.day, "validUntil", e.target.value)}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
                     {editedSchedules[schedule.day]?.map((slot, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <div className="flex items-center gap-2 flex-1">
+                      <div key={idx} className="flex flex-col gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <input
                             type="time"
                             value={slot.startTime}
                             onChange={(e) => handleSlotChange(schedule.day, idx, "startTime", e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 w-20 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 rounded px-2 py-1 w-24 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                           />
                           <span className="text-gray-400">−</span>
                           <input
                             type="time"
                             value={slot.endTime}
                             onChange={(e) => handleSlotChange(schedule.day, idx, "endTime", e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 w-20 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="border border-gray-300 rounded px-2 py-1 w-24 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                           />
                         </div>
-                        <button
-                          onClick={() => copySlot(schedule.day, idx)}
-                          className="p-1 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded transition"
-                        >
-                          <CopyIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => removeSlot(schedule.day, idx)}
-                          className="p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded transition"
-                        >
-                          <CancelIcon className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <select
+                            value={slot.meetingType}
+                            onChange={(e) =>
+                              handleSlotChange(
+                                schedule.day,
+                                idx,
+                                "meetingType",
+                                e.target.value as "video" | "in-person"
+                              )
+                            }
+                            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="video">Video</option>
+                            <option value="in-person">In-Person</option>
+                          </select>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => copySlot(schedule.day, idx)}
+                              className="p-1 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded transition"
+                              title="Duplicate slot"
+                            >
+                              <CopyIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeSlot(schedule.day, idx)}
+                              className="p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded transition"
+                              title="Remove slot"
+                            >
+                              <CancelIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                     <button
@@ -306,23 +500,31 @@ const ViewEditSchedule: React.FC<Props> = ({
                   // View Mode
                   <div className="space-y-3">
                     {schedule.slots.length > 0 ? (
-                      schedule.slots.map((slot, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100">
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {slot.startTime} − {slot.endTime}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              {parseInt(slot.endTime) - parseInt(slot.startTime)} hour session
-                            </p>
+                      schedule.slots.map((slot, idx) => {
+                        const slotType =
+                          slot.meetingType && slot.meetingType !== "both"
+                            ? slot.meetingType
+                            : schedule.meetingType === "in-person"
+                            ? "in-person"
+                            : "video";
+                        return (
+                          <div key={idx} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {slot.startTime} − {slot.endTime}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {Math.max(1, parseInt(slot.endTime) - parseInt(slot.startTime))} hour session
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className="inline-block px-3 py-1 bg-white border border-blue-200 text-blue-700 text-xs font-medium rounded">
+                                {slotType === "video" ? "Video" : "In-Person"}
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="inline-block px-3 py-1 bg-white border border-blue-200 text-blue-700 text-xs font-medium rounded">
-                              {schedule.meetingType === "video" ? "Video" : "In-Person"}
-                            </span>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="text-center py-6">
                         <p className="text-gray-600 text-sm">No time slots</p>
@@ -345,7 +547,11 @@ const ViewEditSchedule: React.FC<Props> = ({
               Cancel
             </button>
             <button
-              onClick={() => setShowSaveModal(true)}
+              onClick={() => {
+                if (validateEditedSchedules()) {
+                  setShowSaveModal(true);
+                }
+              }}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

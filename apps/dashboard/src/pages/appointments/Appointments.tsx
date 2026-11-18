@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 // Import types
@@ -6,15 +7,19 @@ import { TabType } from "../../components/appointment/types";
 import {
   getCounselorAppointments,
   getUserAppointments,
+  BookingStatus,
+  UserDashboardData,
+  Appointment,
 } from "../../api/Appointments.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
+import { QUERY_KEYS } from "../../configs/queryKeys.config";
 
 import TabNavigation from "../../components/appointment/TabNavigation";
 import SessionTable from "../../components/appointment/SessionTable";
 import RescheduleSession from "../../components/appointment/RescheduleSession";
 import { Skeleton, SkeletonTable } from "../../components/common/Skeleton";
 import PageContainer from "../../components/common/PageContainer";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronDown } from "lucide-react";
 
 // Define error types
 interface QueryError {
@@ -24,18 +29,41 @@ interface QueryError {
 }
 
 const Appointments: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const bookingIdParam = searchParams.get("bookingId");
+  const statusParam = searchParams.get("status");
+
   // Get user role from auth store
   const role = useAuthStore((s) => s.role);
   const isCounselor = role === "counselor";
 
   // State for active tab (Upcoming or Passed)
   const [activeTab, setActiveTab] = useState<TabType>("upcoming");
+  const [selectedStatus, setSelectedStatus] = useState<BookingStatus | "">(() => {
+    if (
+      statusParam === "pending" ||
+      statusParam === "confirmed" ||
+      statusParam === "cancelled" ||
+      statusParam === "completed"
+    ) {
+      return statusParam;
+    }
+    return "";
+  });
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null
   );
+
+  // Sync deep-linked bookingId to open reschedule/session modal
+  useEffect(() => {
+    if (bookingIdParam) {
+      setSelectedSessionId(bookingIdParam);
+      setIsModalOpen(true);
+    }
+  }, [bookingIdParam]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -46,7 +74,9 @@ const Appointments: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: isCounselor ? ["counselor-appointments"] : ["user-appointments"],
+    queryKey: isCounselor
+      ? QUERY_KEYS.appointments.counselorList
+      : QUERY_KEYS.appointments.userListFiltered(selectedStatus || undefined),
     queryFn: async () => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -54,7 +84,10 @@ const Appointments: React.FC = () => {
       if (isCounselor) {
         return await getCounselorAppointments({ signal: controller.signal });
       } else {
-        return await getUserAppointments({ signal: controller.signal });
+        return await getUserAppointments(
+          selectedStatus ? { status: selectedStatus } : undefined,
+          { signal: controller.signal }
+        );
       }
     },
     retry: (failureCount, error: unknown) => {
@@ -102,9 +135,15 @@ const Appointments: React.FC = () => {
       if (Array.isArray(appointmentsData.data)) {
         appointments = appointmentsData.data;
       } else {
-        // Check if it's nested in upcomingAppointments (as per UserDashboardData type)
-        const dashboardData = appointmentsData.data;
-        appointments = dashboardData.upcomingAppointments || [];
+        const dashboardData = appointmentsData.data as UserDashboardData & {
+          appointments?: Appointment[];
+          allAppointments?: Appointment[];
+        };
+        appointments =
+          dashboardData.appointments ||
+          dashboardData.upcomingAppointments ||
+          dashboardData.allAppointments ||
+          [];
       }
     }
 
@@ -240,6 +279,41 @@ const Appointments: React.FC = () => {
             />
           </div>
 
+          {/* Booking Status Filter (Item 14 - Client Flow) */}
+          {!isCounselor && (
+            <div className="px-4 sm:px-6 pt-4 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Booking Status:</span>
+                <div className="relative min-w-40">
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) =>
+                      setSelectedStatus(
+                        e.target.value as BookingStatus | ""
+                      )
+                    }
+                    className="appearance-none w-full px-3 py-1.5 pr-8 border border-gray-300 rounded-lg bg-white text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              {selectedStatus && (
+                <button
+                  onClick={() => setSelectedStatus("")}
+                  className="text-xs text-primary hover:underline cursor-pointer font-medium"
+                >
+                  Clear Status Filter
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Sessions Content */}
           <div className="p-4 sm:p-6">
             {/* Summary Stats - Mobile */}
@@ -264,19 +338,21 @@ const Appointments: React.FC = () => {
               </div>
             </div>
 
-            {/* Table Content - Using key prop to force re-render when tab changes */}
+            {/* Table Content - Using key prop to force re-render when tab or status filter changes */}
             {activeTab === "upcoming" && (
               <SessionTable
-                key="upcoming-sessions"
+                key={`upcoming-sessions-${selectedStatus}`}
                 type="upcoming"
+                bookingStatus={selectedStatus}
                 onReschedule={handleReschedule}
               />
             )}
 
             {activeTab === "passed" && (
               <SessionTable
-                key="passed-sessions"
+                key={`passed-sessions-${selectedStatus}`}
                 type="passed"
+                bookingStatus={selectedStatus}
               />
             )}
           </div>

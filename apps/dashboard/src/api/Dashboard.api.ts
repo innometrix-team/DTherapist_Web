@@ -26,30 +26,32 @@ export interface IDashboardData {
   upcomingAppointments: IUpcomingAppointment[];
 }
 
+export interface RawDashboardAppointment {
+  bookingId: string;
+  fullName: string;
+  profilePicture: string | null;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  chatId: string | null;
+  invoiceDownloadLink?: string | null;
+  action?: {
+    agoraChannel: string | null;
+    agoraToken: {
+      token: string;
+      uid: number;
+    } | null;
+    invoiceDownloadLink: string | null;
+  } | null;
+}
+
 export interface UserAPIResponse {
   walletBalance: number;
   totalSessions: number;
   timeSpent: number;
   amountPaid: number;
-  upcomingAppointments: Array<{
-    bookingId: string;
-    therapistId: string;
-    fullName: string;
-    profilePicture: string;
-    date: string;
-    time: string;
-    type: string;
-    status: string;
-    chatId: string | null;
-    action: {
-      agoraChannel: string | null;
-      agoraToken: {
-        token: string;
-        uid: number;
-      } | null;
-      invoiceDownloadLink: string | null;
-    };
-  }>;
+  upcomingAppointments: Array<RawDashboardAppointment & { therapistId: string }>;
 }
 
 export interface CounselorAPIResponse {
@@ -57,25 +59,27 @@ export interface CounselorAPIResponse {
   totalSessions: number;
   timeSpent: number;
   amountEarned: number;
-  upcomingAppointments: Array<{
-    bookingId: string;
-    userId: string;
-    fullName: string;
-    profilePicture: string;
-    date: string;
-    time: string;
-    type: string;
-    status: string;
-    chatId: string | null;
-    action: {
-      agoraChannel: string | null;
-      agoraToken: {
-        token: string;
-        uid: number;
-      } | null;
-      invoiceDownloadLink: string | null;
-    };
+  professionalBodies?: Array<{
+    bodyName: string;
+    certificationName: string;
   }>;
+  upcomingAppointments: Array<RawDashboardAppointment & { userId: string }>;
+}
+
+function mapDashboardAppointment(appointment: RawDashboardAppointment): IUpcomingAppointment {
+  return {
+    _id: appointment.bookingId,
+    fullname: appointment.fullName,
+    profilePicture: appointment.profilePicture ?? "",
+    date: appointment.date,
+    time: appointment.time,
+    type: appointment.type,
+    chatId: appointment.chatId,
+    agoraChannel: appointment.action?.agoraChannel ?? null,
+    agoraToken: appointment.action?.agoraToken ?? null,
+    invoiceDownloadLink:
+      appointment.action?.invoiceDownloadLink ?? appointment.invoiceDownloadLink ?? null,
+  };
 }
 
 function transformUserDashboard(data: UserAPIResponse): IDashboardData {
@@ -84,18 +88,7 @@ function transformUserDashboard(data: UserAPIResponse): IDashboardData {
     totalSessions: data.totalSessions,
     timeSpent: data.timeSpent,
     amountEarned: data.amountPaid,
-    upcomingAppointments: (data.upcomingAppointments || []).map((appointment) => ({
-      _id: appointment.bookingId,
-      fullname: appointment.fullName,
-      profilePicture: appointment.profilePicture,
-      date: appointment.date,
-      time: appointment.time,
-      type: appointment.type,
-      chatId: appointment.chatId,
-      agoraChannel: appointment.action.agoraChannel,
-      agoraToken: appointment.action.agoraToken,
-      invoiceDownloadLink: appointment.action.invoiceDownloadLink,
-    })),
+    upcomingAppointments: (data.upcomingAppointments || []).map(mapDashboardAppointment),
   };
 }
 
@@ -105,18 +98,7 @@ function transformCounselorDashboard(data: CounselorAPIResponse): IDashboardData
     totalSessions: data.totalSessions,
     timeSpent: data.timeSpent,
     amountEarned: data.amountEarned,
-    upcomingAppointments: (data.upcomingAppointments || []).map((appointment) => ({
-      _id: appointment.bookingId,
-      fullname: appointment.fullName,
-      profilePicture: appointment.profilePicture,
-      date: appointment.date,
-      time: appointment.time,
-      type: appointment.type,
-      chatId: appointment.chatId,
-      agoraChannel: appointment.action.agoraChannel,
-      agoraToken: appointment.action.agoraToken,
-      invoiceDownloadLink: appointment.action.invoiceDownloadLink,
-    })),
+    upcomingAppointments: (data.upcomingAppointments || []).map(mapDashboardAppointment),
   };
 }
 

@@ -16,6 +16,8 @@ import { useAuthStore } from "../../store/auth/useAuthStore";
 import socketService from "../../services/SocketService";
 import { formatMessageTime, groupMessagesByDate } from "../../utils/Date.utils";
 import { QUERY_KEYS } from "../../configs/queryKeys.config";
+import { env } from "../../configs/env.config";
+import { useScreenCaptureMonitor } from "../../hooks/useScreenCaptureMonitor";
 
 // Types - Updated to match IMessage interface from DAnonymousChat
 interface Message {
@@ -90,6 +92,8 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
   const [chatId, setChatId] = useState<string | null>(null);
   const [isConnectedToSocket, setIsConnectedToSocket] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+
+  useScreenCaptureMonitor(chatId ? `chat:${chatId}` : null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -236,7 +240,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
 
     const initializeSocket = async () => {
       try {
-        const socketUrl = import.meta.env.VITE_SOCKET_URL;
+        const socketUrl = env.SOCKET_URL;
         if (!socketUrl) {
           toast.error("Chat service configuration error");
           return;

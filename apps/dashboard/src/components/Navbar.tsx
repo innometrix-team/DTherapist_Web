@@ -29,7 +29,7 @@ const Navbar: React.FC = () => {
           </li>
           <li>
             <Link to="/counselor" className="hover:text-primary">
-              Counselors
+              Professionals
             </Link>
           </li>
           <li>
@@ -86,7 +86,7 @@ const Navbar: React.FC = () => {
               className="hover:text-primary"
               onClick={toggleMenu}
             >
-              Counselors
+              Professionals
             </Link>
             <Link
               to="/anonymous"

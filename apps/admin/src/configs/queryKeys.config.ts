@@ -14,6 +14,7 @@ export const QUERY_KEYS = {
     list: ["admin-users"] as const,
     profile: (userId?: string) => ["user-profile", userId] as const,
     credentials: (userId?: string) => ["user-credentials", userId] as const,
+    commission: (userId?: string) => ["user-commission", userId] as const,
   },
   transactions: {
     list: (filters?: Record<string, unknown>) => ["admin-transactions", filters] as const,
