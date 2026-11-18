@@ -229,7 +229,7 @@ function User() {
       if (professionalCategory === "psychologist") return "Psychologist";
       return "Counselor";
     }
-    if (role === "user" || role === "client") return "User";
+    if (role === "user" || role === "client") return "Client";
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
