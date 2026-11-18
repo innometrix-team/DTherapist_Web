@@ -96,9 +96,9 @@ const DisputeDetail: React.FC = () => {
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -208,10 +208,10 @@ const DisputeDetail: React.FC = () => {
       const booking = dispute.bookingId;
       if (booking.date) {
         const date = new Date(booking.date);
-        return date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
+        return date.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
         });
       }
     }

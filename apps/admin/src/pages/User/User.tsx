@@ -243,7 +243,7 @@ function User() {
     return (
       <div className="flex justify-center items-center py-16 h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600 text-sm">Loading users...</span>
+        <span className="ml-2 text-gray-600 text-sm">Loading clients...</span>
       </div>
     );
   }
@@ -252,7 +252,7 @@ function User() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-red-500">
-          Error loading users. Please try again.
+          Error loading clients. Please try again.
         </div>
       </div>
     );
@@ -263,7 +263,7 @@ function User() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          Users Management
+          Clients Management
         </h1>
 
         {/* Filters */}
@@ -290,7 +290,7 @@ function User() {
           >
             <option value="all">All Roles</option>
             <option value="counselor">Counselors</option>
-            <option value="user">Users</option>
+            <option value="user">Clients</option>
           </select>
 
           {/* Profession Filter (Item 7) */}
@@ -340,7 +340,7 @@ function User() {
         {/* Stats */}
         <div className="flex gap-6 text-sm text-gray-600 mb-6">
           <span>Counselors: {userCount.counselors.toLocaleString()}</span>
-          <span>Users: {userCount.users.toLocaleString()}</span>
+          <span>Clients: {userCount.users.toLocaleString()}</span>
         </div>
       </div>
 
@@ -349,7 +349,7 @@ function User() {
         {/* Mobile Card View */}
         <div className="sm:hidden space-y-3 p-3">
           {paginatedUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-gray-500">No clients found</div>
           )}
 
           {paginatedUsers.map((user) => (
@@ -384,7 +384,7 @@ function User() {
                     </div>
                     {user.createdAt && (
                       <div className="text-[11px] text-gray-400 mt-1">
-                        Registered: {new Date(user.createdAt).toLocaleDateString()}
+                        Registered: {new Date(user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
                       </div>
                     )}
                   </div>
@@ -504,7 +504,7 @@ function User() {
                   {/* Registration Date (Item 1) */}
                   <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-600">
                     {user.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString()
+                      ? new Date(user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                       : "-"}
                   </td>
 
@@ -534,7 +534,7 @@ function User() {
           </table>
 
           {paginatedUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-gray-500">No clients found</div>
           )}
         </div>
 
@@ -630,7 +630,7 @@ function User() {
                   {/* Registration Date (Item 1) */}
                   <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-600">
                     {user.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString()
+                      ? new Date(user.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                       : "-"}
                   </td>
 
@@ -660,7 +660,7 @@ function User() {
           </table>
 
           {paginatedUsers.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-gray-500">No clients found</div>
           )}
         </div>
       </div>

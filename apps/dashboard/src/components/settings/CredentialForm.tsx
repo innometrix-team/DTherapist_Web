@@ -111,10 +111,10 @@ const formatDisplayDate = (dateStr?: string): string | null => {
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString("en-US", {
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "short",
-      day: "numeric",
     });
   } catch {
     return null;

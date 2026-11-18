@@ -164,7 +164,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
 
     // Check if user email is available from auth store
     if (!email) {
-      toast.error("User email not found. Please login again.");
+      toast.error("Client email not found. Please login again.");
       return;
     }
 
@@ -232,7 +232,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount }) => {
   //   if (actions.includes("topUp")) {
   //     // Check if user email is available from auth store
   //     if (!email) {
-  //       toast.error("User email not found. Please login again.");
+  //       toast.error("Client email not found. Please login again.");
   //       return;
   //     }
   //     setShowTopUpModal(true);

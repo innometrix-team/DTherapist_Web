@@ -175,10 +175,10 @@ const CreateDAnonymousGroup: React.FC = () => {
         <div className="relative z-10 flex flex-col justify-center h-full px-6">
           <h1 className="text-white text-3xl font-bold">Create Support Group</h1>
           <p className="text-white text-sm mt-1 opacity-90">
-            {new Date().toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
+            {new Date().toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
             })}
           </p>
         </div>

@@ -123,10 +123,10 @@ export function formatNotificationDate(dateString: string): string {
   } else if (diffInDays < 7) {
     return `${diffInDays}d ago`;
   } else {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     });
   }
 }

@@ -67,7 +67,7 @@ const ClientDetail = () => {
       id: appointment.bookingId,
       name: appointment.fullName,
       imageUrl: appointment.profilePicture,
-      about: `Client information for ${appointment.fullName}. Appointment scheduled for ${new Date(appointment.date).toLocaleDateString()} at ${appointment.time}.`,
+      about: `Client information for ${appointment.fullName}. Appointment scheduled for ${new Date(appointment.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })} at ${appointment.time}.`,
     };
   };
 
@@ -274,7 +274,7 @@ const ClientDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="font-medium text-gray-700">Date:</span>
-                <p className="text-gray-600">{new Date(appointmentData.date).toLocaleDateString()}</p>
+                <p className="text-gray-600">{new Date(appointmentData.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</p>
               </div>
               <div>
                 <span className="font-medium text-gray-700">Time:</span>

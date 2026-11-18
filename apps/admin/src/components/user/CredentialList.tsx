@@ -293,7 +293,7 @@ export default function CredentialList({
 
       {
         key: "cert" as const,
-        title: "Certification (PDF or JPG)",
+        title: "Academic Certification (PDF or JPG)",
         doc: credentialsData?.certificationUrl,
         status: credentialsData?.certificationStatus ?? "pending",
         note: credentialsData?.certificationNote,
@@ -359,7 +359,11 @@ export default function CredentialList({
                 <strong>
                   {new Date(
                     credentialsData.compliance.provisionalDeadline
-                  ).toLocaleDateString()}
+                  ).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
                 </strong>
               </span>
             )}

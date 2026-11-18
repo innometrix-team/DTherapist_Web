@@ -132,7 +132,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
       return;
     }
     if (!email) {
-      toast.error("User email not found. Please login again.");
+      toast.error("Client email not found. Please login again.");
       return;
     }
     if (isFunding) return;
@@ -179,7 +179,7 @@ const BalanceCard: React.FC<BalanceConfig> = ({ amount, actions }) => {
   const handleTopUpClick = useCallback(() => {
     if (actions.includes("topUp")) {
       if (!email) {
-        toast.error("User email not found. Please login again.");
+        toast.error("Client email not found. Please login again.");
         return;
       }
       setShowTopUpModal(true);

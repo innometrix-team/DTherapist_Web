@@ -108,7 +108,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
 
     const adminStats: StatCardConfig[] = [
       {
-        label: "Active Users",
+        label: "Active Clients",
         value: adminDashboardData.activeUsers.toLocaleString(),
         trend: "Current active", // No trend data available for users
         trendUp: true,

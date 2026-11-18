@@ -20,8 +20,8 @@ describe('Date.utils - formatMessageDate', () => {
     expect(formatMessageDate('2026-10-30T22:15:00Z')).toBe('Yesterday');
   });
 
-  it('formats older dates with full month, day and year', () => {
-    expect(formatMessageDate('2026-05-15T10:00:00Z')).toBe('May 15, 2026');
+  it('formats older dates as dd/mm/yyyy', () => {
+    expect(formatMessageDate('2026-05-15T10:00:00Z')).toBe('15/05/2026');
   });
 });
 
@@ -59,7 +59,7 @@ describe('Date.utils - groupMessagesByDate', () => {
     expect(grouped.length).toBe(2);
     expect(grouped[0].messages.length).toBe(2);
     expect(grouped[1].messages.length).toBe(1);
-    expect(grouped[1].date).toBe('August 10, 2026');
+    expect(grouped[1].date).toBe('10/08/2026');
   });
 
   it('returns empty array when given no messages', () => {

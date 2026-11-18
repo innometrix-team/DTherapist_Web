@@ -23,10 +23,10 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article, onClick }) => {
       </div>
       <div className="p-4">
         <div className="text-sm text-gray-500 mb-2">
-          {article.date || new Date(article.createdAt).toLocaleDateString('en-US', {
+          {article.date || new Date(article.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
             year: 'numeric',
-            month: 'long',
-            day: 'numeric'
           })}
         </div>
         <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
@@ -40,10 +40,10 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article, onClick }) => {
             {article.category}
           </span>
           <span className="text-xs">
-            {article.date || new Date(article.createdAt).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
+            {article.date || new Date(article.createdAt).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
             })}
           </span>
         </div>

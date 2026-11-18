@@ -141,17 +141,14 @@ export async function getAdminBookingsApi(
   }
 }
 
-// Helper function to format date (matching the "Mon, Jun 23, 2025" format)
+// Helper function to format date as dd/mm/yyyy
 export function formatAdminBookingDate(dateString: string): string {
   const date = new Date(dateString);
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  };
-  
-  return date.toLocaleDateString('en-US', options);
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 // Helper function to get status badge color

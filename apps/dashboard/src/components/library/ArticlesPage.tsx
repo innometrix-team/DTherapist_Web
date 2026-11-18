@@ -24,26 +24,24 @@ const ArticlesPage: React.FC<ArticlesPageProps> = ({ onArticleClick }) => {
 
   // Helper function to format date
   const formatDate = useCallback((dateString: string) => {
+    const fallback = () =>
+      new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        return fallback();
       }
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
-        month: 'long',
-        day: 'numeric'
       });
     } catch {
-      return new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      return fallback();
     }
   }, []);
 

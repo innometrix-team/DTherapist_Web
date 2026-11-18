@@ -640,7 +640,7 @@ const ProfileForm: React.FC = () => {
       <h2 className="text-xl font-semibold text-gray-800 capitalize">
         {isCounselor
           ? `${currentProfession} Profile Details`
-          : "User Profile Details"}
+          : "Client Profile Details"}
       </h2>
 
       {/* Profile Image Section */}
