@@ -255,10 +255,10 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "long",
-      day: "numeric",
     });
   };
 
@@ -523,7 +523,7 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
                                   </div>
                                   <div>
                                     <div className="font-semibold text-gray-900 text-lg">
-                                      {getCurrentReviews()[0].userName || "Anonymous User"}
+                                      {getCurrentReviews()[0].userName || "Anonymous Client"}
                                     </div>
                                     <div className="text-gray-600 text-sm">
                                       Patient • {formatDate(getCurrentReviews()[0].createdAt)}

@@ -13,7 +13,7 @@ import { NavLabel } from "../layout/types";
 export const ICONS: Record<NavLabel, React.FC<React.SVGProps<SVGSVGElement>>> = {
     Dashboard: DashboardIcon,
     Library: BooksIcon,
-    Users: CounselorIcon,
+    Clients: CounselorIcon,
     Bookings: BooksIcon,
     Disputes: TimerIcon,
     Transaction: TransactionIcon,

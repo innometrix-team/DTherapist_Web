@@ -5,10 +5,8 @@ import { ChevronDown, User, Video, MapPin, Users, UserX } from "lucide-react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import {
   getTherapistsApi,
-  getCategoriesApi,
   ITherapist,
   ITherapistListParams,
-  convertCategoriesToObjects,
 } from "../../api/Therapist.api";
 import { getTherapistScheduleApi } from "../../api/TherapistSchedule.api";
 import toast from "react-hot-toast";
@@ -126,7 +124,6 @@ const TherapistList: React.FC<TherapistListProps> = ({
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownCoords, setDropdownCoords] = useState<DropdownCoords | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedProfession, setSelectedProfession] = useState<"" | "counselor" | "psychologist">("");
   const [currentPage, setCurrentPage] = useState(1);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -209,29 +206,13 @@ const TherapistList: React.FC<TherapistListProps> = ({
   }, [openDropdown]);
 
   const {
-    data: categoriesResponse,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useQuery({
-    queryKey: QUERY_KEYS.therapists.categories,
-    queryFn: async () => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const result = await getCategoriesApi({ signal: controller.signal });
-      if (!result) throw new Error("Request cancelled");
-      return result;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const {
     data: therapistsResponse,
     isLoading: therapistsLoading,
     error: therapistsError,
     refetch: refetchTherapists,
   } = useQuery({
     queryKey: QUERY_KEYS.therapists.list(
-      selectedCategory,
+      "",
       searchQuery,
       currentPage,
       selectedProfession || undefined
@@ -240,9 +221,6 @@ const TherapistList: React.FC<TherapistListProps> = ({
       const controller = new AbortController();
       abortControllerRef.current = controller;
       const params: ITherapistListParams = { page: currentPage, limit: 10 };
-      if (selectedCategory && selectedCategory !== "all") {
-        params.category = selectedCategory;
-      }
       if (searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
@@ -309,18 +287,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
     setCurrentPage(1);
   }, []);
 
-  const handleCategoryChange = useCallback((category: string) => {
-    setSelectedCategory(category);
-    setCurrentPage(1);
-  }, []);
-
   useEffect(() => {
     return () => { abortControllerRef.current?.abort(); };
   }, []);
-
-  useEffect(() => {
-    if (categoriesError) toast.error("Failed to load categories");
-  }, [categoriesError]);
 
   useEffect(() => {
     if (therapistsError) toast.error("Failed to load therapists");
@@ -349,10 +318,6 @@ const TherapistList: React.FC<TherapistListProps> = ({
   const totalPages = therapistsResponse?.data?.totalPages || 1;
   const totalCount = therapistsResponse?.data?.totalCount || 0;
 
-  const categories = categoriesResponse?.data?.categories
-    ? convertCategoriesToObjects(categoriesResponse.data.categories)
-    : [];
-
   return (
     <div className="min-h-screen bg-gray-50">
       <PageContainer>
@@ -376,22 +341,6 @@ const TherapistList: React.FC<TherapistListProps> = ({
           {/* Search + Filters */}
         <div className="mb-6 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
-            <div className="relative w-full sm:w-auto sm:min-w-45">
-              <select
-                value={selectedCategory}
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                className="appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary w-full text-sm sm:text-base"
-                disabled={categoriesLoading}
-              >
-                <option value="">All Categories</option>
-                {categories.map((category: { id: string; name: string }) => (
-                  <option key={category.id} value={category.name}>
-                    {trimText(category.name, 25)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
             <div className="relative w-full sm:w-auto sm:min-w-45">
               <select
                 value={selectedProfession}
@@ -470,10 +419,9 @@ const TherapistList: React.FC<TherapistListProps> = ({
           <EmptyState
             icon={UserX}
             title="No Professionals Found"
-            description="We couldn't find any professionals matching your search query or category filter. Try clearing your filters or selecting a different specialization."
-            actionText={selectedCategory || searchQuery || selectedProfession ? "Clear All Filters" : undefined}
+            description="We couldn't find any professionals matching your search query or filters. Try clearing your filters."
+            actionText={searchQuery || selectedProfession ? "Clear All Filters" : undefined}
             onActionClick={() => {
-              setSelectedCategory("");
               setSearchQuery("");
               setSelectedProfession("");
             }}

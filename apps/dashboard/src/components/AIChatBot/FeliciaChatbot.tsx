@@ -43,7 +43,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     icon: "🧘",
   },
   {
-    label: "Talk with Felicia",
+    label: "Chat with Felicia",
     prompt: "Hello Felicia, how can you help me today?",
     icon: "💬",
   },

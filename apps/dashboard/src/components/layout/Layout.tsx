@@ -138,7 +138,7 @@ const Layout: React.FC = () => {
                   <>
                     <img
                       src={profilePicture}
-                      alt={profileData?.fullName || "User avatar"}
+                      alt={profileData?.fullName || "Client avatar"}
                       className="h-9 w-9 rounded-full border border-divider object-cover group-hover:border-primary transition-colors"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";

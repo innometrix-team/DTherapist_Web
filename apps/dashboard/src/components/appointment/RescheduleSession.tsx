@@ -616,7 +616,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
                     <Calendar className="w-5 h-5 text-blue-600 mr-2" />
                     <span className="font-medium">Current Schedule:</span>
                   </div>
-                  <p className="text-gray-700">Date: {new Date(session.date).toLocaleDateString()}</p>
+                  <p className="text-gray-700">Date: {new Date(session.date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}</p>
                   <p className="text-gray-700">Time: {session.time}</p>
                   <p className="text-gray-700">Type: {session.type}</p>
                 </div>
@@ -720,7 +720,7 @@ const RescheduleSession: React.FC<RescheduleSessionProps> = ({
               {selectedDate && (
                 <div className="mt-6">
                   <h5 className="text-sm font-medium mb-2">
-                    Available Times for {new Date(selectedDate).toLocaleDateString()}
+                    Available Times for {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </h5>
                   {availableTimes.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">

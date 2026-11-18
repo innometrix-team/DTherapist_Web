@@ -2,6 +2,33 @@ import { IMessage } from "../api/Groups.api";
 import { MessageGroup } from "../pages/danonymous/types";
 
 // Helper functions for date handling
+export const formatDateDDMMYYYY = (
+  value?: string | Date | null,
+  fallback = ""
+): string => {
+  if (!value) return fallback;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === "string" ? value : fallback;
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 export const formatMessageDate = (dateString: string): string => {
     const messageDate = new Date(dateString);
     const today = new Date();
@@ -16,11 +43,7 @@ export const formatMessageDate = (dateString: string): string => {
     if (messageDay.getTime() === todayDay.getTime()) return 'Today';
     if (messageDay.getTime() === yesterdayDay.getTime()) return 'Yesterday';
     
-    return messageDate.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return formatDateDDMMYYYY(messageDate);
   };
   
   export const formatMessageTime = (dateString: string): string => {

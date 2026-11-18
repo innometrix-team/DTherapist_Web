@@ -271,7 +271,7 @@ const DisputePage: React.FC = () => {
                   {appointment.fullName}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {new Date(appointment.date + "T00:00:00").toLocaleDateString()}{" "}
+                  {new Date(appointment.date + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}{" "}
                   at {appointment.time}
                 </p>
                 <span className="inline-block px-2 py-1 rounded-full bg-blue-100 text-blue-600 text-xs font-medium mt-1">

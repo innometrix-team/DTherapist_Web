@@ -1,25 +1,20 @@
-
 export type NavLabel =
   | "Dashboard"
-  | "Users"
-  | "Transaction" 
+  | "Clients"
+  | "Transaction"
   | "Library"
   | "Bookings"
   | "Disputes"
   | "DAnonymous"
   | "Moderation"
-  | "Feedback"
-
-;
+  | "Feedback";
 
 export interface NavItem {
-    to: string;
-    label: NavLabel;
-    matchNested?: boolean;
-  }
-  
+  to: string;
+  label: NavLabel;
+  matchNested?: boolean;
+}
+
 export interface NavGroup {
-    primary:   NavItem[];
-    
-  }
-  
+  primary: NavItem[];
+}

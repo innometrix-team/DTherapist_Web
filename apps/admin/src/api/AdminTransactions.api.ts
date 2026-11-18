@@ -127,35 +127,14 @@ export function formatAdminCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Helper function to format date (matching the "Thur, May 18th, 2025" format from image)
+// Helper function to format date as dd/mm/yyyy
 export function formatAdminDate(dateString: string): string {
   const date = new Date(dateString);
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: 'short',
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  };
-  
-  const formatted = date.toLocaleDateString('en-US', options);
-  // Add ordinal suffix to day
-  const day = date.getDate();
-  const ordinalSuffix = getOrdinalSuffix(day);
-  
-  return formatted.replace(/\d+/, `${day}${ordinalSuffix}`);
-}
-
-// Helper function to get ordinal suffix
-function getOrdinalSuffix(day: number): string {
-  if (day >= 11 && day <= 13) {
-    return 'th';
-  }
-  switch (day % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
-  }
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 // Helper function to get status badge color (matching image colors)

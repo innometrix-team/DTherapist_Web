@@ -61,10 +61,10 @@ export function formatCurrency(amount: number): string {
 
 // Helper function to format date
 export function formatDate(dateString: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
-    month: 'short',
-    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(dateString));

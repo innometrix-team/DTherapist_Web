@@ -157,12 +157,12 @@ const UserDetail = () => {
       return DeleteUserApi(userId);
     },
     onSuccess: () => {
-      toast.success("User deleted successfully");
+      toast.success("Client deleted successfully");
       void qc.invalidateQueries({ queryKey: ["admin-users"] });
       handleBackButton();
     },
     onError: (error) => {
-      toast.error(error.message ?? "Failed to delete user");
+      toast.error(error.message ?? "Failed to delete client");
     },
   });
 
@@ -377,7 +377,7 @@ const UserDetail = () => {
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             <span className="text-2xl font-semibold text-gray-900 ">
-              User Information
+              Client Information
             </span>
           </button>
         </div>
@@ -387,7 +387,7 @@ const UserDetail = () => {
           onClick={() => setShowDeleteDialog(true)}
           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-colors"
         >
-          Delete User
+          Delete Client
         </button>
       </div>
 
@@ -396,7 +396,7 @@ const UserDetail = () => {
         <div className="flex justify-center items-center py-16 h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-2 text-gray-600 text-sm">
-            Loading user details...
+            Loading client details...
           </span>
         </div>
       )}
@@ -406,14 +406,14 @@ const UserDetail = () => {
           <div className="text-red-500">
             {profileError.message
               ? `${profileError.message}, Profile not updated`
-              : "Error loading user details. Please try again."}
+              : "Error loading client details. Please try again."}
           </div>
         </div>
       )}
 
       {!profileLoading && !profileError && !userProfileData && (
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">User not found</div>
+          <div className="text-gray-500">Client not found</div>
         </div>
       )}
 
@@ -546,8 +546,8 @@ const UserDetail = () => {
         open={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={deleteUser}
-        title="Delete User"
-        message="Are you sure you want to delete this user? This will permanently remove their account and all associated data."
+        title="Delete Client"
+        message="Are you sure you want to delete this client? This will permanently remove their account and all associated data."
       />
       <ReviewProfessionModal
         open={reviewDialog.open}

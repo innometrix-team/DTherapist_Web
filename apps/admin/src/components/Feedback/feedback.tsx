@@ -79,9 +79,9 @@ const AdminFlags: React.FC = () => {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
     try {
-      return new Date(dateStr).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
+      return new Date(dateStr).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",

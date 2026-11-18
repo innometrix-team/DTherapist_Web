@@ -227,7 +227,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({
 
       // More specific error handling
       if (errorMessage.includes("booking")) {
-        toast.error("You must have a valid appointment to chat with this user");
+        toast.error("You must have a valid appointment to chat with this client");
       } else {
         toast.error("Failed to send message: " + errorMessage);
       }

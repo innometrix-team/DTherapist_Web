@@ -284,7 +284,7 @@ export const CommissionManager: React.FC<CommissionManagerProps> = ({
         <div className="text-xs text-neutral">
           {effectiveData.updatedAt && (
             <span>
-              Last updated: {new Date(effectiveData.updatedAt).toLocaleDateString()}
+              Last updated: {new Date(effectiveData.updatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
             </span>
           )}
         </div>

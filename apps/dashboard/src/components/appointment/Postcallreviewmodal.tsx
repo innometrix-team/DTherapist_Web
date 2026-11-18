@@ -189,11 +189,10 @@ const PostCallReviewModal: React.FC<PostCallReviewModalProps> = ({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 truncate">{appointment.fullName}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(appointment.date + "T00:00:00").toLocaleDateString("en-US", {
-                      weekday: "short",
+                    {new Date(appointment.date + "T00:00:00").toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "2-digit",
                       year: "numeric",
-                      month: "short",
-                      day: "numeric",
                     })}{" "}
                     · {appointment.time}
                   </p>

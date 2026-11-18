@@ -47,7 +47,7 @@ const NotFound: React.FC = () => {
             Admin View Not Found
           </h2>
           <p className="text-base sm:text-lg text-gray-600 max-w-lg mx-auto mb-8 leading-relaxed">
-            The admin resource, user account, or management page you requested does not exist or has been relocated.
+            The admin resource, client account, or management page you requested does not exist or has been relocated.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
@@ -79,7 +79,7 @@ const NotFound: React.FC = () => {
                 className="flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl hover:border-primary/50 text-center transition-all group"
               >
                 <Users className="w-5 h-5 text-primary mb-1.5 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-semibold text-gray-800">User Management</span>
+                <span className="text-xs font-semibold text-gray-800">Client Management</span>
               </Link>
               <Link
                 to="/bookings"
