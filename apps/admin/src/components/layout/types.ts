@@ -1,6 +1,6 @@
 export type NavLabel =
   | "Dashboard"
-  | "Clients"
+  | "Users"
   | "Transaction"
   | "Library"
   | "Bookings"

@@ -79,7 +79,7 @@ const NotFound: React.FC = () => {
                 className="flex flex-col items-center p-3 bg-white border border-gray-200 rounded-xl hover:border-primary/50 text-center transition-all group"
               >
                 <Users className="w-5 h-5 text-primary mb-1.5 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-semibold text-gray-800">Client Management</span>
+                <span className="text-xs font-semibold text-gray-800">User Management</span>
               </Link>
               <Link
                 to="/bookings"
