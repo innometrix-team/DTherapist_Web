@@ -263,7 +263,7 @@ function User() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          Clients Management
+          Users Management
         </h1>
 
         {/* Filters */}
@@ -282,48 +282,76 @@ function User() {
             />
           </div>
 
-          {/* Role Filter */}
+          {/* User Type Filter (merges Role & Profession) */}
           <select
-            value={filters.role}
-            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+            value={
+              filters.role === "user"
+                ? "user"
+                : filters.professionalCategory !== "all"
+                ? `counselor:${filters.professionalCategory}`
+                : filters.role === "counselor"
+                ? "counselor"
+                : "all"
+            }
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "all") {
+                setFilters({
+                  ...filters,
+                  role: "all",
+                  professionalCategory: "all",
+                });
+              } else if (val === "user") {
+                setFilters({
+                  ...filters,
+                  role: "user",
+                  professionalCategory: "all",
+                  professionalCategoryRequestStatus: "all",
+                });
+              } else if (val === "counselor") {
+                setFilters({
+                  ...filters,
+                  role: "counselor",
+                  professionalCategory: "all",
+                });
+              } else if (val.startsWith("counselor:")) {
+                const prof = val.split(":")[1];
+                setFilters({
+                  ...filters,
+                  role: "counselor",
+                  professionalCategory: prof,
+                });
+              }
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Roles</option>
-            <option value="counselor">Counselors</option>
+            <option value="all">All Users</option>
             <option value="user">Clients</option>
+            <option value="counselor">All Professionals</option>
+            <option value="counselor:counselor">Counselors</option>
+            <option value="counselor:psychologist">Psychologists</option>
           </select>
 
-          {/* Profession Filter (Item 7) */}
-          <select
-            value={filters.professionalCategory}
-            onChange={(e) =>
-              setFilters({ ...filters, professionalCategory: e.target.value })
-            }
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Professions</option>
-            <option value="psychologist">Psychologists</option>
-            <option value="counselor">Counselors</option>
-          </select>
+          {/* Profession Request Status Filter — only relevant when not viewing Clients only */}
+          {filters.role !== "user" && (
+            <select
+              value={filters.professionalCategoryRequestStatus}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  professionalCategoryRequestStatus: e.target.value,
+                })
+              }
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Request Statuses</option>
+              <option value="pending">Pending Profession Requests</option>
+              <option value="approved">Approved Requests</option>
+              <option value="rejected">Rejected Requests</option>
+            </select>
+          )}
 
-          {/* Profession Request Status Filter (Item 8) */}
-          <select
-            value={filters.professionalCategoryRequestStatus}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                professionalCategoryRequestStatus: e.target.value,
-              })
-            }
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Request Statuses</option>
-            <option value="pending">Pending Profession Requests</option>
-            <option value="approved">Approved Requests</option>
-            <option value="rejected">Rejected Requests</option>
-          </select>
-
-          {/* Suspension Status Filter */}
+          {/* Account Status Filter */}
           <select
             value={filters.isSuspended}
             onChange={(e) =>
