@@ -15,12 +15,13 @@ export const LocalVideoTile: React.FC<LocalVideoTileProps> = ({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    container.innerHTML = "";
     if (track && isCamOn) {
       const div = document.createElement("div");
       div.className = "w-full h-full";
-      container.appendChild(div);
+      container.replaceChildren(div);
       track.play(div);
+    } else {
+      container.replaceChildren();
     }
   }, [track, isCamOn]);
 
@@ -83,12 +84,13 @@ export const RemoteTile: React.FC<RemoteTileProps> = ({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    container.innerHTML = "";
     if (participant.hasVideo && participant.user.videoTrack) {
       const div = document.createElement("div");
       div.className = "w-full h-full";
-      container.appendChild(div);
+      container.replaceChildren(div);
       participant.user.videoTrack.play(div);
+    } else {
+      container.replaceChildren();
     }
   }, [participant.hasVideo, participant.user.videoTrack]);
 

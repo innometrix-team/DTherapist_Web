@@ -8,7 +8,8 @@ export type NavLabel =
   | "DAnonymous"
   | "Moderation"
   | "Feedback"
-  | "Announcements";
+  | "Announcements"
+  | "Audit Logs";
 
 export interface NavItem {
   to: string;
