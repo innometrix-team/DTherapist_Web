@@ -7,7 +7,8 @@ export type NavLabel =
   | "Disputes"
   | "DAnonymous"
   | "Moderation"
-  | "Feedback";
+  | "Feedback"
+  | "Announcements";
 
 export interface NavItem {
   to: string;

@@ -68,7 +68,19 @@ const TherapistDetail: React.FC<TherapistDetailProps> = ({
     },
     enabled: !!therapistId,
     staleTime: 5 * 60 * 1000,
+    retry: (failureCount, err) => {
+      const status = (err as { statusCode?: number })?.statusCode;
+      if (status === 404) return false;
+      return failureCount < 2;
+    },
   });
+
+  useEffect(() => {
+    const status = (therapistError as { statusCode?: number } | null)?.statusCode;
+    if (status === 404) {
+      void queryClient.invalidateQueries({ queryKey: ["therapists"] });
+    }
+  }, [therapistError, queryClient]);
 
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement, Event>) => {

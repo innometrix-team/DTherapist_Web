@@ -2,14 +2,20 @@ import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TimerIcon, UptrendIcon } from "../../assets/icons";
 import { StatCardConfig } from "../../pages/Dashboard/types";
-import AdminDashboardApi from "../../api/AdminDashboard.api";
+import AdminDashboardApi, { IAdminOverviewData } from "../../api/AdminDashboard.api";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface StatsGridProps {
   stats?: StatCardConfig[];
+  overviewData?: IAdminOverviewData;
+  overviewLoading?: boolean;
 }
 
-const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
+const StatsGrid: React.FC<StatsGridProps> = ({
+  stats: propStats,
+  overviewData,
+  overviewLoading,
+}) => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const role = useAuthStore((s) => s.role);
 
@@ -106,17 +112,31 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
 
 
 
+    const clientsLabel = overviewData
+      ? `${overviewData.clients.active.toLocaleString()} / ${overviewData.clients.total.toLocaleString()}`
+      : adminDashboardData.activeUsers.toLocaleString();
+    const clientsTrend = overviewData
+      ? `Active / Total clients`
+      : "Current active";
+
+    const therapistsLabel = overviewData
+      ? `${overviewData.therapists.active.toLocaleString()} / ${overviewData.therapists.total.toLocaleString()}`
+      : adminDashboardData.activeTherapists.toLocaleString();
+    const therapistsTrend = overviewData
+      ? `${overviewData.therapists.bookable.toLocaleString()} bookable`
+      : "Current active";
+
     const adminStats: StatCardConfig[] = [
       {
-        label: "Active Clients",
-        value: adminDashboardData.activeUsers.toLocaleString(),
-        trend: "Current active", // No trend data available for users
+        label: "Clients (Active / Total)",
+        value: clientsLabel,
+        trend: clientsTrend,
         trendUp: true,
       },
       {
-        label: "Active Therapists",
-        value: adminDashboardData.activeTherapists.toLocaleString(),
-        trend: "Current active", // No trend data available for therapists
+        label: "Therapists (Active / Total)",
+        value: therapistsLabel,
+        trend: therapistsTrend,
         trendUp: true,
       },
       {
@@ -132,6 +152,15 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
         trendUp: withdrawalTrend.trendUp,
       },
     ];
+
+    if (overviewData) {
+      adminStats.push({
+        label: `Appointments (${overviewData.year})`,
+        value: overviewData.appointments.total.toLocaleString(),
+        trend: `${overviewData.appointments.completed} completed · ${overviewData.appointments.confirmed} confirmed · ${overviewData.appointments.pending} pending · ${overviewData.appointments.cancelled} cancelled`,
+        trendUp: true,
+      });
+    }
 
     return adminStats;
   };
@@ -155,7 +184,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({ stats: propStats }) => {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || (overviewLoading && !overviewData && !adminDashboardData)) {
     return (
       <div className="max-w-[calc(100vw-48px)]">
         <div className="gap-4 overflow-x-auto overflow-y-hidden flex flex-nowrap">
