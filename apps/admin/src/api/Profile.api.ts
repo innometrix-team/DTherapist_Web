@@ -218,6 +218,7 @@ export async function ReviewProfessionalBodyCertificateApi(
     userId: string;
     status: "approved" | "rejected";
     note?: string;
+    documentUrl?: string;
   },
   config?: AxiosRequestConfig,
 ): Promise<IAPIResult<IResponseData> | null> {
@@ -227,6 +228,7 @@ export async function ReviewProfessionalBodyCertificateApi(
       {
         status: params.status,
         note: params.note ?? "",
+        ...(params.documentUrl ? { documentUrl: params.documentUrl } : {}),
       },
       config
     );

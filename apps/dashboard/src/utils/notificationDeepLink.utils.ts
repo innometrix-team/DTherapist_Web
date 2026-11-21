@@ -13,6 +13,8 @@ export interface INotificationData {
   chatId?: string;
   userId?: string;
   url?: string;
+  deadline?: string;
+  announcementId?: string;
 }
 
 export interface IUserNotification {
@@ -63,6 +65,9 @@ export function extractNotificationData(
     chatId: typeof d.chatId === "string" ? d.chatId : undefined,
     userId: typeof d.userId === "string" ? d.userId : undefined,
     url: typeof d.url === "string" ? d.url : undefined,
+    deadline: typeof d.deadline === "string" ? d.deadline : undefined,
+    announcementId:
+      typeof d.announcementId === "string" ? d.announcementId : undefined,
   };
 }
 
@@ -171,6 +176,17 @@ export function getNotificationDeepLink(
   }
 
   // 4. Profile updates / Credentials / Compliance / Profession change (Item 9)
+  if (
+    rawType === "provisional_registration_granted" ||
+    rawType.includes("provisional")
+  ) {
+    const params = new URLSearchParams({ tab: "credentials" });
+    if (typeof data.deadline === "string" && data.deadline.trim().length > 0) {
+      params.set("deadline", data.deadline.trim());
+    }
+    return `/settings?${params.toString()}`;
+  }
+
   if (
     rawType.includes("profile") ||
     rawType.includes("profession") ||

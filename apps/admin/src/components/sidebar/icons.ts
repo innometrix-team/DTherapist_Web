@@ -20,4 +20,6 @@ export const ICONS: Record<NavLabel, React.FC<React.SVGProps<SVGSVGElement>>> = 
     DAnonymous: MenuIcon,
     Moderation: PeopleIcon,
     Feedback: ChevronDownIcon,
+    Announcements: DashboardIcon,
+    "Audit Logs": TimerIcon,
   };

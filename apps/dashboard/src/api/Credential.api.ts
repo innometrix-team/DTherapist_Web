@@ -11,6 +11,7 @@ export interface IComplianceData {
   provisionalStartedAt?: string;
   provisionalDeadline?: string;
   transitionNoticePending?: boolean;
+  submittedOnTime?: boolean;
 }
 
 export interface ICredentialsData {

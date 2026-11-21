@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Download, FileText, Loader2, ShieldAlert, X } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { ICertificate } from "../../api/GetUsers.api";
 import { ReviewCertificationApi, ReviewCVApi, ReviewProfessionalBodyCertificateApi } from "../../api/Profile.api";
 
@@ -225,6 +226,11 @@ export default function CredentialList({
       },
       onSuccess: () => {
         void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+        void qc.invalidateQueries({ queryKey: ["user-profile", userId] });
+        toast.success("Certification review saved");
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : "Failed to review certification");
       },
     }
   );
@@ -239,6 +245,11 @@ export default function CredentialList({
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+      void qc.invalidateQueries({ queryKey: ["user-profile", userId] });
+      toast.success("CV review saved");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to review CV");
     },
   });
 
@@ -252,10 +263,23 @@ export default function CredentialList({
         userId,
         status: vars.status,
         note: vars.note,
+        documentUrl: credentialsData?.professionalBodyCertificateUrl,
       });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+      void qc.invalidateQueries({ queryKey: ["user-profile", userId] });
+      toast.success("Professional body certificate review saved");
+    },
+    onError: (err) => {
+      const code = (err as { code?: number })?.code;
+      if (code === 409) {
+        void qc.invalidateQueries({ queryKey: ["user-credentials", userId] });
+        void qc.invalidateQueries({ queryKey: ["user-profile", userId] });
+        toast.error("A newer upload was submitted. Reloaded the latest document.");
+        return;
+      }
+      toast.error(err instanceof Error ? err.message : "Failed to review certificate");
     },
   });
 

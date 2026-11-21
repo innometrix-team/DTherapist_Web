@@ -6,7 +6,7 @@ import Api, { ApiError, IAPIResult } from "./Api";
 export interface FlagClientPayload {
   clientId: string;
   bookingId: string;
-  note: string;
+  note?: string;
 }
 
 export interface FlagClientData {

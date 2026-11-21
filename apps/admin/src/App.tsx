@@ -19,6 +19,8 @@ const DAnonymous = lazy(() => import("./pages/DAnonymous/DAnonymous"));
 const DisputesPage = lazy(() => import("./pages/Dispute/Dispute"));
 const Moderation = lazy(() => import("./pages/Moderation/Moderation"));
 const Feedback = lazy(() => import("./pages/Feedback/Feedback"));
+const Announcements = lazy(() => import("./pages/Announcements/Announcements"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs/AuditLogs"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
 function App() {
@@ -49,6 +51,8 @@ function App() {
             <Route path="/disputes/*" element={<DisputesPage />} />
             <Route path="/moderation/*" element={<Moderation />} />
             <Route path="/feedback/*" element={<Feedback />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
           </Route>
 
           {/* Public Routes */}

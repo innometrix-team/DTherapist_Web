@@ -184,9 +184,9 @@ const UserNotificationsDropdown: FC<UserNotificationsDropdownProps> = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+        <div className="fixed inset-x-3 top-16 sm:inset-x-auto sm:top-auto sm:absolute sm:right-0 sm:mt-2 sm:w-96 sm:max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-lg border border-gray-200 z-50 flex flex-col max-h-[calc(100svh-5.5rem)] sm:max-h-[32rem] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between gap-2 p-3 sm:p-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center space-x-2">
               <h3 className="text-base font-semibold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
@@ -208,7 +208,7 @@ const UserNotificationsDropdown: FC<UserNotificationsDropdownProps> = ({
           </div>
 
           {/* Content */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -252,13 +252,13 @@ const UserNotificationsDropdown: FC<UserNotificationsDropdownProps> = ({
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className={`text-sm font-medium ${
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium break-words ${
                               !notification.seen ? 'text-gray-900' : 'text-gray-700'
                             }`}>
                               {notification.title}
                             </p>
-                            <p className={`text-sm mt-1 ${
+                            <p className={`text-sm mt-1 break-words ${
                               !notification.seen ? 'text-gray-700' : 'text-gray-500'
                             }`}>
                               {notification.message}

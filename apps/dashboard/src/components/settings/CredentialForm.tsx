@@ -225,6 +225,7 @@ const CredentialForm: React.FC = () => {
     queryKey: QUERY_KEYS.profile.credentials,
     queryFn: () => getCredentialsApi(),
     enabled: isTherapist,
+    refetchOnWindowFocus: true,
   });
 
   const serverData = credentialsResult?.data;
@@ -499,6 +500,16 @@ const CredentialForm: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {serverData.compliance?.submittedOnTime &&
+                  serverData.professionalBodyCertificateStatus === "pending" && (
+                    <div className="flex items-center gap-2 text-xs text-blue-800 bg-blue-50 p-2.5 rounded-lg border border-blue-200">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                      <span>
+                        Your professional-body certificate was submitted on time and is awaiting compliance review.
+                      </span>
+                    </div>
+                  )}
 
                 {serverData.compliance?.transitionNoticePending && (
                   <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">

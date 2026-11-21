@@ -93,7 +93,10 @@ const PostCallReviewModal: React.FC<PostCallReviewModalProps> = ({
       setIsSubmitting(true);
       await flagClient({
         clientId,
-        bookingId: appointment.bookingId,
+        bookingId:
+          appointment.bookingId ||
+          (appointment as { id?: string }).id ||
+          "",
         note: note.trim(),
       });
       setIsSubmitted(true);

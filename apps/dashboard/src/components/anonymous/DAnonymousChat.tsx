@@ -949,6 +949,7 @@ export default function DAnonymousChat() {
             rows={1}
             {...register("content")}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 void handleSubmit(onSubmit)(e);
