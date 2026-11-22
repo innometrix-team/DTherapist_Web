@@ -1,4 +1,5 @@
 import React from "react";
+import { PhoneOff } from "lucide-react";
 
 export const MicIcon = ({ muted }: { muted: boolean }) => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,16 +57,7 @@ export const VideoIcon = ({ disabled }: { disabled: boolean }) => (
   </svg>
 );
 
-export const PhoneOffIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 16.5v2.25A2.25 2.25 0 005.25 21h2.25m-7.5-4.5h7.5m-7.5 0V9.25A2.25 2.25 0 015.25 7h2.25m12 9.75h-7.5m7.5 0V9.25A2.25 2.25 0 0118.75 7h-2.25"
-    />
-  </svg>
-);
+export const PhoneOffIcon = () => <PhoneOff className="w-5 h-5" />;
 
 export const ChatIcon = ({ hasUnread }: { hasUnread: boolean }) => (
   <div className="relative">
@@ -103,6 +95,9 @@ export interface ControlBarProps {
   showParticipants: boolean;
   isChatOpen: boolean;
   chatUnread: number;
+  isVisible?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   onJoin: () => void;
   onToggleMic: () => void;
   onToggleCam: () => void;
@@ -120,6 +115,9 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   showParticipants,
   isChatOpen,
   chatUnread,
+  isVisible = true,
+  onMouseEnter,
+  onMouseLeave,
   onJoin,
   onToggleMic,
   onToggleCam,
@@ -128,7 +126,15 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   onLeave,
 }) => {
   return (
-    <div className="absolute bottom-0 left-0 right-0 px-4 py-4 bg-gradient-to-t from-black/80 to-transparent z-[110]">
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={`absolute bottom-0 left-0 right-0 px-4 py-4 bg-gradient-to-t from-black/80 to-transparent z-[110] transition-all duration-300 ${
+        isVisible
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-2 pointer-events-none"
+      }`}
+    >
       <div className="flex items-center justify-center gap-2">
         {!isJoined ? (
           <button

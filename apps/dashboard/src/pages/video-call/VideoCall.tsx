@@ -16,6 +16,7 @@ import { LocalVideoTile, RemoteTile } from "./components/VideoTiles";
 import { ControlBar } from "./components/ControlBar";
 import { SessionExpiredOverlay } from "./components/SessionExpiredOverlay";
 import { useCallTimer } from "./hooks/useCallTimer";
+import { useAutoHideControls } from "./hooks/useAutoHideControls";
 import { env } from "../../configs/env.config";
 import { useScreenCaptureMonitor } from "../../hooks/useScreenCaptureMonitor";
 
@@ -107,6 +108,8 @@ const VideoCallPage: React.FC = () => {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const { remainingTime, formattedTime, sessionExpired, setSessionExpired } =
     useCallTimer(state?.appointment, isJoined);
+  const { controlsVisible, showControls, onBarMouseEnter, onBarMouseLeave } =
+    useAutoHideControls(isJoined);
 
   useEffect(() => {
     if (!appId) setAppId(env.AGORA_APP_ID);
@@ -539,7 +542,12 @@ const VideoCallPage: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] flex flex-col">
+    <div
+      onMouseMove={showControls}
+      onMouseEnter={showControls}
+      onTouchStart={showControls}
+      className="fixed inset-0 bg-black z-[100] flex flex-col"
+    >
       <style>{`
         @keyframes soundbar {
           0%, 100% { transform: scaleY(0.4); }
@@ -548,7 +556,15 @@ const VideoCallPage: React.FC = () => {
       `}</style>
 
       {/* ── Top bar ── */}
-      <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-[110]">
+      <div
+        onMouseEnter={onBarMouseEnter}
+        onMouseLeave={onBarMouseLeave}
+        className={`absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-[110] transition-all duration-300 ${
+          controlsVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-2 pointer-events-none"
+        }`}
+      >
         <button
           onClick={() => { void navigate(-1); }}
           className="px-3 py-1.5 text-sm font-medium text-white hover:text-gray-200 transition-colors flex items-center gap-1"
@@ -809,6 +825,9 @@ const VideoCallPage: React.FC = () => {
         showParticipants={showParticipants}
         isChatOpen={isChatOpen}
         chatUnread={chatUnread}
+        isVisible={controlsVisible}
+        onMouseEnter={onBarMouseEnter}
+        onMouseLeave={onBarMouseLeave}
         onJoin={() => {
           void join();
         }}
