@@ -345,7 +345,7 @@ function User() {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Request Statuses</option>
-              <option value="pending">Pending Profession Requests</option>
+              <option value="pending">Pending Profession Change</option>
               <option value="approved">Approved Requests</option>
               <option value="rejected">Rejected Requests</option>
             </select>
